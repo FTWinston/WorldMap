@@ -1,0 +1,33 @@
+#mapRoot {
+	position: fixed;
+	top: 0; left: 0; right: 0; bottom: 1.6em;
+}
+
+#footer {
+	position: fixed;
+	padding: 0em 1em;
+	left: 0; right: 0; bottom: 0; height: 1.5em;
+}
+
+#sidebar {
+	position: fixed;
+	top: 0; right: 0; bottom: 1.6em; width: 16em;
+	padding: 0.2em;
+	display: none;
+}
+
+.edit #mapRoot {
+	right: 16.5em;
+}
+
+.edit #sidebar {
+	display: block;
+}
+
+#modeSwitch::after {
+	content: "switch to edit mode";
+}
+
+.edit #modeSwitch::after {
+	content: "switch to display mode";
+}
