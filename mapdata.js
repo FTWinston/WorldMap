@@ -12,12 +12,20 @@ MapCell.prototype = {
 }
 
 function MapData(width, height) {
-	this.cells = new Array(width * height);
-	this.width = width;
+	this.width = width + Math.floor(height/2) - 1;
 	this.height = height;
+	this.cells = new Array(this.width * this.height);
 	
-	for (var i=0; i<this.cells.length; i++)
+	for (var i=0; i<this.cells.length; i++) {
+		var row = Math.floor(i / this.width);
+		var col = i % this.width;
+		if (2 * col + row < this.height - 2)
+			continue; // chop left to get square edge
+		if (row + 2 * col > 2 * this.width - 1)
+			continue; // chop right to get square edge
+		
 		this.cells[i] = new MapCell();
+	}
 	
 	this._preprocess();
 }
@@ -41,7 +49,7 @@ MapData.prototype = {
 
         for (var i = 0; i < this.cells.length; i++) {
             var cell = this.cells[i];
-            if (cell === undefined || cell == null)
+            if (cell == null)
                 continue;
 
             cell.row = Math.floor(i / this.width);
@@ -65,7 +73,7 @@ MapData.prototype = {
 
         for (var i = 0; i < this.cells.length; i++) {
             var cell = this.cells[i];
-            if (cell === undefined || cell == null)
+            if (cell == null)
                 continue;
 
             cell.xPos -= minX;
