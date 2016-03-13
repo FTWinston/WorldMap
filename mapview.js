@@ -104,7 +104,7 @@ MapView.prototype = {
 		var cellIndex = this._getCellIndexAtPoint(e.clientX, e.clientY);
         var cell = this.data.cells[cellIndex];
         if (cell !== undefined && cell != null)
-            this.cellClicked(cell);
+            this._cellClicked(cell);
 	},
 	_cellClicked: function(cell) {
         if (cell.selected === true)
@@ -115,9 +115,9 @@ MapView.prototype = {
         this.draw();
     },
     _getCellIndexAtPoint: function(screenX, screenY) {
-        var mapX = screenX - this.canvas.offsetLeft + this.root.scrollLeft + this.minX * this.cellRadius;
-        var mapY = screenY - this.canvas.offsetTop + this.root.scrollTop + this.minY * this.cellRadius;
 
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
+        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
         var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.cellRadius;
         var fRow = mapY * 2 / 3 / this.cellRadius;
         var fThirdCoord = - fCol - fRow;
