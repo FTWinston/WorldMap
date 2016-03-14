@@ -81,9 +81,45 @@ MapData.prototype = {
         }
 	},
 	changeWidth: function(delta, leftEdgeFixed) {
+		var overallDelta = 0;
+		if (delta > 0) {
+			for (var row=0; row<this.height; row++) {
+				var rowInsertIndex; // this is complicated on account of the "chopping" we did to get square edges
+				if (leftEdgeFixed)
+					rowInsertIndex = this.width - Math.floor(row/2);
+				else
+					rowInsertIndex = Math.floor((this.height - row - 1)/2);
+				
+				var rowStart = row * this.width;
+				var insertPos = rowStart + rowInsertIndex + overallDelta;
+				
+				for (var i=0; i<delta; i++)
+					this.cells.splice(insertPos, 0, new MapCell());
+				
+				overallDelta += delta;
+			}
+		}
+		else {
+			for (var row=0; row<this.height; row++) {
+				var rowChopPos;
+				if (leftEdgeFixed)
+					rowChopPos = this.width - Math.floor(row/2) + delta;
+				else
+					rowChopPos = Math.floor((this.height - row - 1)/2);
+				
+				var rowStart = row * this.width;
+				var chopPos = rowStart + rowChopPos + overallDelta;
+				this.cells.splice(chopPos, -delta);
+				overallDelta += delta;
+			}
+		}
+		
+		this.width += delta;
 		this._preprocess();
 	},
 	changeHeight: function(delta, topEdgeFixed) {
+		console.log('new height is ' + (this.height + delta) + ', ' + (topEdgeFixed ? 'top' : 'bottom') + ' edge is fixed');
+
 		// if height increases, width must also change, which is kinda awkward
 		
 		this._preprocess();

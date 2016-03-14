@@ -32,7 +32,7 @@ Wizard.prototype = {
 			items = step.querySelectorAll('input[type="text"]');
 			for (var j=0; j<items.length; j++) {
 				var item = items[j];
-				item.addEventListener('change', this._stepItemPicked.bind(this, step, item));
+				item.addEventListener('keyup', this._stepItemPicked.bind(this, step, item));
 			}
 		}
 	},

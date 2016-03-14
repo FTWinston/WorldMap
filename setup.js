@@ -48,7 +48,7 @@ var queryUrl = getParameterByName('source');
 if (queryUrl != null)
 	data = loadData(queryUrl);	
 else
-	data = new MapData(37, 37);
+	data = new MapData(9, 9);
 var map = new MapView(document.getElementById('mapRoot'), data);
 
 document.getElementById('modeSwitch').onclick = function() {
@@ -64,16 +64,16 @@ var resizeWizard = new Wizard(document.getElementById('resize-wizard'), function
 	
 	switch (resize.edge) {
 	case 'top':
-		map.data.changeHeight(number, true);
-		break;
-	case 'bottom':
 		map.data.changeHeight(number, false);
 		break;
+	case 'bottom':
+		map.data.changeHeight(number, true);
+		break;
 	case 'left':
-		map.data.changeWidth(number, true);
+		map.data.changeWidth(number, false);
 		break;
 	case 'right':
-		map.data.changeWidth(number, false);
+		map.data.changeWidth(number, true);
 		break;
 	}
 	map.updateSize();
