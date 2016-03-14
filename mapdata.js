@@ -80,10 +80,19 @@ MapData.prototype = {
             cell.yPos -= minY;
         }
 	},
+	changeWidth: function(delta, leftEdgeFixed) {
+		this._preprocess();
+	},
+	changeHeight: function(delta, topEdgeFixed) {
+		// if height increases, width must also change, which is kinda awkward
+		
+		this._preprocess();
+	},
 	saveToJSON: function() {
 		return JSON.stringify(this, function (key,value) {
 			if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
-			|| key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY')
+			|| key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
+			|| key == 'selected')
 				return undefined;
 			return value;
 		}, '	');

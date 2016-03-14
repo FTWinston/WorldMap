@@ -41,18 +41,12 @@ $(function () {
 		loadData(url);
 		return false;
 	});
-	
-	
-	$('#modeSwitch').click(function () {
-		$('body').toggleClass('edit');
-		map.updateSize();
-	});
 });
 
 var data;
 var queryUrl = getParameterByName('source');
 if (queryUrl != null)
-	loadData(queryUrl);	
+	data = loadData(queryUrl);	
 else
 	data = new MapData(37, 37);
 var map = new MapView(document.getElementById('mapRoot'), data);
@@ -60,5 +54,32 @@ var map = new MapView(document.getElementById('mapRoot'), data);
 document.getElementById('modeSwitch').onclick = function() {
 	document.getElementById('editorRoot').classList.toggle('edit');
 	map.updateSize();
+	return false;
+}
+
+var resizeWizard = new Wizard(document.getElementById('resize-wizard'), function (resize) {
+	var number = parseInt(resize.number);
+	if (resize.change != 'add')
+		number = -number;
+	
+	switch (resize.edge) {
+	case 'top':
+		map.data.changeHeight(number, true);
+		break;
+	case 'bottom':
+		map.data.changeHeight(number, false);
+		break;
+	case 'left':
+		map.data.changeWidth(number, true);
+		break;
+	case 'right':
+		map.data.changeWidth(number, false);
+		break;
+	}
+	map.updateSize();
+});
+
+document.getElementById('resizeLink').onclick = function() {
+	resizeWizard.show();
 	return false;
 }

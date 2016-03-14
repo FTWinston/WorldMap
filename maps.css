@@ -31,3 +31,33 @@
 .edit #modeSwitch::after {
 	content: "switch to display mode";
 }
+
+
+.wizard {
+	position: fixed;
+	margin: 0 auto;
+	top: 20%;
+	left: 50%;
+	margin-left: -300px;
+	width: 300px;
+	background-color: white;
+	border: solid 1px grey;
+	border-radius: 0.5em;
+	padding: 0 0.5em 0.5em 0.5em;
+}
+
+.wizard .step li {
+	cursor: pointer;
+}
+
+.wizard .step li:hover {
+	text-decoration: underline;
+}
+
+.wizard .step.done li:not(.selected) {
+	color: #ccc;
+}
+
+.wizard .wizard-buttons {
+	margin-top: 1em;
+}

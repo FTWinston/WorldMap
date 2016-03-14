@@ -14,12 +14,40 @@
 			</div>
 			<div id="sidebar">
 				This is only shown in "edit" mode. It should let you draw terrain and stuff.
+				
+				<a href="#" id="resizeLink">resize map</a>
+				
+				<div id="resize-wizard" class="wizard" style="display: none">
+					<p>To change the size of the map, select the appropriate options below:</p>
+					<ul class="step">
+						<li data-property="axis" data-value="width">change width</li>
+						<li data-property="axis" data-value="height">change height</li>
+					</ul>
+
+					<ul class="step">
+						<li data-property="change" data-value="add">increase <span class="display" data-property="axis"></span></li>
+						<li data-property="change" data-value="remove">decrease <span class="display" data-property="axis"></span></li>
+					</ul>
+
+					<ul class="step">
+						<li data-property="edge" data-value="left" data-show-property="axis" data-show-value="width"><span class="display" data-property="change"></span> cells at left edge</li>
+						<li data-property="edge" data-value="right" data-show-property="axis" data-show-value="width"><span class="display" data-property="change"></span> cells at right edge</li>
+						<li data-property="edge" data-value="top" data-show-property="axis" data-show-value="height"><span class="display" data-property="change"></span> cells at top edge</li>
+						<li data-property="edge" data-value="bottom" data-show-property="axis" data-show-value="height"><span class="display" data-property="change"></span> cells at bottom edge</li>
+					</ul>
+
+					<div class="step final">
+						How many cells to <span class="display" data-property="change"></span>?
+						<input type="text" class="number" data-property="number" />
+					</div>
+				</div>
 			</div>
 		</div>
 		
 		<script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
 		<script src="mapdata.js"></script>
 		<script src="mapview.js"></script>
+		<script src="ui.js"></script>
 		<script src="setup.js"></script>
 	</body>
 </html>
