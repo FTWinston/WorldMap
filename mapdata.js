@@ -17,14 +17,8 @@ function MapData(width, height) {
 	this.cells = new Array(this.width * this.height);
 	
 	for (var i=0; i<this.cells.length; i++) {
-		var row = Math.floor(i / this.width);
-		var col = i % this.width;
-		if (2 * col + row < this.height - 2)
-			continue; // chop left to get square edge
-		if (row + 2 * col > 2 * this.width - 1)
-			continue; // chop right to get square edge
-		
-		this.cells[i] = new MapCell();
+		if (this._shouldIndexHaveCell(i))
+			this.cells[i] = new MapCell();
 	}
 	
 	this._preprocess();
@@ -80,8 +74,28 @@ MapData.prototype = {
             cell.yPos -= minY;
         }
 	},
+	_shouldIndexHaveCell: function(index) {
+		var row = Math.floor(index / this.width);
+		var col = index % this.width;
+		if (2 * col + row < this.height - 2)
+			return false; // chop left to get square edge
+		if (row + 2 * col > 2 * this.width - 1)
+			return false; // chop right to get square edge
+		return true;
+	},
 	changeWidth: function(delta, leftEdgeFixed) {
 		this._performWidthChange(delta, leftEdgeFixed, true);
+		this._preprocess();
+	},
+	changeHeight: function(delta, topEdgeFixed) {
+		var inc = delta > 0 ? 1 : -1;
+		var adding = delta > 0 ? 1 : 0;
+		
+		for (var i=0; i != delta; i += inc) {
+			if ((this.height + adding) % 2 == 0)
+				this._performWidthChange(inc, !topEdgeFixed, false);
+			this._performHeightChange(inc, topEdgeFixed);
+		}
 		this._preprocess();
 	},
 	_performWidthChange(delta, leftEdgeFixed, addCells) {
@@ -103,7 +117,7 @@ MapData.prototype = {
 				overallDelta += delta;
 			}
 		}
-		else if (delta > 0) {
+		else if (delta < 0) {
 			for (var row=0; row<this.height; row++) {
 				var rowChopPos;
 				if (leftEdgeFixed)
@@ -120,22 +134,22 @@ MapData.prototype = {
 		
 		this.width += delta;
 	},
-	changeHeight: function(delta, topEdgeFixed) {
-		// width must change when changing height, which is kinda awkward
-		var hDelta = (this.height + delta) % 2 == 0 ? Math.ceil(delta / 2) : hDelta = Math.floor(delta / 2);
-		this._performWidthChange(hDelta, !topEdgeFixed, false);
+	_performHeightChange: function (delta, topEdgeFixed) {
 		var diff = delta * this.width;
 		
 		if (delta > 0) {
-			for (var i=0; i<diff; i++) // some of these should be nulls
-				this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, new MapCell());
+			for (var i=0; i<diff; i++) {
+				if (this.cells.length + 1 > this.width * this.height)
+					this.height++;
+				
+				var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
+				this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this._shouldIndexHaveCell(globalIndex) ? new MapCell() : null);
+			}
 		}
 		else if (delta < 0) {
+			this.height += delta;
 			this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
 		}
-		
-		this.height += delta;
-		this._preprocess();
 	},
 	saveToJSON: function() {
 		return JSON.stringify(this, function (key,value) {
