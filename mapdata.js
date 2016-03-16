@@ -81,6 +81,10 @@ MapData.prototype = {
         }
 	},
 	changeWidth: function(delta, leftEdgeFixed) {
+		this._performWidthChange(delta, leftEdgeFixed, true);
+		this._preprocess();
+	},
+	_performWidthChange(delta, leftEdgeFixed, addCells) {
 		var overallDelta = 0;
 		if (delta > 0) {
 			for (var row=0; row<this.height; row++) {
@@ -94,12 +98,12 @@ MapData.prototype = {
 				var insertPos = rowStart + rowInsertIndex + overallDelta;
 				
 				for (var i=0; i<delta; i++)
-					this.cells.splice(insertPos, 0, new MapCell());
+					this.cells.splice(insertPos, 0, addCells ? new MapCell() : null);
 				
 				overallDelta += delta;
 			}
 		}
-		else {
+		else if (delta > 0) {
 			for (var row=0; row<this.height; row++) {
 				var rowChopPos;
 				if (leftEdgeFixed)
@@ -115,13 +119,22 @@ MapData.prototype = {
 		}
 		
 		this.width += delta;
-		this._preprocess();
 	},
 	changeHeight: function(delta, topEdgeFixed) {
-		console.log('new height is ' + (this.height + delta) + ', ' + (topEdgeFixed ? 'top' : 'bottom') + ' edge is fixed');
-
-		// if height increases, width must also change, which is kinda awkward
+		// width must change when changing height, which is kinda awkward
+		var hDelta = (this.height + delta) % 2 == 0 ? Math.ceil(delta / 2) : hDelta = Math.floor(delta / 2);
+		this._performWidthChange(hDelta, !topEdgeFixed, false);
+		var diff = delta * this.width;
 		
+		if (delta > 0) {
+			for (var i=0; i<diff; i++) // some of these should be nulls
+				this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, new MapCell());
+		}
+		else if (delta < 0) {
+			this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
+		}
+		
+		this.height += delta;
 		this._preprocess();
 	},
 	saveToJSON: function() {
