@@ -88,13 +88,13 @@ MapData.prototype = {
 		this._preprocess();
 	},
 	changeHeight: function(delta, topEdgeFixed) {
-		var inc = delta > 0 ? 1 : -1;
-		var adding = delta > 0 ? 1 : 0;
+		var increment = delta > 0 ? 1 : -1;
+		var increasing = delta > 0 ? 1 : 0;
 		
-		for (var i=0; i != delta; i += inc) {
-			if ((this.height + adding) % 2 == 0)
-				this._performWidthChange(inc, !topEdgeFixed, false);
-			this._performHeightChange(inc, topEdgeFixed);
+		for (var i=0; i != delta; i += increment) {
+			if ((this.height + increasing) % 2 == 0)
+				this._performWidthChange(increment, !topEdgeFixed, false);
+			this._performHeightChange(increment, topEdgeFixed);
 		}
 		this._preprocess();
 	},
@@ -135,9 +135,8 @@ MapData.prototype = {
 		this.width += delta;
 	},
 	_performHeightChange: function (delta, topEdgeFixed) {
-		var diff = delta * this.width;
-		
 		if (delta > 0) {
+			var diff = delta * this.width;
 			for (var i=0; i<diff; i++) {
 				if (this.cells.length + 1 > this.width * this.height)
 					this.height++;
@@ -147,6 +146,7 @@ MapData.prototype = {
 			}
 		}
 		else if (delta < 0) {
+			var diff = -delta * this.width;
 			this.height += delta;
 			this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
 		}
