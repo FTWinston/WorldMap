@@ -34,7 +34,8 @@ MapView.prototype = {
 	},
 	draw: function() {
 		var ctx = this.canvas.getContext('2d');
-        ctx.clearRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
+        ctx.fillStyle = '#ccc';
+        ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
         ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
 
         var map = this.data;
@@ -65,24 +66,13 @@ MapView.prototype = {
                 ctx.lineTo(x, y);
         }
 
-		/*
-        switch (cell.Type) {
-            case map.CellType.OutOfBounds:
-                ctx.fillStyle = '#000'; break;
-            case map.CellType.Flat:
-			*/
-                ctx.fillStyle = '#ccc'; /*break;
-            case map.CellType.Difficult:
-                ctx.fillStyle = '#888'; break;
-            case map.CellType.Unpassable:
-                ctx.fillStyle = '#333'; break;
-            default:
-                ctx.fillStyle = '#a88'; break;
-        }
-        */
-        if (cell.selected)
+		if (cell.selected)
             ctx.fillStyle = '#fcc';
-
+		else if (cell.type == null)
+			ctx.fillStyle = '#666';
+		else
+			ctx.fillStyle = cell.type.color;
+		
         ctx.fill();
     },
 	updateSize: function() {
@@ -102,9 +92,13 @@ MapView.prototype = {
 	},
 	clicked: function(e) {
 		var cellIndex = this._getCellIndexAtPoint(e.clientX, e.clientY);
-        var cell = this.data.cells[cellIndex];
-        if (cell !== undefined && cell != null)
-            this._cellClicked(cell);
+		if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
+			var cell = this.data.cells[cellIndex];
+			if (cell != null) {
+				this._cellClicked(cell);
+				return;
+			}
+		}
 	},
 	_cellClicked: function(cell) {
         if (cell.selected === true)
@@ -115,7 +109,6 @@ MapView.prototype = {
         this.draw();
     },
     _getCellIndexAtPoint: function(screenX, screenY) {
-
         var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
         var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
         var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.cellRadius;

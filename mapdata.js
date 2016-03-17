@@ -1,7 +1,20 @@
 "use strict";
 
-function MapCell() {
-	
+function CellType(name, color) {
+	this.name = name;
+	this.color = color;
+}
+
+CellType.prototype = {
+	constructor: CellType,
+	something: function() {
+		
+	}
+}
+
+function MapCell(map, type) {
+	this.map = map;
+	this.type = type;
 }
 
 MapCell.prototype = {
@@ -11,32 +24,24 @@ MapCell.prototype = {
 	}
 }
 
-function MapData(width, height) {
+function MapData(width, height, createCells) {
 	this.width = width + Math.floor(height/2) - 1;
 	this.height = height;
 	this.cells = new Array(this.width * this.height);
+	this.cellTypes = [];	
 	
-	for (var i=0; i<this.cells.length; i++) {
-		if (this._shouldIndexHaveCell(i))
-			this.cells[i] = new MapCell();
+	if (createCells !== false) {	
+		for (var i=0; i<this.cells.length; i++)
+			if (this._shouldIndexHaveCell(i))
+				this.cells[i] = new MapCell(this, null);
+		
+		this._positionCells();
 	}
-	
-	this._preprocess();
 }
 
 MapData.prototype = {
 	constructor: MapData,
-	_preprocess: function() {
-		/*
-		map.CellType = {
-            OutOfBounds: 0,
-            Flat: 1,
-            Difficult: 2,
-            Unpassable: 3,
-            LowBarrier: 4,
-            Barrier: 5,
-        }
-		*/
+	_positionCells: function() {
         var packedWidthRatio = 1.7320508075688772, packedHeightRatio = 1.5;
         var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE;
         var maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
@@ -85,7 +90,7 @@ MapData.prototype = {
 	},
 	changeWidth: function(delta, leftEdgeFixed) {
 		this._performWidthChange(delta, leftEdgeFixed, false);
-		this._preprocess();
+		this._positionCells();
 	},
 	changeHeight: function(delta, topEdgeFixed) {
 		var increment = delta > 0 ? 1 : -1;
@@ -96,7 +101,7 @@ MapData.prototype = {
 				this._performWidthChange(increment, !topEdgeFixed, true);
 			this._performHeightChange(increment, topEdgeFixed);
 		}
-		this._preprocess();
+		this._positionCells();
 	},
 	_performWidthChange(delta, leftEdgeFixed, forHeightChange) {
 		var overallDelta = 0;
@@ -112,7 +117,7 @@ MapData.prototype = {
 				var insertPos = rowStart + rowInsertIndex + overallDelta;
 				
 				for (var i=0; i<delta; i++)
-					this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell());
+					this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, null));
 				
 				overallDelta += delta;
 			}
@@ -148,7 +153,7 @@ MapData.prototype = {
 					this.height++;
 				
 				var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-				this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this._shouldIndexHaveCell(globalIndex) ? new MapCell() : null);
+				this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this._shouldIndexHaveCell(globalIndex) ? new MapCell(this, null) : null);
 			}
 		}
 		else if (delta < 0) {
@@ -158,12 +163,49 @@ MapData.prototype = {
 		}
 	},
 	saveToJSON: function() {
-		return JSON.stringify(this, function (key,value) {
+		this._replaceTypesWithIndexes();
+		
+		var json = JSON.stringify(this, function (key,value) {
 			if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
 			|| key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-			|| key == 'selected')
+			|| key == 'map' || key == 'selected')
 				return undefined;
 			return value;
 		}, '	');
+		
+		this._replaceIndexesWithTypes();
+		return json;
+	},
+	_replaceTypesWithIndexes: function() {
+		for (var i=0; i<this.cells.length; i++) {
+			var cell = this.cells[i];
+			cell.type = this.cellTypes.indexOf(cell.type);
+		}
+	},
+	_replaceIndexesWithTypes: function() {
+		for (var i=0; i<this.cells.length; i++) {
+			var cell = this.cells[i];
+			cell.type = this.cellTypes[cell.type];
+		}
 	}
+};
+
+MapData.loadFromJSON = function(json) {
+	var map = new MapData(json.width, json.height, false);
+	
+	map.cells = json.cells.map(function(cell) {
+		if (cell == null)
+			return null;
+		return new MapCell(map, cell.type);
+	});
+	
+	map._positionCells();
+	
+	map.cellTypes = json.cellTypes.map(function(type) {
+		return new CellType(type.name, type.color);
+	});
+	
+	map._replaceIndexesWithTypes();
+	
+	return map;
 };
