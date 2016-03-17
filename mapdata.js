@@ -84,7 +84,7 @@ MapData.prototype = {
 		return true;
 	},
 	changeWidth: function(delta, leftEdgeFixed) {
-		this._performWidthChange(delta, leftEdgeFixed, true);
+		this._performWidthChange(delta, leftEdgeFixed, false);
 		this._preprocess();
 	},
 	changeHeight: function(delta, topEdgeFixed) {
@@ -93,12 +93,12 @@ MapData.prototype = {
 		
 		for (var i=0; i != delta; i += increment) {
 			if ((this.height + increasing) % 2 == 0)
-				this._performWidthChange(increment, !topEdgeFixed, false);
+				this._performWidthChange(increment, !topEdgeFixed, true);
 			this._performHeightChange(increment, topEdgeFixed);
 		}
 		this._preprocess();
 	},
-	_performWidthChange(delta, leftEdgeFixed, addCells) {
+	_performWidthChange(delta, leftEdgeFixed, forHeightChange) {
 		var overallDelta = 0;
 		if (delta > 0) {
 			for (var row=0; row<this.height; row++) {
@@ -112,7 +112,7 @@ MapData.prototype = {
 				var insertPos = rowStart + rowInsertIndex + overallDelta;
 				
 				for (var i=0; i<delta; i++)
-					this.cells.splice(insertPos, 0, addCells ? new MapCell() : null);
+					this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell());
 				
 				overallDelta += delta;
 			}
@@ -120,7 +120,13 @@ MapData.prototype = {
 		else if (delta < 0) {
 			for (var row=0; row<this.height; row++) {
 				var rowChopPos;
-				if (leftEdgeFixed)
+				if (forHeightChange) {
+					if (leftEdgeFixed)
+						rowChopPos = this.width + delta;
+					else
+						rowChopPos = 0;
+				}
+				else if (leftEdgeFixed)
 					rowChopPos = this.width - Math.floor(row/2) + delta;
 				else
 					rowChopPos = Math.floor((this.height - row - 1)/2);
