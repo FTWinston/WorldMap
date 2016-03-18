@@ -27,21 +27,10 @@ function loadData(url) {
 	}
 	
 	$.getJSON(url, '', function (data) {
-		addLinks(data);
-		tables = data;
-		listTables();
-		$('#intro').hide();
-		$('#displayRoot').show();
+		data = MapData.loadFromJSON(data);
+		map = new MapView(document.getElementById('mapRoot'), data);
 	});
 }
-
-$(function () {
-	$('#loadUrl').click(function () {
-		var url = $('#dataUrl').val();
-		loadData(url);
-		return false;
-	});
-});
 
 var data;
 var queryUrl = getParameterByName('source');
@@ -50,12 +39,32 @@ if (queryUrl != null)
 else
 	data = new MapData(9, 9);
 var map = new MapView(document.getElementById('mapRoot'), data);
-
-document.getElementById('modeSwitch').onclick = function() {
+/*
+document.getElementById('loadUrl').addEventListener('click', function() {
+	var url = document.getElementById('dataUrl').value;
+	loadData(url);
+	return false;
+});
+*/
+document.getElementById('modeSwitch').addEventListener('click', function() {
 	document.getElementById('editorRoot').classList.toggle('edit');
 	map.updateSize();
 	return false;
-}
+});
+
+document.getElementById('addBrushLink').addEventListener('click', function() {
+	document.getElementById('brushName').value = '';
+	document.getElementById('brushColor').value = '';
+	document.getElementById('brushEdit').style.display = '';
+	return false;
+});
+
+document.querySelector('#brushEdit .dialog-buttons .ok').addEventListener('click', function() {
+	var type = new CellType(document.getElementById('brushName').value, document.getElementById('brushColor').value);
+	map.data.cellTypes.push(type);
+	map.drawCellTypes(document.getElementById('brushList'));
+	return false;
+});
 
 var resizeWizard = new Wizard(document.getElementById('resize-wizard'), function (resize) {
 	var number = parseInt(resize.number);
@@ -79,7 +88,7 @@ var resizeWizard = new Wizard(document.getElementById('resize-wizard'), function
 	map.updateSize();
 });
 
-document.getElementById('resizeLink').onclick = function() {
+document.getElementById('resizeLink').addEventListener('click', function() {
 	resizeWizard.show();
 	return false;
-}
+});

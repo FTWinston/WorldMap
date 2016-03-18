@@ -15,9 +15,22 @@
 			<div id="sidebar">
 				This is only shown in "edit" mode. It should let you draw terrain and stuff.
 				
+				<div class="tool" data-title="terrain">
+					<div id="brushList">
+					</div>
+					<a href="#" id="addBrushLink">add new brush</a>
+				</div>
+				
+				<div id="brushEdit" class="dialog" style="display: none">
+					<p>Enter a name and choose a color for this brush:</p>
+					
+					<input type="text" id="brushName" placeholder="name" />
+					<input type="color" id="brushColor" />
+				</div>
+				
 				<a href="#" id="resizeLink">resize map</a>
 				
-				<div id="resize-wizard" class="wizard" style="display: none">
+				<div id="resize-wizard" class="wizard dialog" style="display: none">
 					<p>To change the size of the map, select the appropriate options below:</p>
 					<ul class="step">
 						<li data-property="axis" data-value="width">change width</li>

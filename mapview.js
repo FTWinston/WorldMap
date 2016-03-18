@@ -21,6 +21,7 @@ MapView.prototype = {
 		this.scrollPane.style.position = 'absolute';
 		
 		this.cellRadius = 30;
+		this.terrainBrush = null;
 		
 		this.scrollPane.onscroll = this.draw.bind(this);
 		this.scrollSize.onclick = this.clicked.bind(this);
@@ -101,11 +102,15 @@ MapView.prototype = {
 		}
 	},
 	_cellClicked: function(cell) {
-        if (cell.selected === true)
-            cell.selected = undefined;
-        else
-            cell.selected = true;
-
+		if (this.terrainBrush == null) {
+			if (cell.selected === true)
+				cell.selected = undefined;
+			else
+				cell.selected = true;
+		}
+		else
+			cell.type = this.terrainBrush;
+		
         this.draw();
     },
     _getCellIndexAtPoint: function(screenX, screenY) {
@@ -167,5 +172,25 @@ MapView.prototype = {
 	extractData: function() {
 		var json = data.saveToJSON();
 		window.open('data:text/json,' + encodeURIComponent(json));
+	},
+	drawCellTypes: function(element) {
+		var output = '';
+		
+		for (var i=0; i<this.data.cellTypes.length; i++) {
+			var type = this.data.cellTypes[i];
+			output += '<div class="brush" style="background-color: ' + type.color + '" data-number="' + i + '">' + type.name + '</div>';
+		}
+		
+		element.innerHTML = output;
+		element.onclick = function(e) {
+			var brush = element.querySelector('.selected');
+			if (brush != null)
+				brush.classList.remove('selected');
+			
+			brush = e.target;
+			brush.classList.add('selected');
+			var number = brush.getAttribute('data-number');
+			this.terrainBrush = this.data.cellTypes[number];
+		}.bind(this);
 	}
 };

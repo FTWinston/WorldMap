@@ -9,13 +9,9 @@ function Wizard(root, callback) {
 Wizard.prototype = {
 	constructor: Wizard,
 	_initialize: function() {
-		var btns = document.createElement('div');
-		btns.classList.add('wizard-buttons');
-		btns.innerHTML = '<input type="button" class="cancel" value="Cancel" /> <input type="button" class="ok" value="OK" style="display:none;" />';
-		this.root.appendChild(btns)
-		
-		this.root.querySelector('.wizard-buttons input.cancel').addEventListener('click', this._cancelled.bind(this));
-		this.root.querySelector('.wizard-buttons input.ok').addEventListener('click', this._confirmed.bind(this));
+		var btn = this.root.querySelector('.dialog-buttons input.ok');
+		btn.style.display = 'none';
+		btn.addEventListener('click', this._confirmed.bind(this));
 		
 		this.output = {};
 	
@@ -83,7 +79,7 @@ Wizard.prototype = {
 			else if (this.steps[i] == step)
 				passed = true;
 		
-		this.root.querySelector('.wizard-buttons input.ok').style.display = 'none';
+		this.root.querySelector('.dialog-buttons input.ok').style.display = 'none';
 	},
 	_stepItemPicked: function(step, item, e) {
 		var value = item.getAttribute('data-value');
@@ -119,21 +115,30 @@ Wizard.prototype = {
 		}
 		
 		if (isFinal) {
-			this.root.querySelector('.wizard-buttons input.ok').style.display = '';
+			this.root.querySelector('.dialog-buttons input.ok').style.display = '';
 		}
-	},
-	_cancelled: function() {
-		this.root.style.display = 'none';
 	},
 	_confirmed: function () {
 		this.callback(this.output);
-		this.root.style.display = 'none';
 	}
 };
 
-var dialogs = document.querySelectorAll('.wizard');
-for (var i=0; i<dialogs.length; i++)
-	dialogs[i].style.display = 'none';
+var dialogs = document.querySelectorAll('.dialog');
+for (var i=0; i<dialogs.length; i++) {
+	var dialog = dialogs[i]
+	
+	var btns = document.createElement('div');
+	btns.classList.add('dialog-buttons');
+	btns.innerHTML = '<input type="button" class="cancel" value="Cancel" /> <input type="button" class="ok" value="OK" />';
+	dialog.appendChild(btns)
+	
+	var hide = function() {
+		this.style.display = 'none';
+	}.bind(dialog);
+	
+	dialog.querySelector('.dialog-buttons input.cancel').addEventListener('click', hide);
+	dialog.querySelector('.dialog-buttons input.ok').addEventListener('click', hide);
+}
 
 
 var numeric = document.querySelectorAll('input.number[type="text"]');
