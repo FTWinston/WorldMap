@@ -3,6 +3,7 @@
 function MapView(root, data) {
 	this.data = data;
 	this.root = root;
+	this.cellClicked = null;
 	this._initialize();
 }
 
@@ -21,7 +22,6 @@ MapView.prototype = {
 		this.scrollPane.style.position = 'absolute';
 		
 		this.cellRadius = 30;
-		this.terrainBrush = null;
 		
 		this.scrollPane.onscroll = this.draw.bind(this);
 		this.scrollSize.onclick = this.clicked.bind(this);
@@ -96,23 +96,17 @@ MapView.prototype = {
 		if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
 			var cell = this.data.cells[cellIndex];
 			if (cell != null) {
-				this._cellClicked(cell);
+				if (this.cellClicked == null || !this.cellClicked(cell)) {
+					if (cell.selected === true)
+						cell.selected = undefined;
+					else
+						cell.selected = true;
+				}
+				this.draw();
 				return;
 			}
 		}
 	},
-	_cellClicked: function(cell) {
-		if (this.terrainBrush == null) {
-			if (cell.selected === true)
-				cell.selected = undefined;
-			else
-				cell.selected = true;
-		}
-		else
-			cell.type = this.terrainBrush;
-		
-        this.draw();
-    },
     _getCellIndexAtPoint: function(screenX, screenY) {
         var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
         var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
@@ -172,25 +166,5 @@ MapView.prototype = {
 	extractData: function() {
 		var json = data.saveToJSON();
 		window.open('data:text/json,' + encodeURIComponent(json));
-	},
-	drawCellTypes: function(element) {
-		var output = '';
-		
-		for (var i=0; i<this.data.cellTypes.length; i++) {
-			var type = this.data.cellTypes[i];
-			output += '<div class="brush" style="background-color: ' + type.color + '" data-number="' + i + '">' + type.name + '</div>';
-		}
-		
-		element.innerHTML = output;
-		element.onclick = function(e) {
-			var brush = element.querySelector('.selected');
-			if (brush != null)
-				brush.classList.remove('selected');
-			
-			brush = e.target;
-			brush.classList.add('selected');
-			var number = brush.getAttribute('data-number');
-			this.terrainBrush = this.data.cellTypes[number];
-		}.bind(this);
 	}
 };

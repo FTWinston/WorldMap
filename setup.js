@@ -27,18 +27,25 @@ function loadData(url) {
 	}
 	
 	$.getJSON(url, '', function (data) {
-		data = MapData.loadFromJSON(data);
-		map = new MapView(document.getElementById('mapRoot'), data);
+		editor.view.data = MapData.loadFromJSON(data);
+		editor.view.updateSize();
+		editor.drawCellTypes();
 	});
 }
 
-var data;
+var view = new MapView(document.getElementById('mapRoot'), new MapData(9, 9));
+var editor = new MapEditor(view);
+
 var queryUrl = getParameterByName('source');
 if (queryUrl != null)
-	data = loadData(queryUrl);	
-else
-	data = new MapData(9, 9);
-var map = new MapView(document.getElementById('mapRoot'), data);
+	loadData(queryUrl);	
+
+document.getElementById('modeSwitch').addEventListener('click', function() {
+	document.getElementById('editorRoot').classList.toggle('edit');
+	editor.view.updateSize();
+	return false;
+});
+
 /*
 document.getElementById('loadUrl').addEventListener('click', function() {
 	var url = document.getElementById('dataUrl').value;
@@ -46,49 +53,3 @@ document.getElementById('loadUrl').addEventListener('click', function() {
 	return false;
 });
 */
-document.getElementById('modeSwitch').addEventListener('click', function() {
-	document.getElementById('editorRoot').classList.toggle('edit');
-	map.updateSize();
-	return false;
-});
-
-document.getElementById('addBrushLink').addEventListener('click', function() {
-	document.getElementById('brushName').value = '';
-	document.getElementById('brushColor').value = '';
-	document.getElementById('brushEdit').style.display = '';
-	return false;
-});
-
-document.querySelector('#brushEdit .dialog-buttons .ok').addEventListener('click', function() {
-	var type = new CellType(document.getElementById('brushName').value, document.getElementById('brushColor').value);
-	map.data.cellTypes.push(type);
-	map.drawCellTypes(document.getElementById('brushList'));
-	return false;
-});
-
-var resizeWizard = new Wizard(document.getElementById('resize-wizard'), function (resize) {
-	var number = parseInt(resize.number);
-	if (resize.change != 'add')
-		number = -number;
-	
-	switch (resize.edge) {
-	case 'top':
-		map.data.changeHeight(number, false);
-		break;
-	case 'bottom':
-		map.data.changeHeight(number, true);
-		break;
-	case 'left':
-		map.data.changeWidth(number, false);
-		break;
-	case 'right':
-		map.data.changeWidth(number, true);
-		break;
-	}
-	map.updateSize();
-});
-
-document.getElementById('resizeLink').addEventListener('click', function() {
-	resizeWizard.show();
-	return false;
-});

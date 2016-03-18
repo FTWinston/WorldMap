@@ -51,14 +51,27 @@
 	min-width: 5em;
 	border: solid 1px grey;
 	text-align: center;
+	color: black;
+	text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white;
+	
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
 
 #brushList .brush.selected {
-	border-color: black;
+	color: white;
+	text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black;
 }
 
 #brushList .brush:hover {
 	text-decoration: underline;
+}
+
+#sidebar .terrain.tool::after {
+	content: "double-click to edit";
+	color: #ccc;
 }
 
 
