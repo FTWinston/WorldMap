@@ -24,7 +24,12 @@ MapView.prototype = {
 		this.cellRadius = 30;
 		
 		this.scrollPane.onscroll = this.draw.bind(this);
+		this.scrollPane.addEventListener('wheel', this.mouseScroll.bind(this));
+		this.scrollPane.ontouchstart = this.touchStart.bind(this);
+		this.scrollPane.ontouchend = this.touchEnd.bind(this);
+		this.scrollPane.ontouchmove = this.touchMove.bind(this);
 		this.scrollSize.onclick = this.clicked.bind(this);
+		
 		window.onresize = this.updateSize.bind(this);
 		
 		var scrollSize = this._getScrollbarSize();
@@ -90,6 +95,52 @@ MapView.prototype = {
 		this.scrollSize.style.height = overallHeight + 'px';
 		
 		this.draw();
+	},
+	mouseScroll: function(e) {
+		if (!e.ctrlKey)
+			return;
+		e.preventDefault();
+		
+		if (e.deltaY < 0)
+			this.zoomIn(1);
+		else if (e.deltaY > 0)
+			this.zoomOut(1);
+	},
+	touchStart: function(e) {
+		if (e.touches.length != 2) {
+			this.touchZoomDist = undefined;
+			return;
+		}
+		
+		var t1 = e.touches.item(0), t2 = e.touches.item(1);
+		this.touchZoomDist = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
+	},
+	touchEnd: function(e) {
+		this.touchZoomDist = undefined;
+	},
+	touchMove: function(e) {
+		if (e.touches.length != 2 || this.touchZoomDist === undefined)
+			return;
+		e.preventDefault();
+		
+		var t1 = e.touches.item(0), t2 = e.touches.item(1);
+		var distSq = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
+		
+		var diff = (distSq - this.touchZoomDist) * 0.0000002;
+		if (diff > 0)
+			this.zoomIn(diff);
+		else if (diff < 0)
+			this.zoomOut(-diff);
+		
+		this.touchZoomDist = distSq;
+	},
+	zoomIn: function(scale) {
+		this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + 0.1 * scale)));
+		this.updateSize();
+	},
+	zoomOut: function(scale) {
+		this.cellRadius = Math.max(5, Math.floor(this.cellRadius * (1 - 0.1 * scale)));
+		this.updateSize();
 	},
 	clicked: function(e) {
 		var cellIndex = this._getCellIndexAtPoint(e.clientX, e.clientY);
