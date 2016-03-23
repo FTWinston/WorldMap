@@ -24,6 +24,69 @@ MapCell.prototype = {
 	}
 }
 
+function CellGroup(map, size, startRow, startCol) {
+	this.map = map;
+	this.size = size;
+	this.startRow = startRow;
+	this.startCol = startCol;
+	
+	this.determineCells();
+}
+
+CellGroup.prototype = {
+	constructor: CellGroup,
+	determineCells: function() {
+		this.cells = [];
+		
+		var halfHeight = Math.ceil(this.size / 2);
+		var even = this.size % 2 == 0
+		
+		this._addHalfCells(false, even, halfHeight);
+		this._addHalfCells(true, even, halfHeight);
+		
+		// when map size changes, groups will need recalculated if:
+		// startX or startY < 0
+		// startX + this.size  >= old map width
+		// startY + this.size  >= old map height
+		
+		// when recalculating, dump links to all previous cells, and obtain them afresh.
+		// if there are no cells for a group, it should be removed.
+	},
+	_addHalfCells: function(downward, evenSize, halfHeight) {
+		for (var i = 0; i < halfHeight; i++) {
+			var row;
+			var rowStart = this.startCol;
+			var rowSize = this.size - i;
+			
+			// on the downward half, an even-sized cell needs to extend one further to the right, and one further down, than an odd-sized cell
+			if (downward) {
+				row = this.startRow + i;
+				if (evenSize)
+					row++;
+				else if (i == 0)
+					continue;
+			}
+			else {
+				row = this.startRow - i;
+				rowStart += i;
+			}
+			
+			if (row < 0 || row >= this.map.height)
+				continue;
+			
+			for (var j=0; j<rowSize; j++) {
+				var col = rowStart + j;
+				if (col < 0 || col >= this.map.width)
+					continue;
+				
+				var cell = this.map.cells[row * this.map.width + col];
+				if (cell != null)
+					this.cells.push(cell);
+			}
+		}
+	}
+}
+
 function MapData(width, height, createCells) {
 	this.width = width + Math.floor(height/2) - 1;
 	this.height = height;
@@ -187,6 +250,21 @@ MapData.prototype = {
 			var cell = this.cells[i];
 			cell.type = this.cellTypes[cell.type];
 		}
+	},
+	createCellGroups: function(size) {
+		var groups = [];
+		var halfSize = Math.ceil(size / 2);
+		var size15 = halfSize * 3;
+		
+		for (var row = 0; row<this.height; row += size)
+			for (var col = 0; col<this.width; col += size15) {
+				var group = new CellGroup(this, size, row, col + row);
+				
+				for (var i=0; i<group.cells.length; i++)
+					group.cells[i].selected = true;
+			}
+		
+		return groups;
 	}
 };
 
