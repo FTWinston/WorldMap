@@ -91,12 +91,16 @@ function MapData(width, height, createCells) {
 	this.width = width + Math.floor(height/2) - 1;
 	this.height = height;
 	this.cells = new Array(this.width * this.height);
-	this.cellTypes = [];	
+	this.cellTypes = [];
 	
 	if (createCells !== false) {	
 		for (var i=0; i<this.cells.length; i++)
 			if (this._shouldIndexHaveCell(i))
 				this.cells[i] = new MapCell(this, null);
+		
+		this.cellTypes.push(new CellType('red', '#ff0000'));
+		this.cellTypes.push(new CellType('green', '#00cc00'));
+		this.cellTypes.push(new CellType('blue', '#0099ff'));
 		
 		this._positionCells();
 	}
@@ -253,18 +257,34 @@ MapData.prototype = {
 	},
 	createCellGroups: function(size) {
 		var groups = [];
-		var halfSize = Math.ceil(size / 2);
-		var size15 = halfSize * 3;
 		
-		for (var row = 0; row<this.height; row += size)
-			for (var col = 0; col<this.width; col += size15) {
-				var group = new CellGroup(this, size, row, col + row);
-				
-				for (var i=0; i<group.cells.length; i++)
-					group.cells[i].selected = true;
-			}
+		var halfSize = Math.ceil(size / 2);
+		this._createCellGroupSet(size, -size + 1, -halfSize, this.cellTypes[0]);
+		//this._createCellGroupSet(size, 1, -halfSize * 2, this.cellTypes[1]);
+		//this._createCellGroupSet(size, -size + 2, -halfSize - size, this.cellTypes[2]);
 		
 		return groups;
+	},
+	_createCellGroupSet: function(size, startRow, startCol, cellType) {
+		var halfSize = Math.ceil(size / 2);		
+		var rowSpacing = size * 2;
+		var colSpacing = size + 1;
+		var rowOffset = -1, colOffset;
+		
+		for (var row = startRow; row<this.height; row += rowSpacing) {
+			var colOffset = 0;
+			for (var col = startCol + rowOffset; col<this.width; col += colSpacing) {
+				var group = new CellGroup(this, size, row + colOffset, col + row);
+				
+				if (cellType !== undefined)
+					for (var i=0; i<group.cells.length; i++)
+						group.cells[i].type = cellType;
+
+				colOffset ++;
+			}
+			
+			rowOffset -= 3;
+		}
 	}
 };
 
