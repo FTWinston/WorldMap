@@ -258,32 +258,32 @@ MapData.prototype = {
 	createCellGroups: function(size) {
 		var groups = [];
 		
-		var halfSize = Math.ceil(size / 2);
-		this._createCellGroupSet(size, -size + 1, -halfSize, this.cellTypes[0]);
-		//this._createCellGroupSet(size, 1, -halfSize * 2, this.cellTypes[1]);
-		//this._createCellGroupSet(size, -size + 2, -halfSize - size, this.cellTypes[2]);
+		var halfSizeUp = Math.ceil(size / 2);
+		var halfSizeDown = Math.floor(size / 2);
+		this._createCellGroupSet(size, -size + 1, -halfSizeUp - 1, this.cellTypes[0]);
+		this._createCellGroupSet(size, -halfSizeDown, -halfSizeUp * 3, this.cellTypes[1]);
+		this._createCellGroupSet(size, 1, -size - 2, this.cellTypes[2]);
 		
 		return groups;
 	},
 	_createCellGroupSet: function(size, startRow, startCol, cellType) {
-		var halfSize = Math.ceil(size / 2);		
-		var rowSpacing = size * 2;
-		var colSpacing = size + 1;
-		var rowOffset = -1, colOffset;
+		var rowSpacing = size + Math.ceil(size / 2);
+		var colSpacing = size + Math.floor(size / 2);
+		var colOffset = 0;
 		
 		for (var row = startRow; row<this.height; row += rowSpacing) {
-			var colOffset = 0;
-			for (var col = startCol + rowOffset; col<this.width; col += colSpacing) {
-				var group = new CellGroup(this, size, row + colOffset, col + row);
+			var rowOffset = 0;
+			for (var col = startCol + colOffset; col<this.width; col += colSpacing) {
+				var group = new CellGroup(this, size, row + rowOffset, col);
 				
 				if (cellType !== undefined)
 					for (var i=0; i<group.cells.length; i++)
 						group.cells[i].type = cellType;
 
-				colOffset ++;
+				rowOffset ++;
 			}
 			
-			rowOffset -= 3;
+			colOffset -= 1;
 		}
 	}
 };
