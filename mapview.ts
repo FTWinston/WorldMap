@@ -1,20 +1,23 @@
-"use strict";
+class MapView {
+    canvas: HTMLCanvasElement;
+    scrollPane: HTMLElement;
+    scrollSize: HTMLElement;
+    cellClicked: (MapCell) => void;
+    cellRadius: number;
+    scrollbarWidth: number;
+    scrollbarHeight: number;
+    touchZoomDist: number;
 
-function MapView(root, data) {
-	this.data = data;
-	this.root = root;
-	this.cellClicked = null;
-	this._initialize();
-}
-
-MapView.prototype = {
-	constructor: MapView,
-	_initialize: function() {
+    constructor(private readonly root: HTMLElement, public data: MapData) {
+	    this.cellClicked = null;
+	    this.initialize();
+    }
+	private initialize() {
 		this.root.classList.add('mapRoot');
 		this.root.innerHTML = '<canvas></canvas><div class="scrollPane"><div className="scrollSize" /></div>';
-		this.canvas = this.root.childNodes[0];
-		this.scrollPane = this.root.childNodes[1];
-		this.scrollSize = this.scrollPane.childNodes[0];
+		this.canvas = this.root.childNodes[0] as HTMLCanvasElement;
+		this.scrollPane = this.root.childNodes[1] as HTMLElement;
+		this.scrollSize = this.scrollPane.childNodes[0] as HTMLElement;
 		
 		this.canvas.style.pointerEvents = 'none';
 		this.scrollPane.style.overflow = 'scroll';
@@ -32,36 +35,35 @@ MapView.prototype = {
 		
 		window.onresize = this.updateSize.bind(this);
 		
-		var scrollSize = this._getScrollbarSize();
+		let scrollSize = this.getScrollbarSize();
 		this.scrollbarWidth = scrollSize.width;
 		this.scrollbarHeight = scrollSize.height;
 
 		this.updateSize();
-	},
-	draw: function() {
-		var ctx = this.canvas.getContext('2d');
+	}
+	draw() {
+		let ctx = this.canvas.getContext('2d');
         ctx.fillStyle = '#ccc';
         ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
         ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
 
-        var map = this.data;
-        for (var i=0; i<map.cells.length; i++) {
-            var cell = map.cells[i];
+        let map = this.data;
+        for (let cell of map.cells) {
             if (cell == null)
                 continue;
-            this._drawHex(ctx, cell, this.cellRadius);
+            this.drawHex(ctx, cell, this.cellRadius);
         }
 
         ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
-    },
-    _drawHex: function(ctx, cell, radius) {
+    }
+    drawHex(ctx: CanvasRenderingContext2D, cell: MapCell, radius: number) {
         ctx.beginPath();
         
-        var centerX = cell.xPos * radius + radius, centerY = cell.yPos * radius + radius;
+        let centerX = cell.xPos * radius + radius, centerY = cell.yPos * radius + radius;
         radius -= 0.4; // ensure there's always a 1px border drawn between cells
 
-        var angle, x, y;
-        for (var point = 0; point < 6; point++) {
+        let angle, x, y;
+        for (let point = 0; point < 6; point++) {
             angle = 2 * Math.PI / 6 * (point + 0.5);
             x = centerX + radius * Math.cos(angle);
             y = centerY + radius * Math.sin(angle);
@@ -74,29 +76,29 @@ MapView.prototype = {
 
 		if (cell.selected)
             ctx.fillStyle = '#fcc';
-		else if (cell.type == null)
+		else if (cell.cellType == null)
 			ctx.fillStyle = '#666';
 		else
-			ctx.fillStyle = cell.type.color;
+			ctx.fillStyle = cell.cellType.color;
 		
         ctx.fill();
-    },
-	updateSize: function() {
-		this.canvas.setAttribute('width', this.root.offsetWidth - this.scrollbarWidth);
-		this.canvas.setAttribute('height', this.root.offsetHeight - this.scrollbarHeight);
+    }
+	updateSize() {
+		this.canvas.setAttribute('width', (this.root.offsetWidth - this.scrollbarWidth).toString());
+		this.canvas.setAttribute('height', (this.root.offsetHeight - this.scrollbarHeight).toString());
 		
 		this.scrollPane.style.width = this.root.offsetWidth + 'px';
 		this.scrollPane.style.height = this.root.offsetHeight + 'px';
 		
-		var overallWidth = (this.data.maxX - this.data.minX) * this.cellRadius;
-		var overallHeight = (this.data.maxY - this.data.minY) * this.cellRadius;
+		let overallWidth = (this.data.maxX - this.data.minX) * this.cellRadius;
+		let overallHeight = (this.data.maxY - this.data.minY) * this.cellRadius;
 		
 		this.scrollSize.style.width = overallWidth + 'px';
 		this.scrollSize.style.height = overallHeight + 'px';
 		
 		this.draw();
-	},
-	mouseScroll: function(e) {
+	}
+	mouseScroll(e: MouseWheelEvent) {
 		if (!e.ctrlKey)
 			return;
 		e.preventDefault();
@@ -105,47 +107,47 @@ MapView.prototype = {
 			this.zoomIn(1);
 		else if (e.deltaY > 0)
 			this.zoomOut(1);
-	},
-	touchStart: function(e) {
+	}
+	touchStart(e: TouchEvent) {
 		if (e.touches.length != 2) {
 			this.touchZoomDist = undefined;
 			return;
 		}
 		
-		var t1 = e.touches.item(0), t2 = e.touches.item(1);
+		let t1 = e.touches.item(0), t2 = e.touches.item(1);
 		this.touchZoomDist = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
-	},
-	touchEnd: function(e) {
+	}
+	touchEnd(e: TouchEvent) {
 		this.touchZoomDist = undefined;
-	},
-	touchMove: function(e) {
+	}
+	touchMove(e: TouchEvent) {
 		if (e.touches.length != 2 || this.touchZoomDist === undefined)
 			return;
 		e.preventDefault();
 		
-		var t1 = e.touches.item(0), t2 = e.touches.item(1);
-		var distSq = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
+		let t1 = e.touches.item(0), t2 = e.touches.item(1);
+		let distSq = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
 		
-		var diff = (distSq - this.touchZoomDist) * 0.0000002;
+		let diff = (distSq - this.touchZoomDist) * 0.0000002;
 		if (diff > 0)
 			this.zoomIn(diff);
 		else if (diff < 0)
 			this.zoomOut(-diff);
 		
 		this.touchZoomDist = distSq;
-	},
-	zoomIn: function(scale) {
+	}
+	zoomIn(scale: number) {
 		this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + 0.1 * scale)));
 		this.updateSize();
-	},
-	zoomOut: function(scale) {
+	}
+	zoomOut(scale: number) {
 		this.cellRadius = Math.max(5, Math.floor(this.cellRadius * (1 - 0.1 * scale)));
 		this.updateSize();
-	},
-	clicked: function(e) {
-		var cellIndex = this._getCellIndexAtPoint(e.clientX, e.clientY);
+	}
+	clicked(e: MouseEvent) {
+		let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
 		if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
-			var cell = this.data.cells[cellIndex];
+			let cell = this.data.cells[cellIndex];
 			if (cell != null) {
 				if (this.cellClicked == null || !this.cellClicked(cell)) {
 					if (cell.selected === true)
@@ -157,21 +159,21 @@ MapView.prototype = {
 				return;
 			}
 		}
-	},
-    _getCellIndexAtPoint: function(screenX, screenY) {
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
-        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
-        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.cellRadius;
-        var fRow = mapY * 2 / 3 / this.cellRadius;
-        var fThirdCoord = - fCol - fRow;
+	}
+    private getCellIndexAtPoint(screenX: number, screenY: number) {
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
+        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.cellRadius;
+        let fRow = mapY * 2 / 3 / this.cellRadius;
+        let fThirdCoord = - fCol - fRow;
 
-        var rCol = Math.round(fCol);
-        var rRow = Math.round(fRow);
-        var rThird = Math.round(fThirdCoord);
+        let rCol = Math.round(fCol);
+        let rRow = Math.round(fRow);
+        let rThird = Math.round(fThirdCoord);
 
-        var colDiff = Math.abs(rCol - fCol);
-        var rowDiff = Math.abs(rRow - fRow);
-        var thirdDiff = Math.abs(rThird - fThirdCoord);
+        let colDiff = Math.abs(rCol - fCol);
+        let rowDiff = Math.abs(rRow - fRow);
+        let thirdDiff = Math.abs(rThird - fThirdCoord);
 
         if (colDiff >= rowDiff) {
             if (colDiff >= thirdDiff)
@@ -181,30 +183,30 @@ MapView.prototype = {
             rRow = - rCol - rThird;
 
         return rCol + rRow * this.data.width;
-    },
-	_getScrollbarSize: function() {
-        var outer = document.createElement("div");
-        outer.style.visibility = "hidden";
-        outer.style.width = "100px";
-        outer.style.height = "100px";
-        outer.style.msOverflowStyle = "scrollbar"; // needed for WinJS apps
+    }
+	private getScrollbarSize() {
+        let outer = document.createElement('div');
+        outer.style.visibility = 'hidden';
+        outer.style.width = '100px';
+        outer.style.height = '100px';
+        outer.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
 
         document.body.appendChild(outer);
 
-        var widthNoScroll = outer.offsetWidth;
-        var heightNoScroll = outer.offsetHeight;
+        let widthNoScroll = outer.offsetWidth;
+        let heightNoScroll = outer.offsetHeight;
 
         // force scrollbars
-        outer.style.overflow = "scroll";
+        outer.style.overflow = 'scroll';
 
         // add innerdiv
-        var inner = document.createElement("div");
-        inner.style.width = "100%";
-        inner.style.height = "100%";
+        let inner = document.createElement('div');
+        inner.style.width = '100%';
+        inner.style.height = '100%';
         outer.appendChild(inner);
 
-        var widthWithScroll = inner.offsetWidth;
-        var heightWithScroll = inner.offsetHeight;
+        let widthWithScroll = inner.offsetWidth;
+        let heightWithScroll = inner.offsetHeight;
 
         // remove divs
         outer.parentNode.removeChild(outer);
@@ -213,9 +215,9 @@ MapView.prototype = {
             width: widthNoScroll - widthWithScroll,
             height: heightNoScroll - heightWithScroll
         }
-    },
-	extractData: function() {
-		var json = data.saveToJSON();
+    }
+	extractData() {
+		let json = this.data.saveToJSON();
 		window.open('data:text/json,' + encodeURIComponent(json));
 	}
-};
+}
