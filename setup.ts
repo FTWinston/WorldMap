@@ -51,7 +51,7 @@ function loadData(url: string) {
     });
 }
 
-let view = new MapView(document.getElementById('mapRoot'), new MapData(9, 9));
+let view = new MapView(document.getElementById('mapRoot'), new MapData(500, 500));
 let editor = new MapEditor(view);
 
 let queryUrl = getParameterByName('source');

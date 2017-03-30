@@ -1,12 +1,14 @@
 class MapView {
-    canvas: HTMLCanvasElement;
-    scrollPane: HTMLElement;
-    scrollSize: HTMLElement;
+    private canvas: HTMLCanvasElement;
+    private scrollPane: HTMLElement;
+    private scrollSize: HTMLElement;
     cellClicked: (MapCell) => void;
-    cellRadius: number;
-    scrollbarWidth: number;
-    scrollbarHeight: number;
-    touchZoomDist: number;
+    private _cellRadius: number;
+    private cellCombinationScale: number;
+    private drawCellRadius: number;
+    private scrollbarWidth: number;
+    private scrollbarHeight: number;
+    private touchZoomDist: number;
 
     constructor(private readonly root: HTMLElement, public data: MapData) {
 	    this.cellClicked = null;
@@ -47,19 +49,37 @@ class MapView {
         ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
         ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
 
+        let minDrawX = this.scrollPane.scrollLeft - this.drawCellRadius;
+        let minDrawY = this.scrollPane.scrollTop  - this.drawCellRadius;
+        let maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + this.drawCellRadius;
+        let maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + this.drawCellRadius;
+
         let map = this.data;
         for (let cell of map.cells) {
             if (cell == null)
                 continue;
-            this.drawHex(ctx, cell, this.cellRadius);
+
+            if (cell.row % this.cellCombinationScale != 0)
+                continue;
+            if (cell.col % this.cellCombinationScale != 0)
+                continue;
+
+            let centerX = cell.xPos * this._cellRadius + this.drawCellRadius;
+            if (centerX < minDrawX || centerX > maxDrawX)
+                continue;
+
+            let centerY = cell.yPos * this._cellRadius + this.drawCellRadius;
+            if (centerY < minDrawY || centerY > maxDrawY)
+                continue;
+
+            this.drawHex(ctx, cell, centerX, centerY, this.drawCellRadius);
         }
 
         ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
     }
-    drawHex(ctx: CanvasRenderingContext2D, cell: MapCell, radius: number) {
+    private drawHex(ctx: CanvasRenderingContext2D, cell: MapCell, centerX: number, centerY: number, radius: number) {
         ctx.beginPath();
         
-        let centerX = cell.xPos * radius + radius, centerY = cell.yPos * radius + radius;
         radius -= 0.4; // ensure there's always a 1px border drawn between cells
 
         let angle, x, y;
@@ -83,6 +103,12 @@ class MapView {
 		
         ctx.fill();
     }
+    get cellRadius(): number { return this._cellRadius; }
+    set cellRadius(radius: number) {
+        this._cellRadius = radius;
+        this.cellCombinationScale = Math.max(1, Math.round(30 / radius));
+        this.drawCellRadius = radius * this.cellCombinationScale;
+    }
 	updateSize() {
 		this.canvas.setAttribute('width', (this.root.offsetWidth - this.scrollbarWidth).toString());
 		this.canvas.setAttribute('height', (this.root.offsetHeight - this.scrollbarHeight).toString());
@@ -90,15 +116,15 @@ class MapView {
 		this.scrollPane.style.width = this.root.offsetWidth + 'px';
 		this.scrollPane.style.height = this.root.offsetHeight + 'px';
 		
-		let overallWidth = (this.data.maxX - this.data.minX) * this.cellRadius;
-		let overallHeight = (this.data.maxY - this.data.minY) * this.cellRadius;
+		let overallWidth = (this.data.maxX - this.data.minX) * this._cellRadius;
+		let overallHeight = (this.data.maxY - this.data.minY) * this._cellRadius;
 		
 		this.scrollSize.style.width = overallWidth + 'px';
 		this.scrollSize.style.height = overallHeight + 'px';
 		
 		this.draw();
 	}
-	mouseScroll(e: MouseWheelEvent) {
+	private mouseScroll(e: MouseWheelEvent) {
 		if (!e.ctrlKey)
 			return;
 		e.preventDefault();
@@ -108,7 +134,7 @@ class MapView {
 		else if (e.deltaY > 0)
 			this.zoomOut(1);
 	}
-	touchStart(e: TouchEvent) {
+	private touchStart(e: TouchEvent) {
 		if (e.touches.length != 2) {
 			this.touchZoomDist = undefined;
 			return;
@@ -117,10 +143,10 @@ class MapView {
 		let t1 = e.touches.item(0), t2 = e.touches.item(1);
 		this.touchZoomDist = (t1.screenX-t2.screenX)*(t1.screenX-t2.screenX) + (t1.screenY-t2.screenY)*(t1.screenY-t2.screenY);
 	}
-	touchEnd(e: TouchEvent) {
+	private touchEnd(e: TouchEvent) {
 		this.touchZoomDist = undefined;
 	}
-	touchMove(e: TouchEvent) {
+	private touchMove(e: TouchEvent) {
 		if (e.touches.length != 2 || this.touchZoomDist === undefined)
 			return;
 		e.preventDefault();
@@ -136,15 +162,15 @@ class MapView {
 		
 		this.touchZoomDist = distSq;
 	}
-	zoomIn(scale: number) {
-		this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + 0.1 * scale)));
+	zoomIn(stepScale: number) {
+		this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + 0.1 * stepScale)));
 		this.updateSize();
 	}
-	zoomOut(scale: number) {
-		this.cellRadius = Math.max(5, Math.floor(this.cellRadius * (1 - 0.1 * scale)));
+	zoomOut(stepScale: number) {
+		this.cellRadius = Math.max(0.1, Math.floor(this.cellRadius * (1 - 0.1 * stepScale)));
 		this.updateSize();
 	}
-	clicked(e: MouseEvent) {
+	private clicked(e: MouseEvent) {
 		let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
 		if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
 			let cell = this.data.cells[cellIndex];
@@ -161,10 +187,10 @@ class MapView {
 		}
 	}
     private getCellIndexAtPoint(screenX: number, screenY: number) {
-        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this.cellRadius;
-        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this.cellRadius;
-        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.cellRadius;
-        let fRow = mapY * 2 / 3 / this.cellRadius;
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this._cellRadius;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this._cellRadius;
+        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this._cellRadius;
+        let fRow = mapY * 2 / 3 / this._cellRadius;
         let fThirdCoord = - fCol - fRow;
 
         let rCol = Math.round(fCol);
@@ -181,6 +207,8 @@ class MapView {
         }
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = - rCol - rThird;
+
+        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
 
         return rCol + rRow * this.data.width;
     }
