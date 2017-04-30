@@ -8,12 +8,12 @@ class MapEditor {
     private initialize() {
         this.view.cellClicked = this.cellClicked.bind(this);
         this.terrainBrush = null;
-        
+
         document.getElementById('addBrushLink').addEventListener('click', this.addBrushClicked.bind(this));
 
         this.brushList = document.getElementById('brushList');
         document.querySelector('#brushEdit .dialog-buttons .ok').addEventListener('click', this.brushEditConfirmed.bind(this));
-        
+
         this.drawCellTypes();
 
         let resizeWizard = new Wizard(document.getElementById('resize-wizard'), this.performResize.bind(this));
@@ -28,7 +28,7 @@ class MapEditor {
         let brush = this.brushList.querySelector('.selected');
         if (brush != null)
             brush.classList.remove('selected');
-            
+
         (document.getElementById('brushName') as HTMLInputElement).value = '';
         (document.getElementById('brushColor') as HTMLInputElement).value = '';
         document.getElementById('brushEdit').style.display = '';
@@ -37,18 +37,16 @@ class MapEditor {
     private brushEditConfirmed() {
         let name = (document.getElementById('brushName') as HTMLInputElement).value;
         let color = (document.getElementById('brushColor') as HTMLInputElement).value;
-            
-        if (this.terrainBrush == null)
-        {
+
+        if (this.terrainBrush == null) {
             let type = new CellType(name, color);
             this.view.data.cellTypes.push(type);
         }
-        else
-        {
+        else {
             this.terrainBrush.name = name;
             this.terrainBrush.color = color;
         }
-            
+
         this.terrainBrush = null;
         this.drawCellTypes();
         return false;
@@ -57,20 +55,20 @@ class MapEditor {
         let number = parseInt(resize.number);
         if (resize.change != 'add')
             number = -number;
-            
+
         switch (resize.edge) {
-        case 'top':
-            this.view.data.changeHeight(number, false);
-            break;
-        case 'bottom':
-            this.view.data.changeHeight(number, true);
-            break;
-        case 'left':
-            this.view.data.changeWidth(number, false);
-            break;
-        case 'right':
-            this.view.data.changeWidth(number, true);
-            break;
+            case 'top':
+                this.view.data.changeHeight(number, false);
+                break;
+            case 'bottom':
+                this.view.data.changeHeight(number, true);
+                break;
+            case 'left':
+                this.view.data.changeWidth(number, false);
+                break;
+            case 'right':
+                this.view.data.changeWidth(number, true);
+                break;
         }
         this.view.updateSize();
     }
@@ -83,12 +81,12 @@ class MapEditor {
     }
     drawCellTypes() {
         let output = '';
-        
-        for (let i=0; i<this.view.data.cellTypes.length; i++) {
+
+        for (let i = 0; i < this.view.data.cellTypes.length; i++) {
             let type = this.view.data.cellTypes[i];
             output += '<div class="brush" style="background-color: ' + type.color + '" data-number="' + i + '">' + type.name + '</div>';
         }
-        
+
         this.brushList.innerHTML = output;
         this.brushList.onclick = this.brushListClicked.bind(this);
         this.brushList.ondblclick = this.brushListDoubleClicked.bind(this);
@@ -98,19 +96,19 @@ class MapEditor {
         let number = brush.getAttribute('data-number');
         if (number == null)
             return false;
-            
+
         brush = this.brushList.querySelector('.selected') as HTMLElement;
         if (brush != null)
             brush.classList.remove('selected');
         brush = e.target as HTMLElement;
-            
+
         brush.classList.add('selected');
         this.terrainBrush = this.view.data.cellTypes[number];
     }
     private brushListDoubleClicked(e: MouseEvent) {
         if (this.brushList.onclick(e) === false)
             return;
-    
+
         (document.getElementById('brushName') as HTMLInputElement).value = this.terrainBrush.name;
         (document.getElementById('brushColor') as HTMLInputElement).value = this.terrainBrush.color;
         document.getElementById('brushEdit').style.display = '';

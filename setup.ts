@@ -15,13 +15,13 @@ function get(url: string, callback: (string) => void, contentType: string = null
     if (contentType !== null)
         req.setRequestHeader('Content-Type', contentType);
 
-    req.onload = function() {
+    req.onload = function () {
         if (req.status == 200)
             callback(req.response);
         else
             console.error(Error(req.statusText));
     };
-    req.onerror = function() {
+    req.onerror = function () {
         console.error(Error('Network error'));
     };
 
@@ -29,25 +29,25 @@ function get(url: string, callback: (string) => void, contentType: string = null
 }
 
 function loadData(url: string) {
-	url = url.replace('gist.github.com', 'gist.githubusercontent.com');
-	
-	if (url.indexOf('gist.githubusercontent.com') != -1 ) {
-		if (url.charAt(url.length - 1) != '/')
-			url += '/';
-		
-		let suffix = 'raw/';
-		if (url.substr(-suffix.length) !== suffix)
-			url += 'raw';
-	}
-	
-	if (url.indexOf('://') == -1) {
-		url = 'http://' + url;
-	}
-	
-    get(url, function(data) {
+    url = url.replace('gist.github.com', 'gist.githubusercontent.com');
+
+    if (url.indexOf('gist.githubusercontent.com') != -1) {
+        if (url.charAt(url.length - 1) != '/')
+            url += '/';
+
+        let suffix = 'raw/';
+        if (url.substr(-suffix.length) !== suffix)
+            url += 'raw';
+    }
+
+    if (url.indexOf('://') == -1) {
+        url = 'http://' + url;
+    }
+
+    get(url, function (data) {
         editor.view.data = MapData.loadFromJSON(data);
-		editor.view.updateSize();
-		editor.drawCellTypes();
+        editor.view.updateSize();
+        editor.drawCellTypes();
     });
 }
 
@@ -56,12 +56,12 @@ let editor = new MapEditor(view);
 
 let queryUrl = getParameterByName('source');
 if (queryUrl != null)
-	loadData(queryUrl);	
+    loadData(queryUrl);
 
-document.getElementById('modeSwitch').addEventListener('click', function() {
-	document.getElementById('editorRoot').classList.toggle('edit');
-	editor.view.updateSize();
-	return false;
+document.getElementById('modeSwitch').addEventListener('click', function () {
+    document.getElementById('editorRoot').classList.toggle('edit');
+    editor.view.updateSize();
+    return false;
 });
 
 /*
