@@ -59,8 +59,8 @@ class MapView {
 
         ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
     }
-    private drawCells(ctx: CanvasRenderingContext2D, cellLengthScale: number, outline: boolean) {
-        let drawCellRadius = this.cellRadius * cellLengthScale;
+    private drawCells(ctx: CanvasRenderingContext2D, cellDrawInterval: number, outline: boolean) {
+        let drawCellRadius = this.cellRadius * cellDrawInterval;
         let minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
         let minDrawY = this.scrollPane.scrollTop - drawCellRadius;
         let maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
@@ -72,9 +72,11 @@ class MapView {
             if (cell == null)
                 continue;
 
-            if (cell.row % cellLengthScale != 0)
+            if (this.getCellDisplayY(cell) % cellDrawInterval != cellDrawInterval - 1)
                 continue;
-            if (cell.col % cellLengthScale != 0)
+
+            var alternateRow = cell.row % (2 * cellDrawInterval) == 0 ? Math.floor(cellDrawInterval / 2) : 0;
+            if ((this.getCellDisplayX(cell) + alternateRow) % cellDrawInterval != cellDrawInterval - 1)
                 continue;
 
             let centerX = cell.xPos * this.cellRadius + this.cellRadius;
@@ -122,15 +124,19 @@ class MapView {
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-
-        let displayX = cell.col + 2 + Math.floor((cell.row - this.data.height) / 2);
-        let displayY = cell.row + 1;
-        ctx.fillText(displayX + ', ' + displayY, centerX, centerY);
+        
+        ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
+    }
+    private getCellDisplayX(cell: MapCell) {
+        return cell.col + 2 + Math.floor((cell.row - this.data.height) / 2);
+    }
+    private getCellDisplayY(cell: MapCell) {
+        return cell.row + 1;
     }
     get cellRadius(): number { return this._cellRadius; }
     set cellRadius(radius: number) {
         this._cellRadius = radius;
-        this.cellDrawInterval = Math.max(1, Math.round(30 / radius));
+        this.cellDrawInterval = Math.max(1, Math.round(30 / radius)); // TODO: this should always be a power of 2
     }
     updateSize() {
         this.canvas.setAttribute('width', (this.root.offsetWidth - this.scrollbarWidth).toString());

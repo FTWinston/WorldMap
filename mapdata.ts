@@ -14,7 +14,7 @@ class MapCell {
         this.selected = false;
     }
 }
-
+/*
 class CellGroup {
     cells: MapCell[];
     constructor(readonly map: MapData, readonly size: number, readonly startRow: number, readonly startCol: number) {
@@ -71,7 +71,7 @@ class CellGroup {
         }
     }
 }
-
+*/
 class MapData {
     width: number;
     height: number;
@@ -241,6 +241,7 @@ class MapData {
         for (let cell of this.cells)
             cell.cellType = this.cellTypes[cell.typeID];
     }
+    /*
     createCellGroups(size: number) {
         let groups = [];
 
@@ -272,6 +273,7 @@ class MapData {
             colOffset -= 1;
         }
     }
+    */
     static loadFromJSON(json: any) {
         let map = new MapData(json.width, json.height, false);
 
