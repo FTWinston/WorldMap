@@ -67,16 +67,17 @@ class MapView {
         let maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
 
         let map = this.data;
+        var halfInterval = Math.ceil(cellDrawInterval / 2);
 
         for (let cell of map.cells) {
             if (cell == null)
                 continue;
 
-            if (this.getCellDisplayY(cell) % cellDrawInterval != cellDrawInterval - 1)
+            if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
                 continue;
 
-            var alternateRow = cell.row % (2 * cellDrawInterval) == 0 ? Math.floor(cellDrawInterval / 2) : 0;
-            if ((this.getCellDisplayX(cell) + alternateRow) % cellDrawInterval != cellDrawInterval - 1)
+            var alternateRow = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
+            if ((this.getCellDisplayX(cell) + alternateRow) % cellDrawInterval != 0)
                 continue;
 
             let centerX = cell.xPos * this.cellRadius + this.cellRadius;
@@ -136,7 +137,17 @@ class MapView {
     get cellRadius(): number { return this._cellRadius; }
     set cellRadius(radius: number) {
         this._cellRadius = radius;
-        this.cellDrawInterval = Math.max(1, Math.round(30 / radius)); // TODO: this should always be a power of 2
+        
+        let displayRadius = radius;
+        let cellDrawInterval = 1;
+        let minRadius = 20;
+
+        while (displayRadius < minRadius) {
+            displayRadius *= 2;
+            cellDrawInterval *= 2;
+        }
+
+        this.cellDrawInterval = cellDrawInterval;
     }
     updateSize() {
         this.canvas.setAttribute('width', (this.root.offsetWidth - this.scrollbarWidth).toString());
