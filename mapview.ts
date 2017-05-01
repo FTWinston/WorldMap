@@ -161,8 +161,16 @@ class MapView {
         this.cellDrawInterval = cellDrawInterval;
     }
     updateSize() {
-        this.canvas.setAttribute('width', (this.root.offsetWidth - this.scrollbarWidth).toString());
-        this.canvas.setAttribute('height', (this.root.offsetHeight - this.scrollbarHeight).toString());
+        let viewWidth = this.root.offsetWidth - this.scrollbarWidth;
+        let viewHeight = this.root.offsetHeight - this.scrollbarHeight;
+        let halfWidth = viewWidth / 2, halfHeight = viewHeight / 2;
+
+        let scrollBounds = this.scrollSize.getBoundingClientRect();
+        let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + halfWidth) / scrollBounds.width;
+        let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + halfHeight) / scrollBounds.height;
+
+        this.canvas.setAttribute('width', viewWidth.toString());
+        this.canvas.setAttribute('height', viewHeight.toString());
 
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
@@ -172,6 +180,9 @@ class MapView {
 
         this.scrollSize.style.width = overallWidth + 'px';
         this.scrollSize.style.height = overallHeight + 'px';
+
+        this.scrollPane.scrollLeft = scrollFractionX * overallWidth - halfWidth;
+        this.scrollPane.scrollTop = scrollFractionY * overallHeight - halfHeight;
 
         this.draw();
     }
