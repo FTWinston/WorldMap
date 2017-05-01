@@ -8,6 +8,7 @@ class MapView {
     private scrollbarWidth: number;
     private scrollbarHeight: number;
     private touchZoomDist: number;
+    private backgroundColor: string = '#ccc';
 
     constructor(private readonly root: HTMLElement, public data: MapData) {
         this.cellClicked = null;
@@ -44,23 +45,30 @@ class MapView {
     }
     draw() {
         let ctx = this.canvas.getContext('2d');
-        ctx.fillStyle = '#ccc';
+        ctx.fillStyle = this.backgroundColor;
         ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
         ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
 
-        this.drawCells(ctx, this.cellDrawInterval, false);
+        let twoLevels = this.cellRadius < 40;
 
-        if (this.cellRadius < 40) {
-            // faint outline of next zoom level
-            ctx.globalAlpha = 0.5;
-            this.drawCells(ctx, this.cellDrawInterval * 2, true);
-            ctx.globalAlpha = 1;
+        this.drawCells(ctx, this.cellDrawInterval, !twoLevels, true, !twoLevels, !twoLevels);
+
+        if (twoLevels) {
+            // outline of next zoom level
+            this.drawCells(ctx, this.cellDrawInterval * 2, true, false, true, true);
         }
 
         ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
     }
-    private drawCells(ctx: CanvasRenderingContext2D, cellDrawInterval: number, outline: boolean) {
+    private drawCells(ctx: CanvasRenderingContext2D, cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
         let drawCellRadius = this.cellRadius * cellDrawInterval;
+
+        if (fillContent)
+            if (outline)
+                drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
+            else
+                ;//drawCellRadius += 0.4; // overlap cells slightly so there's no gap
+
         let minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
         let minDrawY = this.scrollPane.scrollTop - drawCellRadius;
         let maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
@@ -68,6 +76,7 @@ class MapView {
 
         let map = this.data;
         var halfInterval = Math.ceil(cellDrawInterval / 2);
+        let xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
 
         for (let cell of map.cells) {
             if (cell == null)
@@ -76,8 +85,8 @@ class MapView {
             if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
                 continue;
 
-            var alternateRow = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
-            if ((this.getCellDisplayX(cell) + alternateRow) % cellDrawInterval != 0)
+            var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
+            if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
                 continue;
 
             let centerX = cell.xPos * this.cellRadius + this.cellRadius;
@@ -88,13 +97,11 @@ class MapView {
             if (centerY < minDrawY || centerY > maxDrawY)
                 continue;
 
-            this.drawCell(ctx, cell, centerX, centerY, drawCellRadius, outline);
+            this.drawCell(ctx, cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
         }
     }
-    private drawCell(ctx: CanvasRenderingContext2D, cell: MapCell, centerX: number, centerY: number, radius: number, outline: boolean) {
+    private drawCell(ctx: CanvasRenderingContext2D, cell: MapCell, centerX: number, centerY: number, radius: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
         ctx.beginPath();
-
-        radius -= 0.4; // ensure there's always a 1px border drawn between cells
 
         let angle, x, y;
         for (let point = 0; point < 6; point++) {
@@ -109,24 +116,28 @@ class MapView {
         }
 
         if (outline) {
-            ctx.strokeStyle = '#0f0';
+            ctx.strokeStyle = this.backgroundColor;
             ctx.stroke();
-            return;
         }
-        else if (cell.selected)
-            ctx.fillStyle = '#fcc';
-        else if (cell.cellType == null)
-            ctx.fillStyle = '#666';
-        else
-            ctx.fillStyle = cell.cellType.color;
 
-        ctx.fill();
+        if (fillContent || (cell.selected && showSelection)) {
+            if (cell.selected)
+                ctx.fillStyle = '#fcc';
+            else if (cell.cellType == null)
+                ctx.fillStyle = '#666';
+            else
+                ctx.fillStyle = cell.cellType.color;
 
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
+            ctx.fill();
+        }
+
+        if (writeCoords) {
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
+        }
     }
     private getCellDisplayX(cell: MapCell) {
         return cell.col + 2 + Math.floor((cell.row - this.data.height) / 2);
