@@ -9,6 +9,8 @@ class MapView {
     private scrollbarHeight: number;
     private touchZoomDist: number;
     private backgroundColor: string = '#ccc';
+    private mouseX?: number;
+    private mouseY?: number;
 
     constructor(private readonly root: HTMLElement, public data: MapData) {
         this.cellClicked = null;
@@ -16,10 +18,17 @@ class MapView {
     }
     private initialize() {
         this.root.classList.add('mapRoot');
-        this.root.innerHTML = '<canvas></canvas><div class="scrollPane"><div className="scrollSize" /></div>';
-        this.canvas = this.root.childNodes[0] as HTMLCanvasElement;
-        this.scrollPane = this.root.childNodes[1] as HTMLElement;
-        this.scrollSize = this.scrollPane.childNodes[0] as HTMLElement;
+
+        this.canvas = document.createElement('canvas');
+        this.root.appendChild(this.canvas);
+
+        this.scrollPane = document.createElement('div');
+        this.scrollPane.classList.add('scrollPane');
+        this.root.appendChild(this.scrollPane);
+
+        this.scrollSize = document.createElement('div');
+        this.scrollSize.classList.add('scrollSize');
+        this.scrollPane.appendChild(this.scrollSize);
 
         this.canvas.style.pointerEvents = 'none';
         this.scrollPane.style.overflow = 'scroll';
@@ -33,6 +42,8 @@ class MapView {
         this.scrollPane.ontouchstart = this.touchStart.bind(this);
         this.scrollPane.ontouchend = this.touchEnd.bind(this);
         this.scrollPane.ontouchmove = this.touchMove.bind(this);
+        this.scrollPane.onmousemove = this.mouseMove.bind(this);
+        this.scrollPane.onmouseenter = this.mouseMove.bind(this);
         this.scrollSize.onclick = this.clicked.bind(this);
 
         window.onresize = this.updateSize.bind(this);
@@ -163,11 +174,13 @@ class MapView {
     updateSize() {
         let viewWidth = this.root.offsetWidth - this.scrollbarWidth;
         let viewHeight = this.root.offsetHeight - this.scrollbarHeight;
-        let halfWidth = viewWidth / 2, halfHeight = viewHeight / 2;
+        
+        let screenFocusX = this.mouseX !== null ? this.mouseX : viewWidth / 2;
+        let screenFocusY = this.mouseY !== null ? this.mouseY : viewHeight / 2;
 
         let scrollBounds = this.scrollSize.getBoundingClientRect();
-        let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + halfWidth) / scrollBounds.width;
-        let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + halfHeight) / scrollBounds.height;
+        let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
+        let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
 
         this.canvas.setAttribute('width', viewWidth.toString());
         this.canvas.setAttribute('height', viewHeight.toString());
@@ -181,8 +194,8 @@ class MapView {
         this.scrollSize.style.width = overallWidth + 'px';
         this.scrollSize.style.height = overallHeight + 'px';
 
-        this.scrollPane.scrollLeft = scrollFractionX * overallWidth - halfWidth;
-        this.scrollPane.scrollTop = scrollFractionY * overallHeight - halfHeight;
+        this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
+        this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
 
         this.draw();
     }
@@ -192,9 +205,9 @@ class MapView {
         e.preventDefault();
 
         if (e.deltaY < 0)
-            this.zoomIn(1);
+            this.zoomIn(0.1);
         else if (e.deltaY > 0)
-            this.zoomOut(1);
+            this.zoomOut(0.1);
     }
     private touchStart(e: TouchEvent) {
         if (e.touches.length != 2) {
@@ -225,12 +238,16 @@ class MapView {
         this.touchZoomDist = distSq;
     }
     zoomIn(stepScale: number) {
-        this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + 0.1 * stepScale)));
+        this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + stepScale)));
         this.updateSize();
     }
     zoomOut(stepScale: number) {
-        this.cellRadius = Math.max(0.1, Math.floor(this.cellRadius * (1 - 0.1 * stepScale)));
+        this.cellRadius = Math.max(0.1, Math.floor(this.cellRadius * (1 - stepScale)));
         this.updateSize();
+    }
+    private mouseMove(e: MouseEvent) {
+        this.mouseX = e.clientX;
+        this.mouseY = e.clientY;
     }
     private clicked(e: MouseEvent) {
         let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
