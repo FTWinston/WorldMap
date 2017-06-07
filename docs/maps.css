@@ -1,52 +1,91 @@
-#editorRoot {
+#worldRoot {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: rows;
   justify-content: space-between;
   align-content: stretch; }
-  #editorRoot #mapWrapper {
+  #worldRoot #mapRoot {
+    flex-shrink: 1;
+    flex-grow: 1; }
+  #worldRoot #editorControls {
+    flex-shrink: 0;
+    flex-grow: 0; }
+  #worldRoot #editor {
+    z-index: 1;
+    flex-shrink: 0;
+    flex-grow: 0;
+    transition: width 1.5s;
+    width: 14em;
+    background-color: grey; }
+    #worldRoot #editor.hidden {
+      width: 0; }
+
+#editorControls {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-content: stretch; }
+  #editorControls button {
+    z-index: 2;
+    font-size: 1.25em;
+    background-color: lightgray;
+    border: solid black 1px;
+    border-top-left-radius: 0.5em;
+    border-bottom-left-radius: 0.5em;
+    padding: 0.25em;
+    transition: margin-left 0.5s, background-color 0.25s, border-right-color 0.25s;
+    cursor: pointer;
+    text-align: left; }
+    #editorControls button.active {
+      background-color: grey;
+      border-right-color: grey;
+      flex-shrink: 0; }
+    #editorControls button:focus {
+      outline: none;
+      margin-left: -0.75em; }
+  #editorControls button, #editorControls button > span {
+    writing-mode: vertical-rl;
+    -ms-writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl; }
+    #editorControls button:hover, #editorControls button > span:hover {
+      text-decoration: underline; }
+  #editorControls .filler {
     flex-grow: 1;
     flex-shrink: 1;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-content: stretch; }
-    #editorRoot #mapWrapper #mapRoot {
-      flex-grow: 1;
-      flex-shrink: 1; }
-    #editorRoot #mapWrapper #sidebar {
-      flex-grow: 0;
-      flex-shrink: 1; }
-  #editorRoot #footer {
-    flex-grow: 0;
-    flex-shrink: 0; }
+    border-right: solid black 1px; }
 
+#mapRoot {
+  overflow: hidden; }
+  #mapRoot canvas {
+    pointer-events: none;
+    position: absolute; }
+  #mapRoot .scrollPane {
+    overflow: scroll;
+    position: absolute; }
+
+/*
+// map editing
 #sidebar {
-  display: none; }
+    .tool {
+      border: solid 1px grey;
+      border-radius: 0.5em;
+      padding: 0.5em;
+      margin: 0.5em 0;
 
-.edit #sidebar {
-  display: initial; }
+      &::before {
+        content: attr(data-title);
+      }
 
-.edit #modeSwitch::after {
-  content: "switch to display mode"; }
-
-#modeSwitch::after {
-  content: "switch to edit mode"; }
-
-#sidebar .tool {
-  border: solid 1px grey;
-  border-radius: 0.5em;
-  padding: 0.5em;
-  margin: 0.5em 0; }
-  #sidebar .tool::before {
-    content: attr(data-title); }
-  #sidebar .tool.terrain::after {
-    content: "double-click to edit";
-    color: #ccc; }
+      &.terrain::after {
+        content: "double-click to edit";
+        color: #ccc;
+      }
+    }
+}
 
 #brushList .brush {
   cursor: pointer;
@@ -58,16 +97,23 @@
   text-align: center;
   color: black;
   text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white;
+
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  user-select: none; }
-  #brushList .brush.selected {
-    color: white;
-    text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black; }
-  #brushList .brush:hover {
-    text-decoration: underline; }
+  user-select: none;
 
+  &.selected {
+    color: white;
+    text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black;
+  }
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+
+// popups
 .dialog {
   position: fixed;
   margin: 0 auto;
@@ -78,14 +124,24 @@
   background-color: white;
   border: solid 1px grey;
   border-radius: 0.5em;
-  padding: 0 0.5em 0.5em 0.5em; }
-  .dialog .dialog-buttons {
-    margin-top: 1em; }
+  padding: 0 0.5em 0.5em 0.5em;
 
-.wizard .step li {
-  cursor: pointer; }
-  .wizard .step li:hover {
-    text-decoration: underline; }
+  .dialog-buttons {
+    margin-top: 1em;
+  }
+}
 
-.wizard .step.done li:not(.selected) {
-  color: #ccc; }
+.wizard .step {
+  li {
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &.done li:not(.selected) {
+    color: #ccc;
+  }
+}
+*/

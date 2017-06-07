@@ -2,6 +2,7 @@
     "compilerOptions": {
         "target": "es5",
         "module": "none",
+        "jsx": "react",
         "sourceMap": true,
         "outFile": "docs/maps.js",
         "noImplicitAny": true,
@@ -13,10 +14,21 @@
         ]
     },
     "files": [
-        "ui.ts",
-        "editor.ts",
-        "mapdata.ts",
-        "mapview.ts",
-        "setup.ts"
+        "typings/react.d.ts",
+        "typings/react-dom.d.ts",
+        "typings/react-global.d.ts",
+
+//        "ui.ts",
+//        "editor.ts",
+//        "setup.ts",
+
+        "editors/TerrainEditor.tsx",
+        "editors/LinesEditor.tsx",
+        "editors/LocationsEditor.tsx",
+
+        "MapData.ts",
+        "MapView.tsx",
+        "EditorControls.tsx",
+        "WorldMap.tsx"
     ]
 }

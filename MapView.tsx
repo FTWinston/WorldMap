@@ -1,78 +1,96 @@
-class MapView {
+interface IMapViewProps {
+    map: MapData;
+    cellClicked?: (cell: MapCell) => void
+}
+
+interface IMapViewState {
+    cellRadius: number;
+    cellDrawInterval: number;
+    scrollbarWidth: number;
+    scrollbarHeight: number;
+}
+
+class MapView extends React.Component<IMapViewProps, IMapViewState> { 
+    private root: HTMLElement;
     private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
     private scrollPane: HTMLElement;
     private scrollSize: HTMLElement;
-    cellClicked?: (cell: MapCell) => void;
-    private _cellRadius: number;
-    private cellDrawInterval: number;
-    private scrollbarWidth: number;
-    private scrollbarHeight: number;
     private touchZoomDist?: number;
-    private backgroundColor: string = '#ccc';
+
+    private readonly backgroundColor: string = '#ccc';
     private mouseX?: number;
     private mouseY?: number;
 
-    constructor(private readonly root: HTMLElement, public data: MapData) {
-        this.cellClicked = undefined;
-        this.initialize();
-    }
-    private initialize() {
-        this.root.classList.add('mapRoot');
-
-        this.canvas = document.createElement('canvas');
-        this.root.appendChild(this.canvas);
-
-        this.scrollPane = document.createElement('div');
-        this.scrollPane.classList.add('scrollPane');
-        this.root.appendChild(this.scrollPane);
-
-        this.scrollSize = document.createElement('div');
-        this.scrollSize.classList.add('scrollSize');
-        this.scrollPane.appendChild(this.scrollSize);
-
-        this.canvas.style.pointerEvents = 'none';
-        this.scrollPane.style.overflow = 'scroll';
-        this.canvas.style.position = 'absolute';
-        this.scrollPane.style.position = 'absolute';
-
-        this.cellRadius = 30;
-
-        this.scrollPane.onscroll = this.draw.bind(this);
-        this.scrollPane.addEventListener('wheel', this.mouseScroll.bind(this));
-        this.scrollPane.ontouchstart = this.touchStart.bind(this);
-        this.scrollPane.ontouchend = this.touchEnd.bind(this);
-        this.scrollPane.ontouchmove = this.touchMove.bind(this);
-        this.scrollPane.onmousemove = this.mouseMove.bind(this);
-        this.scrollPane.onmouseenter = this.mouseMove.bind(this);
-        this.scrollSize.onclick = this.clicked.bind(this);
-
-        window.onresize = this.updateSize.bind(this);
+    constructor(props: IMapViewProps) {
+        super(props);
 
         let scrollSize = this.getScrollbarSize();
-        this.scrollbarWidth = scrollSize.width;
-        this.scrollbarHeight = scrollSize.height;
 
-        this.updateSize();
+        this.state = {
+            cellRadius: 30,
+            cellDrawInterval: 2,
+            scrollbarWidth: scrollSize.width,
+            scrollbarHeight: scrollSize.height,
+        };
     }
-    draw() {
-        let ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
-        ctx.fillStyle = this.backgroundColor;
-        ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
-        ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+    componentDidMount() {
+        window.addEventListener('resize', this.resize.bind(this));
+        
+        let ctx = this.canvas.getContext('2d');
+        if (ctx !== null)
+            this.ctx = ctx;
 
-        let twoLevels = this.cellRadius < 40;
+        this.resize();
+    }
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.resize.bind(this));
+    }
+    render() {
+        return <div id="mapRoot" ref={(c) => this.root = c}>
+            <canvas ref={(c) => this.canvas = c}></canvas>
+            <div ref={(c) => this.scrollPane = c} className="scrollPane"
+                onScroll={this.redraw.bind(this)}
+                onWheel={this.mouseScroll.bind(this)}
+                onTouchStart={this.touchStart.bind(this)}
+                onTouchEnd={this.touchEnd.bind(this)}
+                onTouchMove={this.touchMove.bind(this)}
+                onMouseMove={this.mouseMove.bind(this)}
+                onMouseEnter={this.mouseMove.bind(this)}
+                onClick={this.clicked.bind(this)}>
+                    <div ref={(c) => this.scrollSize = c} className="scrollSize" />
+            </div>
+        </div>;
+    }
 
-        this.drawCells(ctx, this.cellDrawInterval, !twoLevels, true, !twoLevels, !twoLevels);
+    private redrawing: boolean = false;
+    public redraw() {
+        if (this.redrawing)
+            return;
+        requestAnimationFrame(this.draw.bind(this));
+        this.redrawing = true;
+    }
+
+    private draw() {
+        this.ctx.fillStyle = this.backgroundColor;
+        this.ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
+        this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+
+        let twoLevels = this.state.cellRadius < 40;
+        let drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
+
+        this.drawCells(drawInterval, !twoLevels, true, !twoLevels, !twoLevels);
 
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(ctx, this.cellDrawInterval * 2, true, false, true, true);
+            this.drawCells(drawInterval * 2, true, false, true, true);
         }
 
-        ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        this.redrawing = false;
     }
-    private drawCells(ctx: CanvasRenderingContext2D, cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
-        let drawCellRadius = this.cellRadius * cellDrawInterval;
+    private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+        let drawCellRadius = this.state.cellRadius * cellDrawInterval;
 
         if (fillContent)
             if (outline)
@@ -85,7 +103,8 @@ class MapView {
         let maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
         let maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
 
-        let map = this.data;
+        let map = this.props.map;
+        let cellRadius = this.state.cellRadius;
         var halfInterval = Math.ceil(cellDrawInterval / 2);
         let xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
 
@@ -100,18 +119,19 @@ class MapView {
             if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
                 continue;
 
-            let centerX = cell.xPos * this.cellRadius + this.cellRadius;
+            let centerX = cell.xPos * cellRadius + cellRadius;
             if (centerX < minDrawX || centerX > maxDrawX)
                 continue;
 
-            let centerY = cell.yPos * this.cellRadius + this.cellRadius;
+            let centerY = cell.yPos * cellRadius + cellRadius;
             if (centerY < minDrawY || centerY > maxDrawY)
                 continue;
 
-            this.drawCell(ctx, cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
+            this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
         }
     }
-    private drawCell(ctx: CanvasRenderingContext2D, cell: MapCell, centerX: number, centerY: number, radius: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+    private drawCell(cell: MapCell, centerX: number, centerY: number, radius: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+        let ctx = this.ctx;
         ctx.beginPath();
 
         let angle, x, y;
@@ -151,29 +171,23 @@ class MapView {
         }
     }
     private getCellDisplayX(cell: MapCell) {
-        return cell.col + 2 + Math.floor((cell.row - this.data.height) / 2);
+        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
     }
     private getCellDisplayY(cell: MapCell) {
         return cell.row + 1;
     }
-    get cellRadius(): number { return this._cellRadius; }
-    set cellRadius(radius: number) {
-        this._cellRadius = radius;
-        
-        let displayRadius = radius;
-        let cellDrawInterval = 1;
-        let minRadius = 20;
-
-        while (displayRadius < minRadius) {
-            displayRadius *= 2;
-            cellDrawInterval *= 2;
-        }
-
-        this.cellDrawInterval = cellDrawInterval;
+    
+    private resizing: boolean = false;
+    resize() {
+        if (this.resizing)
+            return;
+        requestAnimationFrame(this.updateSize.bind(this));
+        this.resizing = true;
     }
-    updateSize() {
-        let viewWidth = this.root.offsetWidth - this.scrollbarWidth;
-        let viewHeight = this.root.offsetHeight - this.scrollbarHeight;
+
+    private updateSize() {
+        let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
+        let viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
         
         let screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
         let screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
@@ -188,8 +202,8 @@ class MapView {
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
 
-        let overallWidth = (this.data.maxX - this.data.minX) * this._cellRadius;
-        let overallHeight = (this.data.maxY - this.data.minY) * this._cellRadius;
+        let overallWidth = (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius;
+        let overallHeight = (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius;
 
         this.scrollSize.style.width = overallWidth + 'px';
         this.scrollSize.style.height = overallHeight + 'px';
@@ -197,7 +211,8 @@ class MapView {
         this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
         this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
 
-        this.draw();
+        this.redraw();
+        this.resizing = false;
     }
     private mouseScroll(e: MouseWheelEvent) {
         if (!e.ctrlKey)
@@ -240,12 +255,24 @@ class MapView {
         this.touchZoomDist = distSq;
     }
     zoomIn(stepScale: number) {
-        this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + stepScale)));
-        this.updateSize();
+        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
+        this.resize();
     }
     zoomOut(stepScale: number) {
-        this.cellRadius = Math.max(0.1, Math.floor(this.cellRadius * (1 - stepScale)));
-        this.updateSize();
+        this.setCellRadius(Math.max(0.1, Math.floor(this.state.cellRadius * (1 - stepScale))));
+        this.resize();
+    }
+    private setCellRadius(radius: number) {
+        let displayRadius = radius;
+        let cellDrawInterval = 1;
+        let minRadius = 20;
+
+        while (displayRadius < minRadius) {
+            displayRadius *= 2;
+            cellDrawInterval *= 2;
+        }
+
+        this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight});
     }
     private mouseMove(e: MouseEvent) {
         this.mouseX = e.clientX;
@@ -253,22 +280,22 @@ class MapView {
     }
     private clicked(e: MouseEvent) {
         let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
-        if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
-            let cell = this.data.cells[cellIndex];
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            let cell = this.props.map.cells[cellIndex];
             if (cell != null) {
-                if (this.cellClicked === undefined || !this.cellClicked(cell)) {
+                if (this.props.cellClicked === undefined || !this.props.cellClicked(cell)) {
                     cell.selected = cell.selected !== true;
                 }
-                this.draw();
+                this.redraw();
                 return;
             }
         }
     }
     private getCellIndexAtPoint(screenX: number, screenY: number) {
-        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this._cellRadius;
-        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this._cellRadius;
-        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this._cellRadius;
-        let fRow = mapY * 2 / 3 / this._cellRadius;
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
+        let fRow = mapY * 2 / 3 / this.state.cellRadius;
         let fThirdCoord = - fCol - fRow;
 
         let rCol = Math.round(fCol);
@@ -288,7 +315,7 @@ class MapView {
 
         // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
 
-        return rCol + rRow * this.data.width;
+        return rCol + rRow * this.props.map.width;
     }
     private getScrollbarSize() {
         let outer = document.createElement('div');
@@ -324,7 +351,7 @@ class MapView {
         }
     }
     extractData() {
-        let json = this.data.saveToJSON();
+        let json = this.props.map.saveToJSON();
         window.open('data:text/json,' + encodeURIComponent(json));
     }
 }

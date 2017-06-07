@@ -1,234 +1,43 @@
-var Wizard = (function () {
-    function Wizard(root, callback) {
-        this.root = root;
-        this.callback = callback;
-        this.initialize();
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var TerrainEditor = (function (_super) {
+    __extends(TerrainEditor, _super);
+    function TerrainEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    Wizard.prototype.initialize = function () {
-        var btn = this.root.querySelector('.dialog-buttons input.ok');
-        btn.style.display = 'none';
-        btn.addEventListener('click', this.confirmed.bind(this));
-        this.output = {};
-        this.steps = this.root.querySelectorAll('.step');
-        for (var i = 0; i < this.steps.length; i++) {
-            var step = this.steps[i];
-            var items = step.querySelectorAll('li');
-            for (var j = 0; j < items.length; j++) {
-                var item = items[j];
-                item.addEventListener('click', this.stepItemPicked.bind(this, step, item));
-            }
-            items = step.querySelectorAll('input[type="text"]');
-            for (var j = 0; j < items.length; j++) {
-                var item = items[j];
-                item.addEventListener('keyup', this.stepItemPicked.bind(this, step, item));
-            }
-        }
+    TerrainEditor.prototype.render = function () {
+        return React.createElement("div", null);
     };
-    Wizard.prototype.show = function () {
-        this.showStep(this.steps[0]);
-        this.showDialog();
-    };
-    Wizard.prototype.showDialog = function () {
-        this.root.style.display = '';
-    };
-    Wizard.prototype.showStep = function (step) {
-        var display = step.querySelectorAll('.display');
-        for (var i = 0; i < display.length; i++) {
-            var prop = display[i].getAttribute('data-property');
-            if (prop !== null)
-                display[i].innerText = this.output[prop];
-        }
-        var items = step.querySelectorAll('li');
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            var attr = item.getAttribute('data-show-property');
-            if (attr !== null) {
-                if (this.output[attr] != item.getAttribute('data-show-value'))
-                    item.style.display = 'none';
-                else
-                    item.style.display = '';
-            }
-            item.classList.remove('selected');
-        }
-        items = step.querySelectorAll('input[type="text"]');
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            item.classList.remove('selected');
-            item.value = '';
-        }
-        step.classList.remove('done');
-        step.style.display = '';
-        // also hide all later steps, in case this was re-picked
-        var passed = false;
-        for (var i = 0; i < this.steps.length; i++)
-            if (passed)
-                this.steps[i].style.display = 'none';
-            else if (this.steps[i] == step)
-                passed = true;
-        var okButton = this.root.querySelector('.dialog-buttons input.ok');
-        okButton.style.display = 'none';
-    };
-    Wizard.prototype.stepItemPicked = function (step, item, e) {
-        var value = item.getAttribute('data-value');
-        if (value == null && item.value !== undefined)
-            value = item.value;
-        var items = step.querySelectorAll('li');
-        for (var i = 0; i < items.length; i++)
-            items[i].classList.remove('selected');
-        items = step.querySelectorAll('input[type="text"]');
-        for (var i = 0; i < items.length; i++)
-            items[i].classList.remove('selected');
-        var property = item.getAttribute('data-property');
-        if (property !== null && value !== null)
-            this.output[property] = value;
-        item.classList.add('selected');
-        step.classList.add('done');
-        var isFinal = step.classList.contains('final');
-        if (!isFinal) {
-            // show the next step
-            var stepNum = 0;
-            for (var i = 0; i < this.steps.length; i++) {
-                if (this.steps[i] == step)
-                    break;
-                stepNum++;
-            }
-            if (stepNum == this.steps.length - 1)
-                isFinal = true;
-            else
-                this.showStep(this.steps[stepNum + 1]);
-        }
-        if (isFinal) {
-            var okButton = this.root.querySelector('.dialog-buttons input.ok');
-            okButton.style.display = '';
-        }
-    };
-    Wizard.prototype.confirmed = function () {
-        this.callback(this.output);
-    };
-    return Wizard;
-}());
-var dialogs = document.querySelectorAll('.dialog');
-for (var i = 0; i < dialogs.length; i++) {
-    var dialog = dialogs[i];
-    var btns = document.createElement('div');
-    btns.classList.add('dialog-buttons');
-    btns.innerHTML = '<input type="button" class="cancel" value="Cancel" /> <input type="button" class="ok" value="OK" />';
-    dialog.appendChild(btns);
-    var hide = function () {
-        this.style.display = 'none';
-    }.bind(dialog);
-    dialog.querySelector('.dialog-buttons input.cancel').addEventListener('click', hide);
-    dialog.querySelector('.dialog-buttons input.ok').addEventListener('click', hide);
-}
-var numeric = document.querySelectorAll('input.number[type="text"]');
-for (var i = 0; i < numeric.length; i++) {
-    numeric[i].addEventListener('keypress', function (e) {
-        if ((e.keyCode >= 48 && e.keyCode <= 57) || e.keyCode < 31)
-            return;
-        e.preventDefault();
-    });
-}
-var MapEditor = (function () {
-    function MapEditor(view) {
-        this.view = view;
-        this.initialize();
+    return TerrainEditor;
+}(React.Component));
+var LinesEditor = (function (_super) {
+    __extends(LinesEditor, _super);
+    function LinesEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    MapEditor.prototype.initialize = function () {
-        this.view.cellClicked = this.cellClicked.bind(this);
-        this.terrainBrush = undefined;
-        document.getElementById('addBrushLink').addEventListener('click', this.addBrushClicked.bind(this));
-        this.brushList = document.getElementById('brushList');
-        //(document.querySelector('#brushEdit .dialog-buttons .ok') as HTMLElement).addEventListener('click', this.brushEditConfirmed.bind(this));
-        this.drawCellTypes();
-        var resizeWizard = new Wizard(document.getElementById('resize-wizard'), this.performResize.bind(this));
-        document.getElementById('resizeLink').addEventListener('click', this.resizeClicked.bind(this, resizeWizard));
+    LinesEditor.prototype.render = function () {
+        return React.createElement("div", null);
     };
-    MapEditor.prototype.resizeClicked = function (wizard) {
-        wizard.show();
-        return false;
+    return LinesEditor;
+}(React.Component));
+var LocationsEditor = (function (_super) {
+    __extends(LocationsEditor, _super);
+    function LocationsEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    LocationsEditor.prototype.render = function () {
+        return React.createElement("div", null);
     };
-    MapEditor.prototype.addBrushClicked = function () {
-        this.terrainBrush = undefined;
-        var brush = this.brushList.querySelector('.selected');
-        if (brush != null)
-            brush.classList.remove('selected');
-        document.getElementById('brushName').value = '';
-        document.getElementById('brushColor').value = '';
-        document.getElementById('brushEdit').style.display = '';
-        return false;
-    };
-    MapEditor.prototype.brushEditConfirmed = function () {
-        var name = document.getElementById('brushName').value;
-        var color = document.getElementById('brushColor').value;
-        if (this.terrainBrush === undefined) {
-            var type = new CellType(name, color);
-            this.view.data.cellTypes.push(type);
-        }
-        else {
-            this.terrainBrush.name = name;
-            this.terrainBrush.color = color;
-        }
-        this.terrainBrush = undefined;
-        this.drawCellTypes();
-        return false;
-    };
-    MapEditor.prototype.performResize = function (resize) {
-        var number = parseInt(resize.number);
-        if (resize.change != 'add')
-            number = -number;
-        switch (resize.edge) {
-            case 'top':
-                this.view.data.changeHeight(number, false);
-                break;
-            case 'bottom':
-                this.view.data.changeHeight(number, true);
-                break;
-            case 'left':
-                this.view.data.changeWidth(number, false);
-                break;
-            case 'right':
-                this.view.data.changeWidth(number, true);
-                break;
-        }
-        this.view.updateSize();
-    };
-    MapEditor.prototype.cellClicked = function (cell) {
-        if (this.terrainBrush === undefined)
-            return false;
-        cell.cellType = this.terrainBrush;
-        return true;
-    };
-    MapEditor.prototype.drawCellTypes = function () {
-        var output = '';
-        for (var i = 0; i < this.view.data.cellTypes.length; i++) {
-            var type = this.view.data.cellTypes[i];
-            output += '<div class="brush" style="background-color: ' + type.color + '" data-number="' + i + '">' + type.name + '</div>';
-        }
-        this.brushList.innerHTML = output;
-        this.brushList.onclick = this.brushListClicked.bind(this);
-        this.brushList.ondblclick = this.brushListDoubleClicked.bind(this);
-    };
-    MapEditor.prototype.brushListClicked = function (e) {
-        var brush = e.target;
-        var number = brush.getAttribute('data-number');
-        if (number == null)
-            return false;
-        brush = this.brushList.querySelector('.selected');
-        if (brush != null)
-            brush.classList.remove('selected');
-        brush = e.target;
-        brush.classList.add('selected');
-        this.terrainBrush = this.view.data.cellTypes[parseInt(number)];
-    };
-    MapEditor.prototype.brushListDoubleClicked = function (e) {
-        if (this.brushList.onclick(e) === false || this.terrainBrush === undefined)
-            return;
-        document.getElementById('brushName').value = this.terrainBrush.name;
-        document.getElementById('brushColor').value = this.terrainBrush.color;
-        document.getElementById('brushEdit').style.display = '';
-    };
-    return MapEditor;
-}());
+    return LocationsEditor;
+}(React.Component));
 var CellType = (function () {
     function CellType(name, color) {
         this.name = name;
@@ -445,58 +254,61 @@ var MapData = (function () {
     };
     return MapData;
 }());
-var MapView = (function () {
-    function MapView(root, data) {
-        this.root = root;
-        this.data = data;
-        this.backgroundColor = '#ccc';
-        this.cellClicked = undefined;
-        this.initialize();
+var MapView = (function (_super) {
+    __extends(MapView, _super);
+    function MapView(props) {
+        var _this = _super.call(this, props) || this;
+        _this.backgroundColor = '#ccc';
+        _this.redrawing = false;
+        _this.resizing = false;
+        var scrollSize = _this.getScrollbarSize();
+        _this.state = {
+            cellRadius: 30,
+            cellDrawInterval: 2,
+            scrollbarWidth: scrollSize.width,
+            scrollbarHeight: scrollSize.height,
+        };
+        return _this;
     }
-    MapView.prototype.initialize = function () {
-        this.root.classList.add('mapRoot');
-        this.canvas = document.createElement('canvas');
-        this.root.appendChild(this.canvas);
-        this.scrollPane = document.createElement('div');
-        this.scrollPane.classList.add('scrollPane');
-        this.root.appendChild(this.scrollPane);
-        this.scrollSize = document.createElement('div');
-        this.scrollSize.classList.add('scrollSize');
-        this.scrollPane.appendChild(this.scrollSize);
-        this.canvas.style.pointerEvents = 'none';
-        this.scrollPane.style.overflow = 'scroll';
-        this.canvas.style.position = 'absolute';
-        this.scrollPane.style.position = 'absolute';
-        this.cellRadius = 30;
-        this.scrollPane.onscroll = this.draw.bind(this);
-        this.scrollPane.addEventListener('wheel', this.mouseScroll.bind(this));
-        this.scrollPane.ontouchstart = this.touchStart.bind(this);
-        this.scrollPane.ontouchend = this.touchEnd.bind(this);
-        this.scrollPane.ontouchmove = this.touchMove.bind(this);
-        this.scrollPane.onmousemove = this.mouseMove.bind(this);
-        this.scrollPane.onmouseenter = this.mouseMove.bind(this);
-        this.scrollSize.onclick = this.clicked.bind(this);
-        window.onresize = this.updateSize.bind(this);
-        var scrollSize = this.getScrollbarSize();
-        this.scrollbarWidth = scrollSize.width;
-        this.scrollbarHeight = scrollSize.height;
-        this.updateSize();
+    MapView.prototype.componentDidMount = function () {
+        window.addEventListener('resize', this.resize.bind(this));
+        var ctx = this.canvas.getContext('2d');
+        if (ctx !== null)
+            this.ctx = ctx;
+        this.resize();
+    };
+    MapView.prototype.componentWillUnmount = function () {
+        window.removeEventListener('resize', this.resize.bind(this));
+    };
+    MapView.prototype.render = function () {
+        var _this = this;
+        return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
+            React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
+            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onTouchStart: this.touchStart.bind(this), onTouchEnd: this.touchEnd.bind(this), onTouchMove: this.touchMove.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onClick: this.clicked.bind(this) },
+                React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize" })));
+    };
+    MapView.prototype.redraw = function () {
+        if (this.redrawing)
+            return;
+        requestAnimationFrame(this.draw.bind(this));
+        this.redrawing = true;
     };
     MapView.prototype.draw = function () {
-        var ctx = this.canvas.getContext('2d');
-        ctx.fillStyle = this.backgroundColor;
-        ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
-        ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
-        var twoLevels = this.cellRadius < 40;
-        this.drawCells(ctx, this.cellDrawInterval, !twoLevels, true, !twoLevels, !twoLevels);
+        this.ctx.fillStyle = this.backgroundColor;
+        this.ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
+        this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+        var twoLevels = this.state.cellRadius < 40;
+        var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
+        this.drawCells(drawInterval, !twoLevels, true, !twoLevels, !twoLevels);
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(ctx, this.cellDrawInterval * 2, true, false, true, true);
+            this.drawCells(drawInterval * 2, true, false, true, true);
         }
-        ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        this.redrawing = false;
     };
-    MapView.prototype.drawCells = function (ctx, cellDrawInterval, outline, fillContent, showSelection, writeCoords) {
-        var drawCellRadius = this.cellRadius * cellDrawInterval;
+    MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent, showSelection, writeCoords) {
+        var drawCellRadius = this.state.cellRadius * cellDrawInterval;
         if (fillContent)
             if (outline)
                 drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
@@ -506,7 +318,8 @@ var MapView = (function () {
         var minDrawY = this.scrollPane.scrollTop - drawCellRadius;
         var maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
         var maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
-        var map = this.data;
+        var map = this.props.map;
+        var cellRadius = this.state.cellRadius;
         var halfInterval = Math.ceil(cellDrawInterval / 2);
         var xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
         for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
@@ -518,16 +331,17 @@ var MapView = (function () {
             var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
             if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
                 continue;
-            var centerX = cell.xPos * this.cellRadius + this.cellRadius;
+            var centerX = cell.xPos * cellRadius + cellRadius;
             if (centerX < minDrawX || centerX > maxDrawX)
                 continue;
-            var centerY = cell.yPos * this.cellRadius + this.cellRadius;
+            var centerY = cell.yPos * cellRadius + cellRadius;
             if (centerY < minDrawY || centerY > maxDrawY)
                 continue;
-            this.drawCell(ctx, cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
+            this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
         }
     };
-    MapView.prototype.drawCell = function (ctx, cell, centerX, centerY, radius, outline, fillContent, showSelection, writeCoords) {
+    MapView.prototype.drawCell = function (cell, centerX, centerY, radius, outline, fillContent, showSelection, writeCoords) {
+        var ctx = this.ctx;
         ctx.beginPath();
         var angle, x, y;
         for (var point = 0; point < 6; point++) {
@@ -560,30 +374,20 @@ var MapView = (function () {
         }
     };
     MapView.prototype.getCellDisplayX = function (cell) {
-        return cell.col + 2 + Math.floor((cell.row - this.data.height) / 2);
+        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
     };
     MapView.prototype.getCellDisplayY = function (cell) {
         return cell.row + 1;
     };
-    Object.defineProperty(MapView.prototype, "cellRadius", {
-        get: function () { return this._cellRadius; },
-        set: function (radius) {
-            this._cellRadius = radius;
-            var displayRadius = radius;
-            var cellDrawInterval = 1;
-            var minRadius = 20;
-            while (displayRadius < minRadius) {
-                displayRadius *= 2;
-                cellDrawInterval *= 2;
-            }
-            this.cellDrawInterval = cellDrawInterval;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    MapView.prototype.resize = function () {
+        if (this.resizing)
+            return;
+        requestAnimationFrame(this.updateSize.bind(this));
+        this.resizing = true;
+    };
     MapView.prototype.updateSize = function () {
-        var viewWidth = this.root.offsetWidth - this.scrollbarWidth;
-        var viewHeight = this.root.offsetHeight - this.scrollbarHeight;
+        var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
+        var viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
         var screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
         var screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
         var scrollBounds = this.scrollSize.getBoundingClientRect();
@@ -593,13 +397,14 @@ var MapView = (function () {
         this.canvas.setAttribute('height', viewHeight.toString());
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
-        var overallWidth = (this.data.maxX - this.data.minX) * this._cellRadius;
-        var overallHeight = (this.data.maxY - this.data.minY) * this._cellRadius;
+        var overallWidth = (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius;
+        var overallHeight = (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius;
         this.scrollSize.style.width = overallWidth + 'px';
         this.scrollSize.style.height = overallHeight + 'px';
         this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
         this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
-        this.draw();
+        this.redraw();
+        this.resizing = false;
     };
     MapView.prototype.mouseScroll = function (e) {
         if (!e.ctrlKey)
@@ -637,12 +442,22 @@ var MapView = (function () {
         this.touchZoomDist = distSq;
     };
     MapView.prototype.zoomIn = function (stepScale) {
-        this.cellRadius = Math.min(200, Math.ceil(this.cellRadius * (1 + stepScale)));
-        this.updateSize();
+        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
+        this.resize();
     };
     MapView.prototype.zoomOut = function (stepScale) {
-        this.cellRadius = Math.max(0.1, Math.floor(this.cellRadius * (1 - stepScale)));
-        this.updateSize();
+        this.setCellRadius(Math.max(0.1, Math.floor(this.state.cellRadius * (1 - stepScale))));
+        this.resize();
+    };
+    MapView.prototype.setCellRadius = function (radius) {
+        var displayRadius = radius;
+        var cellDrawInterval = 1;
+        var minRadius = 20;
+        while (displayRadius < minRadius) {
+            displayRadius *= 2;
+            cellDrawInterval *= 2;
+        }
+        this.setState({ cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight });
     };
     MapView.prototype.mouseMove = function (e) {
         this.mouseX = e.clientX;
@@ -650,22 +465,22 @@ var MapView = (function () {
     };
     MapView.prototype.clicked = function (e) {
         var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
-        if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
-            var cell = this.data.cells[cellIndex];
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            var cell = this.props.map.cells[cellIndex];
             if (cell != null) {
-                if (this.cellClicked === undefined || !this.cellClicked(cell)) {
+                if (this.props.cellClicked === undefined || !this.props.cellClicked(cell)) {
                     cell.selected = cell.selected !== true;
                 }
-                this.draw();
+                this.redraw();
                 return;
             }
         }
     };
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.data.minX * this._cellRadius;
-        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.data.minY * this._cellRadius;
-        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this._cellRadius;
-        var fRow = mapY * 2 / 3 / this._cellRadius;
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
+        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
+        var fRow = mapY * 2 / 3 / this.state.cellRadius;
         var fThirdCoord = -fCol - fRow;
         var rCol = Math.round(fCol);
         var rRow = Math.round(fRow);
@@ -680,7 +495,7 @@ var MapView = (function () {
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = -rCol - rThird;
         // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
-        return rCol + rRow * this.data.width;
+        return rCol + rRow * this.props.map.width;
     };
     MapView.prototype.getScrollbarSize = function () {
         var outer = document.createElement('div');
@@ -709,73 +524,68 @@ var MapView = (function () {
         };
     };
     MapView.prototype.extractData = function () {
-        var json = this.data.saveToJSON();
+        var json = this.props.map.saveToJSON();
         window.open('data:text/json,' + encodeURIComponent(json));
     };
     return MapView;
-}());
-function getParameterByName(name, url) {
-    if (url === void 0) { url = null; }
-    if (!url)
-        url = window.location.href;
-    name = name.replace(/[\[\]]/g, "\\$&");
-    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"), results = regex.exec(url);
-    if (!results)
-        return null;
-    if (!results[2])
-        return '';
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
-function get(url, callback, contentType) {
-    if (contentType === void 0) { contentType = null; }
-    var req = new XMLHttpRequest();
-    req.open('GET', url);
-    if (contentType !== null)
-        req.setRequestHeader('Content-Type', contentType);
-    req.onload = function () {
-        if (req.status == 200)
-            callback(req.response);
-        else
-            console.error(Error(req.statusText));
-    };
-    req.onerror = function () {
-        console.error(Error('Network error'));
-    };
-    req.send();
-}
-function loadData(url) {
-    url = url.replace('gist.github.com', 'gist.githubusercontent.com');
-    if (url.indexOf('gist.githubusercontent.com') != -1) {
-        if (url.charAt(url.length - 1) != '/')
-            url += '/';
-        var suffix = 'raw/';
-        if (url.substr(-suffix.length) !== suffix)
-            url += 'raw';
+}(React.Component));
+var EditorControls = (function (_super) {
+    __extends(EditorControls, _super);
+    function EditorControls() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    if (url.indexOf('://') == -1) {
-        url = 'http://' + url;
+    EditorControls.prototype.render = function () {
+        return React.createElement("div", { id: "editorControls" },
+            this.renderButton(0 /* Terrain */, 'Terrain'),
+            this.renderButton(1 /* Lines */, 'Lines'),
+            this.renderButton(2 /* Locations */, 'Locations'),
+            React.createElement("div", { className: "filler" }));
+    };
+    EditorControls.prototype.renderButton = function (editor, text) {
+        var classes = this.props.activeEditor === editor ? 'active' : undefined;
+        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor) },
+            React.createElement("span", null, text));
+    };
+    EditorControls.prototype.selectEditor = function (editor) {
+        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor);
+    };
+    return EditorControls;
+}(React.Component));
+var WorldMap = (function (_super) {
+    __extends(WorldMap, _super);
+    function WorldMap(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            map: new MapData(500, 500),
+        };
+        return _this;
     }
-    get(url, function (data) {
-        editor.view.data = MapData.loadFromJSON(data);
-        editor.view.updateSize();
-        editor.drawCellTypes();
-    });
-}
-var view = new MapView(document.getElementById('mapRoot'), new MapData(500, 500));
-var editor = new MapEditor(view);
-var queryUrl = getParameterByName('source');
-if (queryUrl != null)
-    loadData(queryUrl);
-document.getElementById('modeSwitch').addEventListener('click', function (e) {
-    document.getElementById('editorRoot').classList.toggle('edit');
-    editor.view.updateSize();
-    e.preventDefault();
-});
-/*
-document.getElementById('loadUrl').addEventListener('click', function() {
-    let url = document.getElementById('dataUrl').value;
-    loadData(url);
-    return false;
-});
-*/ 
+    WorldMap.prototype.render = function () {
+        var _this = this;
+        var editorClass = this.state.activeEditor === undefined ? 'hidden' : undefined;
+        var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
+        if (this.state.map === undefined)
+            return React.createElement("div", { id: "worldRoot" });
+        return React.createElement("div", { id: "worldRoot" },
+            React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; } }),
+            React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
+            React.createElement("div", { id: "editor", className: editorClass }, activeEditor));
+    };
+    WorldMap.prototype.renderEditor = function (editor) {
+        switch (editor) {
+            case 0 /* Terrain */:
+                return React.createElement(TerrainEditor, null);
+            case 1 /* Lines */:
+                return React.createElement(LinesEditor, null);
+            case 2 /* Locations */:
+                return React.createElement(LocationsEditor, null);
+        }
+    };
+    WorldMap.prototype.selectEditor = function (editor) {
+        this.setState({ activeEditor: editor });
+        window.setTimeout(this.mapView.resize.bind(this.mapView), 1510);
+    };
+    return WorldMap;
+}(React.Component));
+var worldMap = ReactDOM.render(React.createElement(WorldMap, null), document.getElementById('uiRoot'));
 //# sourceMappingURL=maps.js.map

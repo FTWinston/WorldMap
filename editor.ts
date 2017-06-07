@@ -1,3 +1,4 @@
+/*
 class MapEditor {
     terrainBrush?: CellType;
     brushList: HTMLElement;
@@ -114,3 +115,4 @@ class MapEditor {
         (document.getElementById('brushEdit') as HTMLElement).style.display = '';
     }
 }
+*/
