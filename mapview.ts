@@ -2,18 +2,18 @@ class MapView {
     private canvas: HTMLCanvasElement;
     private scrollPane: HTMLElement;
     private scrollSize: HTMLElement;
-    cellClicked: (MapCell) => void;
+    cellClicked?: (cell: MapCell) => void;
     private _cellRadius: number;
     private cellDrawInterval: number;
     private scrollbarWidth: number;
     private scrollbarHeight: number;
-    private touchZoomDist: number;
+    private touchZoomDist?: number;
     private backgroundColor: string = '#ccc';
     private mouseX?: number;
     private mouseY?: number;
 
     constructor(private readonly root: HTMLElement, public data: MapData) {
-        this.cellClicked = null;
+        this.cellClicked = undefined;
         this.initialize();
     }
     private initialize() {
@@ -55,7 +55,7 @@ class MapView {
         this.updateSize();
     }
     draw() {
-        let ctx = this.canvas.getContext('2d');
+        let ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         ctx.fillStyle = this.backgroundColor;
         ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
         ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
@@ -175,8 +175,8 @@ class MapView {
         let viewWidth = this.root.offsetWidth - this.scrollbarWidth;
         let viewHeight = this.root.offsetHeight - this.scrollbarHeight;
         
-        let screenFocusX = this.mouseX !== null ? this.mouseX : viewWidth / 2;
-        let screenFocusY = this.mouseY !== null ? this.mouseY : viewHeight / 2;
+        let screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
+        let screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
 
         let scrollBounds = this.scrollSize.getBoundingClientRect();
         let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
@@ -216,7 +216,8 @@ class MapView {
         }
 
         let t1 = e.touches.item(0), t2 = e.touches.item(1);
-        this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        if (t1 !== null && t2 !== null)
+            this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
     }
     private touchEnd(e: TouchEvent) {
         this.touchZoomDist = undefined;
@@ -227,7 +228,8 @@ class MapView {
         e.preventDefault();
 
         let t1 = e.touches.item(0), t2 = e.touches.item(1);
-        let distSq = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        let distSq = t1 === null || t2 === null ? 0 :
+            (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
 
         let diff = (distSq - this.touchZoomDist) * 0.0000002;
         if (diff > 0)
@@ -254,11 +256,8 @@ class MapView {
         if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
             let cell = this.data.cells[cellIndex];
             if (cell != null) {
-                if (this.cellClicked == null || !this.cellClicked(cell)) {
-                    if (cell.selected === true)
-                        cell.selected = undefined;
-                    else
-                        cell.selected = true;
+                if (this.cellClicked === undefined || !this.cellClicked(cell)) {
+                    cell.selected = cell.selected !== true;
                 }
                 this.draw();
                 return;
@@ -316,7 +315,8 @@ class MapView {
         let heightWithScroll = inner.offsetHeight;
 
         // remove divs
-        outer.parentNode.removeChild(outer);
+        if (outer.parentNode !== null)
+            outer.parentNode.removeChild(outer);
 
         return {
             width: widthNoScroll - widthWithScroll,

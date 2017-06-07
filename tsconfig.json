@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "module": "none",
+        "sourceMap": true,
+        "outFile": "docs/maps.js",
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "allowSyntheticDefaultImports": true,
+        "lib": [
+            "dom",
+            "es5"
+        ]
+    },
+    "files": [
+        "ui.ts",
+        "editor.ts",
+        "mapdata.ts",
+        "mapview.ts",
+        "setup.ts"
+    ]
+}

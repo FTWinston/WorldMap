@@ -1,48 +1,52 @@
-﻿#mapRoot {
+#editorRoot {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 1.6em; }
-
-#footer {
-  position: fixed;
-  padding: 0em 1em;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 1.5em; }
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-content: stretch; }
+  #editorRoot #mapWrapper {
+    flex-grow: 1;
+    flex-shrink: 1;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-content: stretch; }
+    #editorRoot #mapWrapper #mapRoot {
+      flex-grow: 1;
+      flex-shrink: 1; }
+    #editorRoot #mapWrapper #sidebar {
+      flex-grow: 0;
+      flex-shrink: 1; }
+  #editorRoot #footer {
+    flex-grow: 0;
+    flex-shrink: 0; }
 
 #sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 1.6em;
-  width: 16em;
-  padding: 0.2em;
   display: none; }
-  #sidebar .tool {
-    border: solid 1px grey;
-    border-radius: 0.5em;
-    padding: 0.5em;
-    margin: 0.5em 0; }
-    #sidebar .tool::before {
-      content: attr(data-title); }
-    #sidebar .tool.terrain::after {
-      content: "double-click to edit";
-      color: #ccc; }
-
-.edit #mapRoot {
-  right: 16.5em; }
 
 .edit #sidebar {
-  display: block; }
+  display: initial; }
 
 .edit #modeSwitch::after {
   content: "switch to display mode"; }
 
 #modeSwitch::after {
   content: "switch to edit mode"; }
+
+#sidebar .tool {
+  border: solid 1px grey;
+  border-radius: 0.5em;
+  padding: 0.5em;
+  margin: 0.5em 0; }
+  #sidebar .tool::before {
+    content: attr(data-title); }
+  #sidebar .tool.terrain::after {
+    content: "double-click to edit";
+    color: #ccc; }
 
 #brushList .brush {
   cursor: pointer;
@@ -85,4 +89,3 @@
 
 .wizard .step.done li:not(.selected) {
   color: #ccc; }
-

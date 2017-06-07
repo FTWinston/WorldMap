@@ -2,7 +2,7 @@ class Wizard {
     private output: { [key: string]: string };
     private steps: NodeListOf<HTMLElement>;
 
-    constructor(private root: HTMLElement, private callback: (any) => void) {
+    constructor(private root: HTMLElement, private callback: (any: any) => void) {
         this.initialize();
     }
     private initialize() {
@@ -40,7 +40,8 @@ class Wizard {
         let display = step.querySelectorAll('.display') as NodeListOf<HTMLElement>;
         for (let i = 0; i < display.length; i++) {
             let prop = display[i].getAttribute('data-property');
-            display[i].innerText = this.output[prop];
+            if (prop !== null)
+                display[i].innerText = this.output[prop];
         }
 
         let items = step.querySelectorAll('li') as NodeListOf<HTMLElement>;
@@ -79,7 +80,7 @@ class Wizard {
         let okButton = this.root.querySelector('.dialog-buttons input.ok') as HTMLElement;
         okButton.style.display = 'none';
     }
-    private stepItemPicked(step: HTMLElement, item, e: MouseEvent) {
+    private stepItemPicked(step: HTMLElement, item: HTMLInputElement, e: MouseEvent) {
         let value = item.getAttribute('data-value');
         if (value == null && item.value !== undefined)
             value = item.value;
@@ -92,8 +93,9 @@ class Wizard {
         for (let i = 0; i < items.length; i++)
             items[i].classList.remove('selected');
 
-
-        this.output[item.getAttribute('data-property')] = value;
+        let property = item.getAttribute('data-property');
+        if (property !== null && value !== null)
+            this.output[property] = value;
         item.classList.add('selected');
         step.classList.add('done');
 
@@ -134,8 +136,8 @@ for (let i = 0; i < dialogs.length; i++) {
         this.style.display = 'none';
     }.bind(dialog);
 
-    dialog.querySelector('.dialog-buttons input.cancel').addEventListener('click', hide);
-    dialog.querySelector('.dialog-buttons input.ok').addEventListener('click', hide);
+    (dialog.querySelector('.dialog-buttons input.cancel') as HTMLElement).addEventListener('click', hide);
+    (dialog.querySelector('.dialog-buttons input.ok') as HTMLElement).addEventListener('click', hide);
 }
 
 

@@ -1,3 +1,133 @@
+var Wizard = (function () {
+    function Wizard(root, callback) {
+        this.root = root;
+        this.callback = callback;
+        this.initialize();
+    }
+    Wizard.prototype.initialize = function () {
+        var btn = this.root.querySelector('.dialog-buttons input.ok');
+        btn.style.display = 'none';
+        btn.addEventListener('click', this.confirmed.bind(this));
+        this.output = {};
+        this.steps = this.root.querySelectorAll('.step');
+        for (var i = 0; i < this.steps.length; i++) {
+            var step = this.steps[i];
+            var items = step.querySelectorAll('li');
+            for (var j = 0; j < items.length; j++) {
+                var item = items[j];
+                item.addEventListener('click', this.stepItemPicked.bind(this, step, item));
+            }
+            items = step.querySelectorAll('input[type="text"]');
+            for (var j = 0; j < items.length; j++) {
+                var item = items[j];
+                item.addEventListener('keyup', this.stepItemPicked.bind(this, step, item));
+            }
+        }
+    };
+    Wizard.prototype.show = function () {
+        this.showStep(this.steps[0]);
+        this.showDialog();
+    };
+    Wizard.prototype.showDialog = function () {
+        this.root.style.display = '';
+    };
+    Wizard.prototype.showStep = function (step) {
+        var display = step.querySelectorAll('.display');
+        for (var i = 0; i < display.length; i++) {
+            var prop = display[i].getAttribute('data-property');
+            if (prop !== null)
+                display[i].innerText = this.output[prop];
+        }
+        var items = step.querySelectorAll('li');
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var attr = item.getAttribute('data-show-property');
+            if (attr !== null) {
+                if (this.output[attr] != item.getAttribute('data-show-value'))
+                    item.style.display = 'none';
+                else
+                    item.style.display = '';
+            }
+            item.classList.remove('selected');
+        }
+        items = step.querySelectorAll('input[type="text"]');
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            item.classList.remove('selected');
+            item.value = '';
+        }
+        step.classList.remove('done');
+        step.style.display = '';
+        // also hide all later steps, in case this was re-picked
+        var passed = false;
+        for (var i = 0; i < this.steps.length; i++)
+            if (passed)
+                this.steps[i].style.display = 'none';
+            else if (this.steps[i] == step)
+                passed = true;
+        var okButton = this.root.querySelector('.dialog-buttons input.ok');
+        okButton.style.display = 'none';
+    };
+    Wizard.prototype.stepItemPicked = function (step, item, e) {
+        var value = item.getAttribute('data-value');
+        if (value == null && item.value !== undefined)
+            value = item.value;
+        var items = step.querySelectorAll('li');
+        for (var i = 0; i < items.length; i++)
+            items[i].classList.remove('selected');
+        items = step.querySelectorAll('input[type="text"]');
+        for (var i = 0; i < items.length; i++)
+            items[i].classList.remove('selected');
+        var property = item.getAttribute('data-property');
+        if (property !== null && value !== null)
+            this.output[property] = value;
+        item.classList.add('selected');
+        step.classList.add('done');
+        var isFinal = step.classList.contains('final');
+        if (!isFinal) {
+            // show the next step
+            var stepNum = 0;
+            for (var i = 0; i < this.steps.length; i++) {
+                if (this.steps[i] == step)
+                    break;
+                stepNum++;
+            }
+            if (stepNum == this.steps.length - 1)
+                isFinal = true;
+            else
+                this.showStep(this.steps[stepNum + 1]);
+        }
+        if (isFinal) {
+            var okButton = this.root.querySelector('.dialog-buttons input.ok');
+            okButton.style.display = '';
+        }
+    };
+    Wizard.prototype.confirmed = function () {
+        this.callback(this.output);
+    };
+    return Wizard;
+}());
+var dialogs = document.querySelectorAll('.dialog');
+for (var i = 0; i < dialogs.length; i++) {
+    var dialog = dialogs[i];
+    var btns = document.createElement('div');
+    btns.classList.add('dialog-buttons');
+    btns.innerHTML = '<input type="button" class="cancel" value="Cancel" /> <input type="button" class="ok" value="OK" />';
+    dialog.appendChild(btns);
+    var hide = function () {
+        this.style.display = 'none';
+    }.bind(dialog);
+    dialog.querySelector('.dialog-buttons input.cancel').addEventListener('click', hide);
+    dialog.querySelector('.dialog-buttons input.ok').addEventListener('click', hide);
+}
+var numeric = document.querySelectorAll('input.number[type="text"]');
+for (var i = 0; i < numeric.length; i++) {
+    numeric[i].addEventListener('keypress', function (e) {
+        if ((e.keyCode >= 48 && e.keyCode <= 57) || e.keyCode < 31)
+            return;
+        e.preventDefault();
+    });
+}
 var MapEditor = (function () {
     function MapEditor(view) {
         this.view = view;
@@ -5,10 +135,10 @@ var MapEditor = (function () {
     }
     MapEditor.prototype.initialize = function () {
         this.view.cellClicked = this.cellClicked.bind(this);
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
         document.getElementById('addBrushLink').addEventListener('click', this.addBrushClicked.bind(this));
         this.brushList = document.getElementById('brushList');
-        document.querySelector('#brushEdit .dialog-buttons .ok').addEventListener('click', this.brushEditConfirmed.bind(this));
+        //(document.querySelector('#brushEdit .dialog-buttons .ok') as HTMLElement).addEventListener('click', this.brushEditConfirmed.bind(this));
         this.drawCellTypes();
         var resizeWizard = new Wizard(document.getElementById('resize-wizard'), this.performResize.bind(this));
         document.getElementById('resizeLink').addEventListener('click', this.resizeClicked.bind(this, resizeWizard));
@@ -18,7 +148,7 @@ var MapEditor = (function () {
         return false;
     };
     MapEditor.prototype.addBrushClicked = function () {
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
         var brush = this.brushList.querySelector('.selected');
         if (brush != null)
             brush.classList.remove('selected');
@@ -30,7 +160,7 @@ var MapEditor = (function () {
     MapEditor.prototype.brushEditConfirmed = function () {
         var name = document.getElementById('brushName').value;
         var color = document.getElementById('brushColor').value;
-        if (this.terrainBrush == null) {
+        if (this.terrainBrush === undefined) {
             var type = new CellType(name, color);
             this.view.data.cellTypes.push(type);
         }
@@ -38,7 +168,7 @@ var MapEditor = (function () {
             this.terrainBrush.name = name;
             this.terrainBrush.color = color;
         }
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
         this.drawCellTypes();
         return false;
     };
@@ -63,7 +193,7 @@ var MapEditor = (function () {
         this.view.updateSize();
     };
     MapEditor.prototype.cellClicked = function (cell) {
-        if (this.terrainBrush == null)
+        if (this.terrainBrush === undefined)
             return false;
         cell.cellType = this.terrainBrush;
         return true;
@@ -88,10 +218,10 @@ var MapEditor = (function () {
             brush.classList.remove('selected');
         brush = e.target;
         brush.classList.add('selected');
-        this.terrainBrush = this.view.data.cellTypes[number];
+        this.terrainBrush = this.view.data.cellTypes[parseInt(number)];
     };
     MapEditor.prototype.brushListDoubleClicked = function (e) {
-        if (this.brushList.onclick(e) === false)
+        if (this.brushList.onclick(e) === false || this.terrainBrush === undefined)
             return;
         document.getElementById('brushName').value = this.terrainBrush.name;
         document.getElementById('brushColor').value = this.terrainBrush.color;
@@ -106,6 +236,7 @@ var CellType = (function () {
     }
     return CellType;
 }());
+CellType.empty = new CellType('Empty', '#fff');
 var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
@@ -114,64 +245,6 @@ var MapCell = (function () {
     }
     return MapCell;
 }());
-/*
-class CellGroup {
-    cells: MapCell[];
-    constructor(readonly map: MapData, readonly size: number, readonly startRow: number, readonly startCol: number) {
-        this.determineCells();
-    }
-    determineCells() {
-        this.cells = [];
-
-        let halfHeight = Math.ceil(this.size / 2);
-        let even = this.size % 2 == 0
-
-        this.addHalfCells(false, even, halfHeight);
-        this.addHalfCells(true, even, halfHeight);
-
-        // when map size changes, groups will need recalculated if:
-        // startX or startY < 0
-        // startX + this.size  >= old map width
-        // startY + this.size  >= old map height
-
-        // when recalculating, dump links to all previous cells, and obtain them afresh.
-        // if there are no cells for a group, it should be removed.
-    }
-    private addHalfCells(downward: boolean, evenSize: boolean, halfHeight: number) {
-        for (let i = 0; i < halfHeight; i++) {
-            let row;
-            let rowStart = this.startCol;
-            let rowSize = this.size - i;
-
-            // on the downward half, an even-sized cell needs to extend one further to the right, and one further down, than an odd-sized cell
-            if (downward) {
-                row = this.startRow + i;
-                if (evenSize)
-                    row++;
-                else if (i == 0)
-                    continue;
-            }
-            else {
-                row = this.startRow - i;
-                rowStart += i;
-            }
-
-            if (row < 0 || row >= this.map.height)
-                continue;
-
-            for (let j = 0; j < rowSize; j++) {
-                let col = rowStart + j;
-                if (col < 0 || col >= this.map.width)
-                    continue;
-
-                let cell = this.map.cells[row * this.map.width + col];
-                if (cell != null)
-                    this.cells.push(cell);
-            }
-        }
-    }
-}
-*/
 var MapData = (function () {
     function MapData(width, height, createCells) {
         if (createCells === void 0) { createCells = true; }
@@ -182,7 +255,7 @@ var MapData = (function () {
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
                 if (this.shouldIndexHaveCell(i))
-                    this.cells[i] = new MapCell(this, null);
+                    this.cells[i] = new MapCell(this, CellType.empty);
             this.cellTypes.push(new CellType('red', '#ff0000'));
             this.cellTypes.push(new CellType('green', '#00cc00'));
             this.cellTypes.push(new CellType('blue', '#0099ff'));
@@ -257,7 +330,7 @@ var MapData = (function () {
                 var rowStart = row * this.width;
                 var insertPos = rowStart + rowInsertIndex + overallDelta;
                 for (var i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, null));
+                    this.cells.splice(insertPos, 0, forHeightChange ? undefined : new MapCell(this, CellType.empty));
                 overallDelta += delta;
             }
         }
@@ -289,7 +362,7 @@ var MapData = (function () {
                 if (this.cells.length + 1 > this.width * this.height)
                     this.height++;
                 var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, null) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : undefined);
             }
         }
         else if (delta < 0) {
@@ -312,13 +385,15 @@ var MapData = (function () {
     MapData.prototype.setCellTypeIndexes = function () {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
-            cell.typeID = this.cellTypes.indexOf(cell.cellType);
+            if (cell !== undefined)
+                cell.typeID = this.cellTypes.indexOf(cell.cellType);
         }
     };
     MapData.prototype.setCellTypesFromIndexes = function () {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
-            cell.cellType = this.cellTypes[cell.typeID];
+            if (cell !== undefined)
+                cell.cellType = this.cellTypes[cell.typeID];
         }
     };
     /*
@@ -375,7 +450,7 @@ var MapView = (function () {
         this.root = root;
         this.data = data;
         this.backgroundColor = '#ccc';
-        this.cellClicked = null;
+        this.cellClicked = undefined;
         this.initialize();
     }
     MapView.prototype.initialize = function () {
@@ -509,8 +584,8 @@ var MapView = (function () {
     MapView.prototype.updateSize = function () {
         var viewWidth = this.root.offsetWidth - this.scrollbarWidth;
         var viewHeight = this.root.offsetHeight - this.scrollbarHeight;
-        var screenFocusX = this.mouseX !== null ? this.mouseX : viewWidth / 2;
-        var screenFocusY = this.mouseY !== null ? this.mouseY : viewHeight / 2;
+        var screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
+        var screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
         var scrollBounds = this.scrollSize.getBoundingClientRect();
         var scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
         var scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
@@ -541,7 +616,8 @@ var MapView = (function () {
             return;
         }
         var t1 = e.touches.item(0), t2 = e.touches.item(1);
-        this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        if (t1 !== null && t2 !== null)
+            this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
     };
     MapView.prototype.touchEnd = function (e) {
         this.touchZoomDist = undefined;
@@ -551,7 +627,8 @@ var MapView = (function () {
             return;
         e.preventDefault();
         var t1 = e.touches.item(0), t2 = e.touches.item(1);
-        var distSq = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        var distSq = t1 === null || t2 === null ? 0 :
+            (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
         var diff = (distSq - this.touchZoomDist) * 0.0000002;
         if (diff > 0)
             this.zoomIn(diff);
@@ -576,11 +653,8 @@ var MapView = (function () {
         if (cellIndex >= 0 && cellIndex < this.data.cells.length) {
             var cell = this.data.cells[cellIndex];
             if (cell != null) {
-                if (this.cellClicked == null || !this.cellClicked(cell)) {
-                    if (cell.selected === true)
-                        cell.selected = undefined;
-                    else
-                        cell.selected = true;
+                if (this.cellClicked === undefined || !this.cellClicked(cell)) {
+                    cell.selected = cell.selected !== true;
                 }
                 this.draw();
                 return;
@@ -627,7 +701,8 @@ var MapView = (function () {
         var widthWithScroll = inner.offsetWidth;
         var heightWithScroll = inner.offsetHeight;
         // remove divs
-        outer.parentNode.removeChild(outer);
+        if (outer.parentNode !== null)
+            outer.parentNode.removeChild(outer);
         return {
             width: widthNoScroll - widthWithScroll,
             height: heightNoScroll - heightWithScroll
@@ -639,133 +714,6 @@ var MapView = (function () {
     };
     return MapView;
 }());
-var Wizard = (function () {
-    function Wizard(root, callback) {
-        this.root = root;
-        this.callback = callback;
-        this.initialize();
-    }
-    Wizard.prototype.initialize = function () {
-        var btn = this.root.querySelector('.dialog-buttons input.ok');
-        btn.style.display = 'none';
-        btn.addEventListener('click', this.confirmed.bind(this));
-        this.output = {};
-        this.steps = this.root.querySelectorAll('.step');
-        for (var i = 0; i < this.steps.length; i++) {
-            var step = this.steps[i];
-            var items = step.querySelectorAll('li');
-            for (var j = 0; j < items.length; j++) {
-                var item = items[j];
-                item.addEventListener('click', this.stepItemPicked.bind(this, step, item));
-            }
-            items = step.querySelectorAll('input[type="text"]');
-            for (var j = 0; j < items.length; j++) {
-                var item = items[j];
-                item.addEventListener('keyup', this.stepItemPicked.bind(this, step, item));
-            }
-        }
-    };
-    Wizard.prototype.show = function () {
-        this.showStep(this.steps[0]);
-        this.showDialog();
-    };
-    Wizard.prototype.showDialog = function () {
-        this.root.style.display = '';
-    };
-    Wizard.prototype.showStep = function (step) {
-        var display = step.querySelectorAll('.display');
-        for (var i = 0; i < display.length; i++) {
-            var prop = display[i].getAttribute('data-property');
-            display[i].innerText = this.output[prop];
-        }
-        var items = step.querySelectorAll('li');
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            var attr = item.getAttribute('data-show-property');
-            if (attr !== null) {
-                if (this.output[attr] != item.getAttribute('data-show-value'))
-                    item.style.display = 'none';
-                else
-                    item.style.display = '';
-            }
-            item.classList.remove('selected');
-        }
-        items = step.querySelectorAll('input[type="text"]');
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            item.classList.remove('selected');
-            item.value = '';
-        }
-        step.classList.remove('done');
-        step.style.display = '';
-        // also hide all later steps, in case this was re-picked
-        var passed = false;
-        for (var i = 0; i < this.steps.length; i++)
-            if (passed)
-                this.steps[i].style.display = 'none';
-            else if (this.steps[i] == step)
-                passed = true;
-        var okButton = this.root.querySelector('.dialog-buttons input.ok');
-        okButton.style.display = 'none';
-    };
-    Wizard.prototype.stepItemPicked = function (step, item, e) {
-        var value = item.getAttribute('data-value');
-        if (value == null && item.value !== undefined)
-            value = item.value;
-        var items = step.querySelectorAll('li');
-        for (var i = 0; i < items.length; i++)
-            items[i].classList.remove('selected');
-        items = step.querySelectorAll('input[type="text"]');
-        for (var i = 0; i < items.length; i++)
-            items[i].classList.remove('selected');
-        this.output[item.getAttribute('data-property')] = value;
-        item.classList.add('selected');
-        step.classList.add('done');
-        var isFinal = step.classList.contains('final');
-        if (!isFinal) {
-            // show the next step
-            var stepNum = 0;
-            for (var i = 0; i < this.steps.length; i++) {
-                if (this.steps[i] == step)
-                    break;
-                stepNum++;
-            }
-            if (stepNum == this.steps.length - 1)
-                isFinal = true;
-            else
-                this.showStep(this.steps[stepNum + 1]);
-        }
-        if (isFinal) {
-            var okButton = this.root.querySelector('.dialog-buttons input.ok');
-            okButton.style.display = '';
-        }
-    };
-    Wizard.prototype.confirmed = function () {
-        this.callback(this.output);
-    };
-    return Wizard;
-}());
-var dialogs = document.querySelectorAll('.dialog');
-for (var i = 0; i < dialogs.length; i++) {
-    var dialog = dialogs[i];
-    var btns = document.createElement('div');
-    btns.classList.add('dialog-buttons');
-    btns.innerHTML = '<input type="button" class="cancel" value="Cancel" /> <input type="button" class="ok" value="OK" />';
-    dialog.appendChild(btns);
-    var hide = function () {
-        this.style.display = 'none';
-    }.bind(dialog);
-    dialog.querySelector('.dialog-buttons input.cancel').addEventListener('click', hide);
-    dialog.querySelector('.dialog-buttons input.ok').addEventListener('click', hide);
-}
-var numeric = document.querySelectorAll('input.number[type="text"]');
-for (var i = 0; i < numeric.length; i++) {
-    numeric[i].addEventListener('keypress', function (e) {
-        if ((e.keyCode >= 48 && e.keyCode <= 57) || e.keyCode < 31)
-            return;
-        e.preventDefault();
-    });
-}
 function getParameterByName(name, url) {
     if (url === void 0) { url = null; }
     if (!url)
@@ -818,10 +766,10 @@ var editor = new MapEditor(view);
 var queryUrl = getParameterByName('source');
 if (queryUrl != null)
     loadData(queryUrl);
-document.getElementById('modeSwitch').addEventListener('click', function () {
+document.getElementById('modeSwitch').addEventListener('click', function (e) {
     document.getElementById('editorRoot').classList.toggle('edit');
     editor.view.updateSize();
-    return false;
+    e.preventDefault();
 });
 /*
 document.getElementById('loadUrl').addEventListener('click', function() {

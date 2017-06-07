@@ -1,5 +1,5 @@
 class MapEditor {
-    terrainBrush: CellType;
+    terrainBrush?: CellType;
     brushList: HTMLElement;
 
     constructor(public readonly view: MapView) {
@@ -7,38 +7,38 @@ class MapEditor {
     }
     private initialize() {
         this.view.cellClicked = this.cellClicked.bind(this);
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
 
-        document.getElementById('addBrushLink').addEventListener('click', this.addBrushClicked.bind(this));
+        (document.getElementById('addBrushLink') as HTMLElement).addEventListener('click', this.addBrushClicked.bind(this));
 
-        this.brushList = document.getElementById('brushList');
-        document.querySelector('#brushEdit .dialog-buttons .ok').addEventListener('click', this.brushEditConfirmed.bind(this));
+        this.brushList = document.getElementById('brushList') as HTMLElement;
+        //(document.querySelector('#brushEdit .dialog-buttons .ok') as HTMLElement).addEventListener('click', this.brushEditConfirmed.bind(this));
 
         this.drawCellTypes();
 
-        let resizeWizard = new Wizard(document.getElementById('resize-wizard'), this.performResize.bind(this));
-        document.getElementById('resizeLink').addEventListener('click', this.resizeClicked.bind(this, resizeWizard));
+        let resizeWizard = new Wizard(document.getElementById('resize-wizard') as HTMLElement, this.performResize.bind(this));
+        (document.getElementById('resizeLink') as HTMLElement).addEventListener('click', this.resizeClicked.bind(this, resizeWizard));
     }
     private resizeClicked(wizard: Wizard) {
         wizard.show();
         return false;
     }
     private addBrushClicked() {
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
         let brush = this.brushList.querySelector('.selected');
         if (brush != null)
             brush.classList.remove('selected');
 
         (document.getElementById('brushName') as HTMLInputElement).value = '';
         (document.getElementById('brushColor') as HTMLInputElement).value = '';
-        document.getElementById('brushEdit').style.display = '';
+        (document.getElementById('brushEdit') as HTMLElement).style.display = '';
         return false;
     }
     private brushEditConfirmed() {
         let name = (document.getElementById('brushName') as HTMLInputElement).value;
         let color = (document.getElementById('brushColor') as HTMLInputElement).value;
 
-        if (this.terrainBrush == null) {
+        if (this.terrainBrush === undefined) {
             let type = new CellType(name, color);
             this.view.data.cellTypes.push(type);
         }
@@ -47,7 +47,7 @@ class MapEditor {
             this.terrainBrush.color = color;
         }
 
-        this.terrainBrush = null;
+        this.terrainBrush = undefined;
         this.drawCellTypes();
         return false;
     }
@@ -73,7 +73,7 @@ class MapEditor {
         this.view.updateSize();
     }
     private cellClicked(cell: MapCell) {
-        if (this.terrainBrush == null)
+        if (this.terrainBrush === undefined)
             return false;
 
         cell.cellType = this.terrainBrush;
@@ -103,14 +103,14 @@ class MapEditor {
         brush = e.target as HTMLElement;
 
         brush.classList.add('selected');
-        this.terrainBrush = this.view.data.cellTypes[number];
+        this.terrainBrush = this.view.data.cellTypes[parseInt(number)];
     }
     private brushListDoubleClicked(e: MouseEvent) {
-        if (this.brushList.onclick(e) === false)
+        if (this.brushList.onclick(e) === false || this.terrainBrush === undefined)
             return;
 
         (document.getElementById('brushName') as HTMLInputElement).value = this.terrainBrush.name;
         (document.getElementById('brushColor') as HTMLInputElement).value = this.terrainBrush.color;
-        document.getElementById('brushEdit').style.display = '';
+        (document.getElementById('brushEdit') as HTMLElement).style.display = '';
     }
 }

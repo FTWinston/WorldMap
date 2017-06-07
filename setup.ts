@@ -1,4 +1,4 @@
-function getParameterByName(name: string, url: string = null) {
+function getParameterByName(name: string, url: string | null = null) {
     if (!url) url = window.location.href;
     name = name.replace(/[\[\]]/g, "\\$&");
     let regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
@@ -8,7 +8,7 @@ function getParameterByName(name: string, url: string = null) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-function get(url: string, callback: (string) => void, contentType: string = null) {
+function get(url: string, callback: (string: string) => void, contentType: string | null = null) {
     let req = new XMLHttpRequest();
     req.open('GET', url);
 
@@ -51,17 +51,17 @@ function loadData(url: string) {
     });
 }
 
-let view = new MapView(document.getElementById('mapRoot'), new MapData(500, 500));
+let view = new MapView(document.getElementById('mapRoot') as HTMLElement, new MapData(500, 500));
 let editor = new MapEditor(view);
 
 let queryUrl = getParameterByName('source');
 if (queryUrl != null)
     loadData(queryUrl);
 
-document.getElementById('modeSwitch').addEventListener('click', function () {
-    document.getElementById('editorRoot').classList.toggle('edit');
+(document.getElementById('modeSwitch') as HTMLElement).addEventListener('click', function (e) {
+    (document.getElementById('editorRoot') as HTMLElement).classList.toggle('edit');
     editor.view.updateSize();
-    return false;
+    e.preventDefault();
 });
 
 /*

@@ -1,6 +1,8 @@
 class CellType {
     constructor(public name: string, public color: string) {
     }
+
+    public static empty = new CellType('Empty', '#fff');
 }
 
 class MapCell {
@@ -72,11 +74,13 @@ class CellGroup {
     }
 }
 */
+type PossibleMapCell = MapCell | undefined;
+
 class MapData {
     width: number;
     height: number;
     cellTypes: CellType[];
-    cells: MapCell[];
+    cells: PossibleMapCell[];
     minX: number;
     maxX: number;
     minY: number;
@@ -85,13 +89,13 @@ class MapData {
     constructor(width: number, height: number, createCells: boolean = true) {
         this.width = width + Math.floor(height / 2) - 1;
         this.height = height;
-        this.cells = new Array(this.width * this.height);
+        this.cells = new Array<MapCell>(this.width * this.height);
         this.cellTypes = [];
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
                 if (this.shouldIndexHaveCell(i))
-                    this.cells[i] = new MapCell(this, null);
+                    this.cells[i] = new MapCell(this, CellType.empty);
 
             this.cellTypes.push(new CellType('red', '#ff0000'));
             this.cellTypes.push(new CellType('green', '#00cc00'));
@@ -175,7 +179,7 @@ class MapData {
                 let insertPos = rowStart + rowInsertIndex + overallDelta;
 
                 for (let i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, null));
+                    this.cells.splice(insertPos, 0, forHeightChange ? undefined : new MapCell(this, CellType.empty));
 
                 overallDelta += delta;
             }
@@ -211,7 +215,7 @@ class MapData {
                     this.height++;
 
                 let globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, null) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : undefined);
             }
         }
         else if (delta < 0) {
@@ -235,11 +239,13 @@ class MapData {
     }
     private setCellTypeIndexes() {
         for (let cell of this.cells)
-            cell.typeID = this.cellTypes.indexOf(cell.cellType);
+            if (cell !== undefined)
+                cell.typeID = this.cellTypes.indexOf(cell.cellType);
     }
     private setCellTypesFromIndexes() {
         for (let cell of this.cells)
-            cell.cellType = this.cellTypes[cell.typeID];
+            if (cell !== undefined)
+                cell.cellType = this.cellTypes[cell.typeID];
     }
     /*
     createCellGroups(size: number) {
@@ -277,7 +283,7 @@ class MapData {
     static loadFromJSON(json: any) {
         let map = new MapData(json.width, json.height, false);
 
-        map.cells = json.cells.map(function (cell) {
+        map.cells = json.cells.map(function (cell: {type: CellType}) {
             if (cell == null)
                 return null;
             return new MapCell(map, cell.type);
@@ -285,7 +291,7 @@ class MapData {
 
         map.positionCells();
 
-        map.cellTypes = json.cellTypes.map(function (type) {
+        map.cellTypes = json.cellTypes.map(function (type: {name: string, color: string}) {
             return new CellType(type.name, type.color);
         });
 

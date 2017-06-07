@@ -1,52 +1,51 @@
-#mapRoot {
+// page layout
+#editorRoot {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 1.6em;
-}
-
-#footer {
-  position: fixed;
-  padding: 0em 1em;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 1.5em;
-}
 
-#sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 1.6em;
-  width: 16em;
-  padding: 0.2em;
-  display: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-content: stretch;
 
-  .tool {
-    border: solid 1px grey;
-    border-radius: 0.5em;
-    padding: 0.5em;
-    margin: 0.5em 0;
+  #mapWrapper {
+    flex-grow: 1;
+    flex-shrink: 1;
 
-    &::before {
-      content: attr(data-title);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-content: stretch;
+
+    #mapRoot {
+      flex-grow: 1;
+      flex-shrink: 1;
     }
 
-    &.terrain::after {
-      content: "double-click to edit";
-      color: #ccc;
+    #sidebar {
+      flex-grow: 0;
+      flex-shrink: 1;
     }
   }
+
+  #footer {
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+}
+
+
+// edit mode switching
+#sidebar {
+  display: none;
 }
 
 .edit {
-  #mapRoot {
-    right: 16.5em;
-  }
   #sidebar {
-  	display: block;
+  	display: initial;
   }
   #modeSwitch::after {
     content: "switch to display mode";
@@ -55,6 +54,26 @@
 
 #modeSwitch::after {
   content: "switch to edit mode";
+}
+
+
+// map editing
+#sidebar {
+    .tool {
+      border: solid 1px grey;
+      border-radius: 0.5em;
+      padding: 0.5em;
+      margin: 0.5em 0;
+
+      &::before {
+        content: attr(data-title);
+      }
+
+      &.terrain::after {
+        content: "double-click to edit";
+        color: #ccc;
+      }
+    }
 }
 
 #brushList .brush {
@@ -82,6 +101,8 @@
   }
 }
 
+
+// popups
 .dialog {
   position: fixed;
   margin: 0 auto;
