@@ -77,6 +77,7 @@ class CellGroup {
 type PossibleMapCell = MapCell | undefined;
 
 class MapData {
+    underlyingWidth: number;
     width: number;
     height: number;
     cellTypes: CellType[];
@@ -87,9 +88,10 @@ class MapData {
     maxY: number;
 
     constructor(width: number, height: number, createCells: boolean = true) {
-        this.width = width + Math.floor(height / 2) - 1;
+        this.underlyingWidth = width + Math.floor(height / 2) - 1;
+        this.width = width;
         this.height = height;
-        this.cells = new Array<MapCell>(this.width * this.height);
+        this.cells = new Array<MapCell>(this.underlyingWidth * this.height);
         this.cellTypes = [];
 
         if (createCells !== false) {
@@ -114,8 +116,8 @@ class MapData {
             if (cell == null)
                 continue;
 
-            cell.row = Math.floor(i / this.width);
-            cell.col = i % this.width;
+            cell.row = Math.floor(i / this.underlyingWidth);
+            cell.col = i % this.underlyingWidth;
             cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
             cell.yPos = packedHeightRatio * cell.row;
 
@@ -142,11 +144,11 @@ class MapData {
         }
     }
     private shouldIndexHaveCell(index: number) {
-        let row = Math.floor(index / this.width);
-        let col = index % this.width;
+        let row = Math.floor(index / this.underlyingWidth);
+        let col = index % this.underlyingWidth;
         if (2 * col + row < this.height - 2)
             return false; // chop left to get square edge
-        if (row + 2 * col > 2 * this.width - 1)
+        if (row + 2 * col > 2 * this.underlyingWidth - 1)
             return false; // chop right to get square edge
         return true;
     }
@@ -171,11 +173,11 @@ class MapData {
             for (let row = 0; row < this.height; row++) {
                 let rowInsertIndex: number; // this is complicated on account of the "chopping" we did to get square edges
                 if (leftEdgeFixed)
-                    rowInsertIndex = this.width - Math.floor(row / 2);
+                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
                 else
                     rowInsertIndex = Math.floor((this.height - row - 1) / 2);
 
-                let rowStart = row * this.width;
+                let rowStart = row * this.underlyingWidth;
                 let insertPos = rowStart + rowInsertIndex + overallDelta;
 
                 for (let i = 0; i < delta; i++)
@@ -189,16 +191,16 @@ class MapData {
                 let rowChopPos;
                 if (forHeightChange) {
                     if (leftEdgeFixed)
-                        rowChopPos = this.width + delta;
+                        rowChopPos = this.underlyingWidth + delta;
                     else
                         rowChopPos = 0;
                 }
                 else if (leftEdgeFixed)
-                    rowChopPos = this.width - Math.floor(row / 2) + delta;
+                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
                 else
                     rowChopPos = Math.floor((this.height - row - 1) / 2);
 
-                let rowStart = row * this.width;
+                let rowStart = row * this.underlyingWidth;
                 let chopPos = rowStart + rowChopPos + overallDelta;
                 this.cells.splice(chopPos, -delta);
                 overallDelta += delta;
@@ -206,12 +208,13 @@ class MapData {
         }
 
         this.width += delta;
+        this.underlyingWidth += delta;
     }
     private performHeightChange(delta: number, topEdgeFixed: boolean) {
         if (delta > 0) {
-            let diff = delta * this.width;
+            let diff = delta * this.underlyingWidth;
             for (let i = 0; i < diff; i++) {
-                if (this.cells.length + 1 > this.width * this.height)
+                if (this.cells.length + 1 > this.underlyingWidth * this.height)
                     this.height++;
 
                 let globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
@@ -219,7 +222,7 @@ class MapData {
             }
         }
         else if (delta < 0) {
-            let diff = -delta * this.width;
+            let diff = -delta * this.underlyingWidth;
             this.height += delta;
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }

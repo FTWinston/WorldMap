@@ -232,9 +232,10 @@ var MapCell = (function () {
 var MapData = (function () {
     function MapData(width, height, createCells) {
         if (createCells === void 0) { createCells = true; }
-        this.width = width + Math.floor(height / 2) - 1;
+        this.underlyingWidth = width + Math.floor(height / 2) - 1;
+        this.width = width;
         this.height = height;
-        this.cells = new Array(this.width * this.height);
+        this.cells = new Array(this.underlyingWidth * this.height);
         this.cellTypes = [];
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
@@ -254,8 +255,8 @@ var MapData = (function () {
             var cell = this.cells[i];
             if (cell == null)
                 continue;
-            cell.row = Math.floor(i / this.width);
-            cell.col = i % this.width;
+            cell.row = Math.floor(i / this.underlyingWidth);
+            cell.col = i % this.underlyingWidth;
             cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
             cell.yPos = packedHeightRatio * cell.row;
             if (cell.xPos < minX)
@@ -280,11 +281,11 @@ var MapData = (function () {
         }
     };
     MapData.prototype.shouldIndexHaveCell = function (index) {
-        var row = Math.floor(index / this.width);
-        var col = index % this.width;
+        var row = Math.floor(index / this.underlyingWidth);
+        var col = index % this.underlyingWidth;
         if (2 * col + row < this.height - 2)
             return false; // chop left to get square edge
-        if (row + 2 * col > 2 * this.width - 1)
+        if (row + 2 * col > 2 * this.underlyingWidth - 1)
             return false; // chop right to get square edge
         return true;
     };
@@ -308,10 +309,10 @@ var MapData = (function () {
             for (var row = 0; row < this.height; row++) {
                 var rowInsertIndex = void 0; // this is complicated on account of the "chopping" we did to get square edges
                 if (leftEdgeFixed)
-                    rowInsertIndex = this.width - Math.floor(row / 2);
+                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
                 else
                     rowInsertIndex = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.width;
+                var rowStart = row * this.underlyingWidth;
                 var insertPos = rowStart + rowInsertIndex + overallDelta;
                 for (var i = 0; i < delta; i++)
                     this.cells.splice(insertPos, 0, forHeightChange ? undefined : new MapCell(this, CellType.empty));
@@ -323,34 +324,35 @@ var MapData = (function () {
                 var rowChopPos = void 0;
                 if (forHeightChange) {
                     if (leftEdgeFixed)
-                        rowChopPos = this.width + delta;
+                        rowChopPos = this.underlyingWidth + delta;
                     else
                         rowChopPos = 0;
                 }
                 else if (leftEdgeFixed)
-                    rowChopPos = this.width - Math.floor(row / 2) + delta;
+                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
                 else
                     rowChopPos = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.width;
+                var rowStart = row * this.underlyingWidth;
                 var chopPos = rowStart + rowChopPos + overallDelta;
                 this.cells.splice(chopPos, -delta);
                 overallDelta += delta;
             }
         }
         this.width += delta;
+        this.underlyingWidth += delta;
     };
     MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
         if (delta > 0) {
-            var diff = delta * this.width;
+            var diff = delta * this.underlyingWidth;
             for (var i = 0; i < diff; i++) {
-                if (this.cells.length + 1 > this.width * this.height)
+                if (this.cells.length + 1 > this.underlyingWidth * this.height)
                     this.height++;
                 var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
                 this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : undefined);
             }
         }
         else if (delta < 0) {
-            var diff = -delta * this.width;
+            var diff = -delta * this.underlyingWidth;
             this.height += delta;
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
@@ -670,7 +672,7 @@ var MapView = (function (_super) {
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = -rCol - rThird;
         // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
-        return rCol + rRow * this.props.map.width;
+        return rCol + rRow * this.props.map.underlyingWidth;
     };
     MapView.prototype.getScrollbarSize = function () {
         var outer = document.createElement('div');
