@@ -8,6 +8,176 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var ResizeAnchorInput = (function (_super) {
+    __extends(ResizeAnchorInput, _super);
+    function ResizeAnchorInput(props) {
+        var _this = _super.call(this, props) || this;
+        _this.arrows = [
+            ['&#8598;', '&#8593;', '&#8599;'],
+            ['&#8592;', '', '&#8594;'],
+            ['&#8601;', '&#8595;', '&#8600;'],
+        ];
+        _this.state = {
+            mode: 0 /* TopLeft */,
+        };
+        return _this;
+    }
+    ResizeAnchorInput.prototype.render = function () {
+        var widthChange = this.props.newWidth - this.props.oldWidth;
+        var heightChange = this.props.newHeight - this.props.oldHeight;
+        var tlIcon = this.decideIcon(0 /* TopLeft */, widthChange, heightChange);
+        var tmIcon = this.decideIcon(1 /* TopMiddle */, widthChange, heightChange);
+        var trIcon = this.decideIcon(2 /* TopRight */, widthChange, heightChange);
+        var clIcon = this.decideIcon(3 /* CenterLeft */, widthChange, heightChange);
+        var cmIcon = this.decideIcon(4 /* Center */, widthChange, heightChange);
+        var crIcon = this.decideIcon(5 /* CenterRight */, widthChange, heightChange);
+        var blIcon = this.decideIcon(6 /* BottomLeft */, widthChange, heightChange);
+        var bmIcon = this.decideIcon(7 /* BottomMiddle */, widthChange, heightChange);
+        var brIcon = this.decideIcon(8 /* BottomRight */, widthChange, heightChange);
+        return React.createElement("div", { className: "resizeAnchor" },
+            React.createElement("div", null,
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 0 /* TopLeft */), dangerouslySetInnerHTML: tlIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 1 /* TopMiddle */), dangerouslySetInnerHTML: tmIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 2 /* TopRight */), dangerouslySetInnerHTML: trIcon })),
+            React.createElement("div", null,
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 3 /* CenterLeft */), dangerouslySetInnerHTML: clIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 4 /* Center */), dangerouslySetInnerHTML: cmIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 5 /* CenterRight */), dangerouslySetInnerHTML: crIcon })),
+            React.createElement("div", null,
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 6 /* BottomLeft */), dangerouslySetInnerHTML: blIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 7 /* BottomMiddle */), dangerouslySetInnerHTML: bmIcon }),
+                React.createElement("button", { type: "button", onClick: this.setMode.bind(this, 8 /* BottomRight */), dangerouslySetInnerHTML: brIcon })));
+    };
+    ResizeAnchorInput.prototype.setMode = function (mode) {
+        this.props.setMode(mode);
+    };
+    ResizeAnchorInput.prototype.decideIcon = function (button, widthChange, heightChange) {
+        if (this.props.mode == button)
+            return { __html: '&#9974;' }; // picture icon
+        if (widthChange == 0 && heightChange == 0)
+            return undefined;
+        var buttonCoords = this.getCoords(button);
+        var stateCoords = this.getCoords(this.props.mode);
+        var dx = buttonCoords.x - stateCoords.x;
+        var dy = buttonCoords.y - stateCoords.y;
+        // only draw arrow if adjacent to selected icon
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
+            return undefined;
+        if (widthChange == 0)
+            dx = 0;
+        if (heightChange == 0)
+            dy = 0;
+        // now dx and dy are both in range -1 .. 1
+        var arrowX = widthChange >= 0 ? 1 + dx : 1 - dx;
+        var arrowY = heightChange >= 0 ? 1 + dy : 1 - dy;
+        return { __html: this.arrows[arrowY][arrowX] };
+    };
+    ResizeAnchorInput.prototype.getCoords = function (mode) {
+        switch (mode) {
+            case 0 /* TopLeft */:
+                return { x: -1, y: -1 };
+            case 1 /* TopMiddle */:
+                return { x: 0, y: -1 };
+            case 2 /* TopRight */:
+                return { x: 1, y: -1 };
+            case 3 /* CenterLeft */:
+                return { x: -1, y: 0 };
+            case 4 /* Center */:
+                return { x: 0, y: 0 };
+            case 5 /* CenterRight */:
+                return { x: 1, y: 0 };
+            case 6 /* BottomLeft */:
+                return { x: -1, y: 1 };
+            case 7 /* BottomMiddle */:
+                return { x: 0, y: 1 };
+            case 8 /* BottomRight */:
+                return { x: 1, y: 1 };
+        }
+    };
+    return ResizeAnchorInput;
+}(React.Component));
+var SizeEditor = (function (_super) {
+    __extends(SizeEditor, _super);
+    function SizeEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            newWidth: props.map.width,
+            newHeight: props.map.height,
+            resizeAnchor: 0 /* TopLeft */,
+        };
+        return _this;
+    }
+    SizeEditor.prototype.render = function () {
+        var sameSize = this.state.newWidth == this.props.map.width && this.state.newHeight == this.props.map.height;
+        return React.createElement("form", { onSubmit: this.changeSize.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtResizeWidth" }, "Width"),
+                React.createElement("input", { type: "number", id: "txtResizeWidth", value: this.state.newWidth.toString(), onChange: this.widthChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtResizeHeight" }, "Height"),
+                React.createElement("input", { type: "number", id: "txtResizeHeight", value: this.state.newHeight.toString(), onChange: this.heightChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", null, "Anchor"),
+                React.createElement(ResizeAnchorInput, { oldWidth: this.props.map.width, newWidth: this.state.newWidth, oldHeight: this.props.map.height, newHeight: this.state.newHeight, mode: this.state.resizeAnchor, setMode: this.setMode.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit", disabled: sameSize }, "Change size")));
+    };
+    SizeEditor.prototype.widthChanged = function (e) {
+        this.setState({ newWidth: e.target.value, newHeight: this.state.newHeight, resizeAnchor: this.state.resizeAnchor });
+    };
+    SizeEditor.prototype.heightChanged = function (e) {
+        this.setState({ newWidth: this.state.newWidth, newHeight: e.target.value, resizeAnchor: this.state.resizeAnchor });
+    };
+    SizeEditor.prototype.setMode = function (mode) {
+        this.setState({ newWidth: this.state.newWidth, newHeight: this.state.newHeight, resizeAnchor: mode });
+    };
+    SizeEditor.prototype.changeSize = function (e) {
+        e.preventDefault();
+        var deltaWidth = this.state.newWidth - this.props.map.width;
+        var deltaHeight = this.state.newWidth - this.props.map.width;
+        // TODO: commented out lines need to be done twice, each for half the delta. One half rounded up, the other rounded down, tying to the left & right edges
+        switch (this.state.resizeAnchor) {
+            case 0 /* TopLeft */:
+                this.props.map.changeWidth(deltaWidth, true);
+                this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 1 /* TopMiddle */:
+                //this.props.map.changeWidth(deltaWidth, true);
+                this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 2 /* TopRight */:
+                this.props.map.changeWidth(deltaWidth, false);
+                this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 3 /* CenterLeft */:
+                this.props.map.changeWidth(deltaWidth, true);
+                //this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 4 /* Center */:
+                //this.props.map.changeWidth(deltaWidth, true);
+                //this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 5 /* CenterRight */:
+                this.props.map.changeWidth(deltaWidth, false);
+                //this.props.map.changeHeight(deltaHeight, true);
+                break;
+            case 6 /* BottomLeft */:
+                this.props.map.changeWidth(deltaWidth, true);
+                this.props.map.changeHeight(deltaHeight, false);
+                break;
+            case 7 /* BottomMiddle */:
+                //this.props.map.changeWidth(deltaWidth, true);
+                this.props.map.changeHeight(deltaHeight, false);
+                break;
+            case 8 /* BottomRight */:
+                this.props.map.changeWidth(deltaWidth, false);
+                this.props.map.changeHeight(deltaHeight, false);
+                break;
+        }
+        this.props.mapChanged();
+    };
+    return SizeEditor;
+}(React.Component));
 var TerrainEditor = (function (_super) {
     __extends(TerrainEditor, _super);
     function TerrainEditor() {
@@ -536,9 +706,10 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Terrain */, 'Terrain'),
-            this.renderButton(1 /* Lines */, 'Lines'),
-            this.renderButton(2 /* Locations */, 'Locations'),
+            this.renderButton(0 /* Size */, 'Size'),
+            this.renderButton(1 /* Terrain */, 'Terrain'),
+            this.renderButton(2 /* Lines */, 'Lines'),
+            this.renderButton(3 /* Locations */, 'Locations'),
             React.createElement("div", { className: "filler" }));
     };
     EditorControls.prototype.renderButton = function (editor, text) {
@@ -572,13 +743,18 @@ var WorldMap = (function (_super) {
             React.createElement("div", { id: "editor", className: editorClass }, activeEditor));
     };
     WorldMap.prototype.renderEditor = function (editor) {
+        var mapChanged = this.mapView.redraw.bind(this.mapView);
+        if (this.state.map === undefined)
+            return React.createElement("div", null, "No map");
         switch (editor) {
-            case 0 /* Terrain */:
-                return React.createElement(TerrainEditor, null);
-            case 1 /* Lines */:
-                return React.createElement(LinesEditor, null);
-            case 2 /* Locations */:
-                return React.createElement(LocationsEditor, null);
+            case 0 /* Size */:
+                return React.createElement(SizeEditor, { mapChanged: mapChanged, map: this.state.map });
+            case 1 /* Terrain */:
+                return React.createElement(TerrainEditor, { mapChanged: mapChanged, map: this.state.map });
+            case 2 /* Lines */:
+                return React.createElement(LinesEditor, { mapChanged: mapChanged, map: this.state.map });
+            case 3 /* Locations */:
+                return React.createElement(LocationsEditor, { mapChanged: mapChanged, map: this.state.map });
         }
     };
     WorldMap.prototype.selectEditor = function (editor) {

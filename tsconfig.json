@@ -22,6 +22,9 @@
 //        "editor.ts",
 //        "setup.ts",
 
+        "controls/ResizeAnchorInput.tsx",
+
+        "editors/SizeEditor.tsx",
         "editors/TerrainEditor.tsx",
         "editors/LinesEditor.tsx",
         "editors/LocationsEditor.tsx",

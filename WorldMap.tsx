@@ -1,4 +1,5 @@
 const enum EditorType {
+    Size,
     Terrain,
     //Generation,
     Lines,
@@ -38,13 +39,19 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         </div>;
     }
     private renderEditor(editor: EditorType): JSX.Element {
+        let mapChanged = this.mapView.redraw.bind(this.mapView);
+        if (this.state.map === undefined)
+            return <div>No map</div>;
+
         switch(editor) {
+            case EditorType.Size:
+                return <SizeEditor mapChanged={mapChanged} map={this.state.map} />;
             case EditorType.Terrain:
-                return <TerrainEditor />;
+                return <TerrainEditor mapChanged={mapChanged} map={this.state.map} />;
             case EditorType.Lines:
-                return <LinesEditor />;
+                return <LinesEditor mapChanged={mapChanged} map={this.state.map} />;
             case EditorType.Locations:
-                return <LocationsEditor />;
+                return <LocationsEditor mapChanged={mapChanged} map={this.state.map} />;
         }
     }
     private selectEditor(editor: EditorType) {

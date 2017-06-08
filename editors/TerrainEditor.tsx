@@ -1,7 +1,3 @@
-interface IEditorProps {
-    
-}
-
 interface ITerrainEditorState {
     
 }

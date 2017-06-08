@@ -104,6 +104,56 @@ $editorBackground: grey;
   }
 }
 
+// editor tools
+#editor > form {
+  margin: 0.25em;
+
+  & > div[role="group"] {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+
+    > label {
+      min-width: 4em;
+    }
+
+    &:not(:first-child) {
+      margin-top: 1em;
+    }
+
+    > input {
+      flex-shrink: 1;
+      width: 10em;
+      text-align: center;
+    }
+  }
+}
+
+.resizeAnchor {
+  height: 8em;
+  width: 8em;
+
+  button {
+    margin: 0.1em;
+    padding: 0;
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 1em;
+  }
+
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  
+  & > div {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    flex-basis: 0;
+    justify-content: stretch;
+  }
+}
 
 
 /*

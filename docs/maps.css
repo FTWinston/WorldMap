@@ -15,11 +15,11 @@
     flex-shrink: 0;
     flex-grow: 0; }
   #worldRoot #editor {
-    z-index: 1;
     flex-shrink: 0;
     flex-grow: 0;
     transition: width 1.5s;
     width: 14em;
+    z-index: 1;
     background-color: grey; }
     #worldRoot #editor.hidden {
       width: 0; }
@@ -66,6 +66,41 @@
   #mapRoot .scrollPane {
     overflow: scroll;
     position: absolute; }
+
+#editor > form {
+  margin: 0.25em; }
+  #editor > form > div[role="group"] {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start; }
+    #editor > form > div[role="group"] > label {
+      min-width: 4em; }
+    #editor > form > div[role="group"]:not(:first-child) {
+      margin-top: 1em; }
+    #editor > form > div[role="group"] > input {
+      flex-shrink: 1;
+      width: 10em;
+      text-align: center; }
+
+.resizeAnchor {
+  height: 8em;
+  width: 8em;
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch; }
+  .resizeAnchor button {
+    margin: 0.1em;
+    padding: 0;
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 1em; }
+  .resizeAnchor > div {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    flex-basis: 0;
+    justify-content: stretch; }
 
 /*
 // map editing
