@@ -20,7 +20,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         super(props);
 
         this.state = {
-            map: new MapData(500, 500),
+            map: new MapData(50, 50),
         }
     }
     mapView: MapView;

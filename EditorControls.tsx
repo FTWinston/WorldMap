@@ -10,10 +10,12 @@ interface IEditorControlsState {
 class EditorControls extends React.Component<IEditorControlsProps, IEditorControlsState> { 
     render() {
         return <div id="editorControls">
-            {this.renderButton(EditorType.Size, 'Size')}
-            {this.renderButton(EditorType.Terrain, 'Terrain')}
-            {this.renderButton(EditorType.Lines, 'Lines')}
-            {this.renderButton(EditorType.Locations, 'Locations')}
+            {this.renderButton(EditorType.Size, 'Size') /* move.svg */}
+            {this.renderButton(EditorType.TerrainTypes, 'Terrain Types') /* grid.svg */}
+            {this.renderButton(EditorType.Terrain, 'Terrain') /* edit.svg */}
+            {this.renderButton(EditorType.Lines, 'Lines') /*edit-3.svg*/}
+            {this.renderButton(EditorType.Locations, 'Locations') /* map-pin.svg */}
+            {this.renderButton(EditorType.Locations, 'Layers') /* layers.svg */}
             <div className="filler" />
         </div>;
     }

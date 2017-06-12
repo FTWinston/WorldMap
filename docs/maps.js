@@ -715,10 +715,12 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Size */, 'Size'),
-            this.renderButton(1 /* Terrain */, 'Terrain'),
-            this.renderButton(2 /* Lines */, 'Lines'),
-            this.renderButton(3 /* Locations */, 'Locations'),
+            this.renderButton(0 /* Size */, 'Size') /* move.svg */,
+            this.renderButton(EditorType.TerrainTypes, 'Terrain Types') /* grid.svg */,
+            this.renderButton(1 /* Terrain */, 'Terrain') /* edit.svg */,
+            this.renderButton(2 /* Lines */, 'Lines') /*edit-3.svg*/,
+            this.renderButton(3 /* Locations */, 'Locations') /* map-pin.svg */,
+            this.renderButton(3 /* Locations */, 'Layers') /* layers.svg */,
             React.createElement("div", { className: "filler" }));
     };
     EditorControls.prototype.renderButton = function (editor, text) {
