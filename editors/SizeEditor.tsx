@@ -3,31 +3,37 @@ interface IEditorProps {
     map: MapData;
 }
 
+interface ISizeEditorProps {
+    width: number;
+    height: number;
+    changeSize: (width: number, height: number, mode: ResizeAnchorMode) => void;
+}
+
 interface ISizeEditorState {
     newWidth: number;
     newHeight: number;
     resizeAnchor: ResizeAnchorMode;
 }
 
-class SizeEditor extends React.Component<IEditorProps, ISizeEditorState> {
-    constructor(props: IEditorProps) {
+class SizeEditor extends React.Component<ISizeEditorProps, ISizeEditorState> {
+    constructor(props: ISizeEditorProps) {
         super(props);
 
         this.state = {
-            newWidth: props.map.width,
-            newHeight: props.map.height,
+            newWidth: props.width,
+            newHeight: props.height,
             resizeAnchor: ResizeAnchorMode.TopLeft,
         };
     }
     render() {
-        let sameSize = this.state.newWidth == this.props.map.width && this.state.newHeight == this.props.map.height;
+        let sameSize = this.state.newWidth == this.props.width && this.state.newHeight == this.props.height;
 
         return <form onSubmit={this.changeSize.bind(this)}>
             <div role="group"><label htmlFor="txtResizeWidth">Width</label><input type="number" id="txtResizeWidth" value={this.state.newWidth.toString()} onChange={this.widthChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtResizeHeight">Height</label><input type="number" id="txtResizeHeight" value={this.state.newHeight.toString()} onChange={this.heightChanged.bind(this)} /></div>
             <div role="group"><label>Anchor</label>
-                <ResizeAnchorInput oldWidth={this.props.map.width} newWidth={this.state.newWidth}
-                                   oldHeight={this.props.map.height} newHeight={this.state.newHeight}
+                <ResizeAnchorInput oldWidth={this.props.width} newWidth={this.state.newWidth}
+                                   oldHeight={this.props.height} newHeight={this.state.newHeight}
                                    mode={this.state.resizeAnchor} setMode={this.setMode.bind(this)} />
             </div>
             <div role="group">
@@ -47,8 +53,6 @@ class SizeEditor extends React.Component<IEditorProps, ISizeEditorState> {
     private changeSize(e: Event) {
         e.preventDefault();
 
-        this.props.map.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
-
-        this.props.mapChanged();
+        this.props.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
     }
 }

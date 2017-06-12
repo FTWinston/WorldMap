@@ -24,8 +24,9 @@
 
         "controls/ResizeAnchorInput.tsx",
 
+        "editors/OverviewEditor.tsx",
         "editors/SizeEditor.tsx",
-        "editors/TerrainTypesEditor.tsx",
+        "editors/TerrainTypes.tsx",
         "editors/TerrainEditor.tsx",
         "editors/LinesEditor.tsx",
         "editors/LocationsEditor.tsx",

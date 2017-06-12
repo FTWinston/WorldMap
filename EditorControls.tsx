@@ -10,6 +10,7 @@ interface IEditorControlsState {
 class EditorControls extends React.Component<IEditorControlsProps, IEditorControlsState> { 
     render() {
         return <div id="editorControls">
+            {this.renderButton(EditorType.Overview, 'Overview') /* info.svg */}
             {this.renderButton(EditorType.Size, 'Size') /* move.svg */}
             {this.renderButton(EditorType.TerrainTypes, 'Terrain Types') /* grid.svg */}
             {this.renderButton(EditorType.Terrain, 'Terrain') /* edit.svg */}

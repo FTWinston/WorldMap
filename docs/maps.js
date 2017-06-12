@@ -96,19 +96,52 @@ var ResizeAnchorInput = (function (_super) {
     };
     return ResizeAnchorInput;
 }(React.Component));
+var OverviewEditor = (function (_super) {
+    __extends(OverviewEditor, _super);
+    function OverviewEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            name: props.name,
+            description: props.description,
+        };
+        return _this;
+    }
+    OverviewEditor.prototype.render = function () {
+        return React.createElement("form", { onSubmit: this.updateDetails.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtName" }, "Name"),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtDesc" }, "Info"),
+                React.createElement("textarea", { id: "txtDesc", onChange: this.descChanged.bind(this), rows: 20, value: this.state.description })),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save details")));
+    };
+    OverviewEditor.prototype.nameChanged = function (e) {
+        this.setState({ name: e.target.value, description: this.state.description });
+    };
+    OverviewEditor.prototype.descChanged = function (e) {
+        this.setState({ name: this.state.name, description: e.target.value });
+    };
+    OverviewEditor.prototype.updateDetails = function (e) {
+        e.preventDefault();
+        this.props.saveChanges(this.state.name, this.state.description);
+    };
+    return OverviewEditor;
+}(React.Component));
 var SizeEditor = (function (_super) {
     __extends(SizeEditor, _super);
     function SizeEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            newWidth: props.map.width,
-            newHeight: props.map.height,
+            newWidth: props.width,
+            newHeight: props.height,
             resizeAnchor: 0 /* TopLeft */,
         };
         return _this;
     }
     SizeEditor.prototype.render = function () {
-        var sameSize = this.state.newWidth == this.props.map.width && this.state.newHeight == this.props.map.height;
+        var sameSize = this.state.newWidth == this.props.width && this.state.newHeight == this.props.height;
         return React.createElement("form", { onSubmit: this.changeSize.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtResizeWidth" }, "Width"),
@@ -118,7 +151,7 @@ var SizeEditor = (function (_super) {
                 React.createElement("input", { type: "number", id: "txtResizeHeight", value: this.state.newHeight.toString(), onChange: this.heightChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", null, "Anchor"),
-                React.createElement(ResizeAnchorInput, { oldWidth: this.props.map.width, newWidth: this.state.newWidth, oldHeight: this.props.map.height, newHeight: this.state.newHeight, mode: this.state.resizeAnchor, setMode: this.setMode.bind(this) })),
+                React.createElement(ResizeAnchorInput, { oldWidth: this.props.width, newWidth: this.state.newWidth, oldHeight: this.props.height, newHeight: this.state.newHeight, mode: this.state.resizeAnchor, setMode: this.setMode.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit", disabled: sameSize }, "Change size")));
     };
@@ -133,10 +166,19 @@ var SizeEditor = (function (_super) {
     };
     SizeEditor.prototype.changeSize = function (e) {
         e.preventDefault();
-        this.props.map.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
-        this.props.mapChanged();
+        this.props.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
     };
     return SizeEditor;
+}(React.Component));
+var TerrainTypesEditor = (function (_super) {
+    __extends(TerrainTypesEditor, _super);
+    function TerrainTypesEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    TerrainTypesEditor.prototype.render = function () {
+        return React.createElement("div", null);
+    };
+    return TerrainTypesEditor;
 }(React.Component));
 var TerrainEditor = (function (_super) {
     __extends(TerrainEditor, _super);
@@ -192,6 +234,8 @@ var MapData = (function () {
         this.height = height;
         this.cells = new Array(this.underlyingWidth * this.height);
         this.cellTypes = [];
+        this.name = '';
+        this.description = '';
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
                 if (this.shouldIndexHaveCell(i))
@@ -419,6 +463,8 @@ var MapData = (function () {
     */
     MapData.loadFromJSON = function (json) {
         var map = new MapData(json.width, json.height, false);
+        map.name = json.name;
+        map.description = json.description;
         map.cells = json.cells.map(function (cell) {
             if (cell == null)
                 return null;
@@ -715,12 +761,13 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Size */, 'Size') /* move.svg */,
-            this.renderButton(EditorType.TerrainTypes, 'Terrain Types') /* grid.svg */,
-            this.renderButton(1 /* Terrain */, 'Terrain') /* edit.svg */,
-            this.renderButton(2 /* Lines */, 'Lines') /*edit-3.svg*/,
-            this.renderButton(3 /* Locations */, 'Locations') /* map-pin.svg */,
-            this.renderButton(3 /* Locations */, 'Layers') /* layers.svg */,
+            this.renderButton(0 /* Overview */, 'Overview') /* info.svg */,
+            this.renderButton(1 /* Size */, 'Size') /* move.svg */,
+            this.renderButton(2 /* TerrainTypes */, 'Terrain Types') /* grid.svg */,
+            this.renderButton(3 /* Terrain */, 'Terrain') /* edit.svg */,
+            this.renderButton(4 /* Lines */, 'Lines') /*edit-3.svg*/,
+            this.renderButton(5 /* Locations */, 'Locations') /* map-pin.svg */,
+            this.renderButton(5 /* Locations */, 'Layers') /* layers.svg */,
             React.createElement("div", { className: "filler" }));
     };
     EditorControls.prototype.renderButton = function (editor, text) {
@@ -754,19 +801,40 @@ var WorldMap = (function (_super) {
             React.createElement("div", { id: "editor", className: editorClass }, activeEditor));
     };
     WorldMap.prototype.renderEditor = function (editor) {
-        var mapChanged = this.mapView.redraw.bind(this.mapView);
         if (this.state.map === undefined)
             return React.createElement("div", null, "No map");
         switch (editor) {
-            case 0 /* Size */:
-                return React.createElement(SizeEditor, { mapChanged: mapChanged, map: this.state.map });
-            case 1 /* Terrain */:
-                return React.createElement(TerrainEditor, { mapChanged: mapChanged, map: this.state.map });
-            case 2 /* Lines */:
-                return React.createElement(LinesEditor, { mapChanged: mapChanged, map: this.state.map });
-            case 3 /* Locations */:
-                return React.createElement(LocationsEditor, { mapChanged: mapChanged, map: this.state.map });
+            case 0 /* Overview */:
+                return React.createElement(OverviewEditor, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) });
+            case 1 /* Size */:
+                return React.createElement(SizeEditor, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) });
+            case 2 /* TerrainTypes */:
+                return React.createElement(TerrainTypesEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+            case 3 /* Terrain */:
+                return React.createElement(TerrainEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+            case 4 /* Lines */:
+                return React.createElement(LinesEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+            case 5 /* Locations */:
+                return React.createElement(LocationsEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
         }
+    };
+    WorldMap.prototype.updateDetails = function (name, desc) {
+        if (this.state.map === undefined)
+            return;
+        this.state.map.name = name;
+        this.state.map.description = desc;
+        this.setState({ map: this.state.map });
+    };
+    WorldMap.prototype.changeSize = function (width, height, mode) {
+        if (this.state.map === undefined)
+            return;
+        this.state.map.changeSize(width, height, mode);
+        this.mapView.redraw();
+        this.setState({ map: this.state.map });
+    };
+    WorldMap.prototype.mapChanged = function () {
+        this.mapView.redraw();
+        this.setState({ map: this.state.map });
     };
     WorldMap.prototype.selectEditor = function (editor) {
         this.setState({ activeEditor: editor });

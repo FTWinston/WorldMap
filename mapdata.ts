@@ -77,6 +77,8 @@ class CellGroup {
 type PossibleMapCell = MapCell | undefined;
 
 class MapData {
+    name: string;
+    description: string;
     private underlyingWidth: number;
     width: number;
     height: number;
@@ -93,6 +95,8 @@ class MapData {
         this.height = height;
         this.cells = new Array<MapCell>(this.underlyingWidth * this.height);
         this.cellTypes = [];
+        this.name = '';
+        this.description = '';
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
@@ -334,6 +338,8 @@ class MapData {
     */
     static loadFromJSON(json: any) {
         let map = new MapData(json.width, json.height, false);
+        map.name = json.name;
+        map.description = json.description;
 
         map.cells = json.cells.map(function (cell: {type: CellType}) {
             if (cell == null)
