@@ -64,11 +64,12 @@ $editorBackground: grey;
       border-right-color: $editorBackground;
       flex-shrink: 0;
     }
-
+/*
     &:focus {
       outline: none;
       margin-left: -0.75em;
     }
+*/
   }
 
   button, button > span {

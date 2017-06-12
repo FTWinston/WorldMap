@@ -39,14 +39,17 @@
     padding: 0.25em;
     transition: margin-left 0.5s, background-color 0.25s, border-right-color 0.25s;
     cursor: pointer;
-    text-align: left; }
+    text-align: left;
+    /*
+    &:focus {
+      outline: none;
+      margin-left: -0.75em;
+    }
+*/ }
     #editorControls button.active {
       background-color: grey;
       border-right-color: grey;
       flex-shrink: 0; }
-    #editorControls button:focus {
-      outline: none;
-      margin-left: -0.75em; }
   #editorControls button, #editorControls button > span {
     writing-mode: vertical-rl;
     -ms-writing-mode: vertical-rl;

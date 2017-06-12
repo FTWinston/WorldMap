@@ -133,52 +133,7 @@ var SizeEditor = (function (_super) {
     };
     SizeEditor.prototype.changeSize = function (e) {
         e.preventDefault();
-        var deltaWidth = this.state.newWidth - this.props.map.width;
-        var deltaHeight = this.state.newWidth - this.props.map.width;
-        switch (this.state.resizeAnchor) {
-            case 0 /* TopLeft */:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case 1 /* TopMiddle */:
-                this.props.map.changeWidth(Math.floor(deltaWidth / 2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth / 2), false);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case 2 /* TopRight */:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case 3 /* CenterLeft */:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 4 /* Center */:
-                this.props.map.changeWidth(Math.floor(deltaWidth / 2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth / 2), false);
-                this.props.map.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 5 /* CenterRight */:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 6 /* BottomLeft */:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-            case 7 /* BottomMiddle */:
-                this.props.map.changeWidth(Math.floor(deltaWidth / 2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth / 2), false);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-            case 8 /* BottomRight */:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-        }
+        this.props.map.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
         this.props.mapChanged();
     };
     return SizeEditor;
@@ -289,8 +244,57 @@ var MapData = (function () {
             return false; // chop right to get square edge
         return true;
     };
-    MapData.prototype.changeWidth = function (delta, leftEdgeFixed) {
-        this.performWidthChange(delta, leftEdgeFixed, false);
+    MapData.prototype.getCellIndex = function (row, col) {
+        return col + row * this.underlyingWidth;
+    };
+    MapData.prototype.changeSize = function (newWidth, newHeight, mode) {
+        var deltaWidth = newWidth - this.width;
+        var deltaHeight = newHeight - this.height;
+        switch (mode) {
+            case 0 /* TopLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 1 /* TopMiddle */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 2 /* TopRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 3 /* CenterLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 4 /* Center */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 5 /* CenterRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 6 /* BottomLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case 7 /* BottomMiddle */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case 8 /* BottomRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+        }
+        this.width += deltaWidth; // this is a "display only" property, and isn't affected by underlying calculations
         this.positionCells();
     };
     MapData.prototype.changeHeight = function (delta, topEdgeFixed) {
@@ -301,7 +305,6 @@ var MapData = (function () {
                 this.performWidthChange(increment, !topEdgeFixed, true);
             this.performHeightChange(increment, topEdgeFixed);
         }
-        this.positionCells();
     };
     MapData.prototype.performWidthChange = function (delta, leftEdgeFixed, forHeightChange) {
         var overallDelta = 0;
@@ -338,7 +341,6 @@ var MapData = (function () {
                 overallDelta += delta;
             }
         }
-        this.width += delta;
         this.underlyingWidth += delta;
     };
     MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
@@ -672,7 +674,7 @@ var MapView = (function (_super) {
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = -rCol - rThird;
         // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
-        return rCol + rRow * this.props.map.underlyingWidth;
+        return this.props.map.getCellIndex(rRow, rCol);
     };
     MapView.prototype.getScrollbarSize = function () {
         var outer = document.createElement('div');
@@ -734,7 +736,7 @@ var WorldMap = (function (_super) {
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            map: new MapData(500, 500),
+            map: new MapData(50, 50),
         };
         return _this;
     }

@@ -47,53 +47,7 @@ class SizeEditor extends React.Component<IEditorProps, ISizeEditorState> {
     private changeSize(e: Event) {
         e.preventDefault();
 
-        let deltaWidth = this.state.newWidth - this.props.map.width;
-        let deltaHeight = this.state.newWidth - this.props.map.width;
-
-        switch (this.state.resizeAnchor) {
-            case ResizeAnchorMode.TopLeft:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case ResizeAnchorMode.TopMiddle:
-                this.props.map.changeWidth(Math.floor(deltaWidth/2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth/2), false);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case ResizeAnchorMode.TopRight:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(deltaHeight, true);
-                break;
-            case ResizeAnchorMode.CenterLeft:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(Math.floor(deltaHeight/2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight/2), false);
-                break;
-            case ResizeAnchorMode.Center:
-                this.props.map.changeWidth(Math.floor(deltaWidth/2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth/2), false);
-                this.props.map.changeHeight(Math.floor(deltaHeight/2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight/2), false);
-                break;
-            case ResizeAnchorMode.CenterRight:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(Math.floor(deltaHeight/2), true);
-                this.props.map.changeHeight(Math.ceil(deltaHeight/2), false);
-                break;
-            case ResizeAnchorMode.BottomLeft:
-                this.props.map.changeWidth(deltaWidth, true);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-            case ResizeAnchorMode.BottomMiddle:
-                this.props.map.changeWidth(Math.floor(deltaWidth/2), true);
-                this.props.map.changeWidth(Math.ceil(deltaWidth/2), false);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-            case ResizeAnchorMode.BottomRight:
-                this.props.map.changeWidth(deltaWidth, false);
-                this.props.map.changeHeight(deltaHeight, false);
-                break;
-        }
+        this.props.map.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
 
         this.props.mapChanged();
     }

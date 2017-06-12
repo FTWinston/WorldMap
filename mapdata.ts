@@ -77,7 +77,7 @@ class CellGroup {
 type PossibleMapCell = MapCell | undefined;
 
 class MapData {
-    underlyingWidth: number;
+    private underlyingWidth: number;
     width: number;
     height: number;
     cellTypes: CellType[];
@@ -152,11 +152,62 @@ class MapData {
             return false; // chop right to get square edge
         return true;
     }
-    changeWidth(delta: number, leftEdgeFixed: boolean) {
-        this.performWidthChange(delta, leftEdgeFixed, false);
+    getCellIndex(row: number, col: number) {
+        return col + row * this.underlyingWidth;
+    }
+    changeSize(newWidth: number, newHeight: number, mode: ResizeAnchorMode) {
+        let deltaWidth = newWidth - this.width;
+        let deltaHeight = newHeight - this.height;
+
+        switch (mode) {
+            case ResizeAnchorMode.TopLeft:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case ResizeAnchorMode.TopMiddle:
+                this.performWidthChange(Math.floor(deltaWidth/2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth/2), false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case ResizeAnchorMode.TopRight:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case ResizeAnchorMode.CenterLeft:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(Math.floor(deltaHeight/2), true);
+                this.changeHeight(Math.ceil(deltaHeight/2), false);
+                break;
+            case ResizeAnchorMode.Center:
+                this.performWidthChange(Math.floor(deltaWidth/2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth/2), false, false);
+                this.changeHeight(Math.floor(deltaHeight/2), true);
+                this.changeHeight(Math.ceil(deltaHeight/2), false);
+                break;
+            case ResizeAnchorMode.CenterRight:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(Math.floor(deltaHeight/2), true);
+                this.changeHeight(Math.ceil(deltaHeight/2), false);
+                break;
+            case ResizeAnchorMode.BottomLeft:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case ResizeAnchorMode.BottomMiddle:
+                this.performWidthChange(Math.floor(deltaWidth/2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth/2), false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case ResizeAnchorMode.BottomRight:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+        }
+
+        this.width += deltaWidth; // this is a "display only" property, and isn't affected by underlying calculations
         this.positionCells();
     }
-    changeHeight(delta: number, topEdgeFixed: boolean) {
+    private changeHeight(delta: number, topEdgeFixed: boolean) {
         let increment = delta > 0 ? 1 : -1;
         let increasing = delta > 0 ? 1 : 0;
 
@@ -165,7 +216,6 @@ class MapData {
                 this.performWidthChange(increment, !topEdgeFixed, true);
             this.performHeightChange(increment, topEdgeFixed);
         }
-        this.positionCells();
     }
     private performWidthChange(delta: number, leftEdgeFixed: boolean, forHeightChange: boolean) {
         let overallDelta = 0;
@@ -207,7 +257,6 @@ class MapData {
             }
         }
 
-        this.width += delta;
         this.underlyingWidth += delta;
     }
     private performHeightChange(delta: number, topEdgeFixed: boolean) {

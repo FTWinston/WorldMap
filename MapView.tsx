@@ -315,7 +315,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
 
-        return rCol + rRow * this.props.map.underlyingWidth;
+        return this.props.map.getCellIndex(rRow, rCol);
     }
     private getScrollbarSize() {
         let outer = document.createElement('div');
