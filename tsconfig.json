@@ -30,10 +30,11 @@
         "editors/TerrainEditor.tsx",
         "editors/LinesEditor.tsx",
         "editors/LocationsEditor.tsx",
+        "editors/LayersEditor.tsx",
 
         "MapData.ts",
         "MapView.tsx",
-        "EditorControls.tsx",
+        "EditorTabs.tsx",
         "WorldMap.tsx"
     ]
 }

@@ -172,11 +172,22 @@ var SizeEditor = (function (_super) {
 }(React.Component));
 var TerrainTypesEditor = (function (_super) {
     __extends(TerrainTypesEditor, _super);
-    function TerrainTypesEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function TerrainTypesEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            cellTypes: props.cellTypes.slice(),
+        };
+        return _this;
     }
+    TerrainTypesEditor.prototype.componentWillReceiveProps = function (newProps) {
+        this.setState({ cellTypes: newProps.cellTypes.slice() });
+    };
     TerrainTypesEditor.prototype.render = function () {
         return React.createElement("div", null);
+    };
+    TerrainTypesEditor.prototype.changeSize = function (e) {
+        e.preventDefault();
+        this.props.updateCellTypes(this.state.cellTypes);
     };
     return TerrainTypesEditor;
 }(React.Component));
@@ -209,6 +220,16 @@ var LocationsEditor = (function (_super) {
         return React.createElement("div", null);
     };
     return LocationsEditor;
+}(React.Component));
+var LayersEditor = (function (_super) {
+    __extends(LayersEditor, _super);
+    function LayersEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    LayersEditor.prototype.render = function () {
+        return React.createElement("div", null);
+    };
+    return LayersEditor;
 }(React.Component));
 var CellType = (function () {
     function CellType(name, color) {
@@ -761,19 +782,47 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Overview */, 'Overview') /* info.svg */,
-            this.renderButton(1 /* Size */, 'Size') /* move.svg */,
-            this.renderButton(2 /* TerrainTypes */, 'Terrain Types') /* grid.svg */,
-            this.renderButton(3 /* Terrain */, 'Terrain') /* edit.svg */,
-            this.renderButton(4 /* Lines */, 'Lines') /*edit-3.svg*/,
-            this.renderButton(5 /* Locations */, 'Locations') /* map-pin.svg */,
-            this.renderButton(5 /* Locations */, 'Layers') /* layers.svg */,
+            this.renderButton(0 /* Overview */, 'Overview', // info
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
+                React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
+                React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
+            this.renderButton(1 /* Size */, 'Size', // move
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polyline", { points: "5 9 2 12 5 15" }),
+                React.createElement("polyline", { points: "9 5 12 2 15 5" }),
+                React.createElement("polyline", { points: "15 19 12 22 9 19" }),
+                React.createElement("polyline", { points: "19 9 22 12 19 15" }),
+                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
+                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
+            this.renderButton(2 /* TerrainTypes */, 'Terrain Types', // grid
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("rect", { x: "3", y: "3", width: "7", height: "7" }),
+                React.createElement("rect", { x: "14", y: "3", width: "7", height: "7" }),
+                React.createElement("rect", { x: "14", y: "14", width: "7", height: "7" }),
+                React.createElement("rect", { x: "3", y: "14", width: "7", height: "7" }))),
+            this.renderButton(3 /* Terrain */, 'Terrain', // edit
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" }),
+                React.createElement("polygon", { points: "18 2 22 6 12 16 8 16 8 12 18 2" }))),
+            this.renderButton(4 /* Lines */, 'Lines', // edit-3
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polygon", { points: "14 2 18 6 7 17 3 17 3 13 14 2" }),
+                React.createElement("line", { x1: "3", y1: "22", x2: "21", y2: "22" }))),
+            this.renderButton(5 /* Locations */, 'Locations', // map-pin
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
+                React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
+            this.renderButton(6 /* Layers */, 'Layers', // layers
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
+                React.createElement("polyline", { points: "2 17 12 22 22 17" }),
+                React.createElement("polyline", { points: "2 12 12 17 22 12" }))),
             React.createElement("div", { className: "filler" }));
     };
-    EditorControls.prototype.renderButton = function (editor, text) {
+    EditorControls.prototype.renderButton = function (editor, text, image) {
         var classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor) },
-            React.createElement("span", null, text));
+        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor) }, image);
     };
     EditorControls.prototype.selectEditor = function (editor) {
         this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor);
@@ -809,13 +858,15 @@ var WorldMap = (function (_super) {
             case 1 /* Size */:
                 return React.createElement(SizeEditor, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) });
             case 2 /* TerrainTypes */:
-                return React.createElement(TerrainTypesEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+                return React.createElement(TerrainTypesEditor, { cellTypes: this.state.map.cellTypes, updateCellTypes: this.updateCellTypes.bind(this) });
             case 3 /* Terrain */:
                 return React.createElement(TerrainEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
             case 4 /* Lines */:
                 return React.createElement(LinesEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
             case 5 /* Locations */:
                 return React.createElement(LocationsEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+            case 6 /* Layers */:
+                return React.createElement(LayersEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
         }
     };
     WorldMap.prototype.updateDetails = function (name, desc) {
@@ -829,6 +880,15 @@ var WorldMap = (function (_super) {
         if (this.state.map === undefined)
             return;
         this.state.map.changeSize(width, height, mode);
+        this.mapView.redraw();
+        this.setState({ map: this.state.map });
+    };
+    WorldMap.prototype.updateCellTypes = function (cellTypes) {
+        if (this.state.map === undefined)
+            return;
+        // TODO: surely check that a cell type isn't in use before we get this far?
+        // or just clear all cells of a "removed" type, but the user should be warned first.
+        this.state.map.cellTypes = cellTypes;
         this.mapView.redraw();
         this.setState({ map: this.state.map });
     };

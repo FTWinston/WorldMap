@@ -3,9 +3,9 @@ const enum EditorType {
     Size,
     TerrainTypes,
     Terrain,
-    //Generation,
     Lines,
     Locations,
+    Layers,
 }
 
 interface IWorldMapProps {
@@ -50,13 +50,15 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Size:
                 return <SizeEditor width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.TerrainTypes:
-                return <TerrainTypesEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+                return <TerrainTypesEditor cellTypes={this.state.map.cellTypes} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Terrain:
                 return <TerrainEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
             case EditorType.Lines:
                 return <LinesEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
             case EditorType.Locations:
                 return <LocationsEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+            case EditorType.Layers:
+                return <LayersEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
         }
     }
     private updateDetails(name: string, desc: string) {
@@ -72,6 +74,16 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             return;
         
         this.state.map.changeSize(width, height, mode);
+        this.mapView.redraw();
+        this.setState({map: this.state.map});
+    }
+    private updateCellTypes(cellTypes: CellType[]) {
+        if (this.state.map === undefined)
+            return;
+        
+        // TODO: surely check that a cell type isn't in use before we get this far?
+        // or just clear all cells of a "removed" type, but the user should be warned first.
+        this.state.map.cellTypes = cellTypes;
         this.mapView.redraw();
         this.setState({map: this.state.map});
     }

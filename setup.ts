@@ -1,3 +1,4 @@
+/*
 function getParameterByName(name: string, url: string | null = null) {
     if (!url) url = window.location.href;
     name = name.replace(/[\[\]]/g, "\\$&");
@@ -63,6 +64,7 @@ if (queryUrl != null)
     editor.view.updateSize();
     e.preventDefault();
 });
+*/
 
 /*
 document.getElementById('loadUrl').addEventListener('click', function() {
