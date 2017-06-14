@@ -1,6 +1,6 @@
 interface IEditorControlsProps {
     activeEditor?: EditorType;
-    editorSelected: (editor?: EditorType) => void;
+    editorSelected: (editor?: EditorType, name?: string) => void;
 }
 
 class EditorControls extends React.Component<IEditorControlsProps, {}> { 
@@ -54,9 +54,9 @@ class EditorControls extends React.Component<IEditorControlsProps, {}> {
     }
     private renderButton(editor: EditorType, text: string, image: JSX.Element) {
         let classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return <button className={classes} onClick={this.selectEditor.bind(this, editor)}>{image}</button>;
+        return <button className={classes} onClick={this.selectEditor.bind(this, editor, text)}>{image}</button>;
     }
-    private selectEditor(editor: EditorType) {
-        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor);
+    private selectEditor(editor: EditorType, name: string) {
+        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
     }
 }

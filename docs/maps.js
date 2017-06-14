@@ -822,10 +822,10 @@ var EditorControls = (function (_super) {
     };
     EditorControls.prototype.renderButton = function (editor, text, image) {
         var classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor) }, image);
+        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor, text) }, image);
     };
-    EditorControls.prototype.selectEditor = function (editor) {
-        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor);
+    EditorControls.prototype.selectEditor = function (editor, name) {
+        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
     };
     return EditorControls;
 }(React.Component));
@@ -847,7 +847,9 @@ var WorldMap = (function (_super) {
         return React.createElement("div", { id: "worldRoot" },
             React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; } }),
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
-            React.createElement("div", { id: "editor", className: editorClass }, activeEditor));
+            React.createElement("div", { id: "editor", className: editorClass },
+                React.createElement("h1", null, this.state.editorHeading),
+                activeEditor));
     };
     WorldMap.prototype.renderEditor = function (editor) {
         if (this.state.map === undefined)
@@ -896,8 +898,8 @@ var WorldMap = (function (_super) {
         this.mapView.redraw();
         this.setState({ map: this.state.map });
     };
-    WorldMap.prototype.selectEditor = function (editor) {
-        this.setState({ activeEditor: editor });
+    WorldMap.prototype.selectEditor = function (editor, name) {
+        this.setState({ activeEditor: editor, editorHeading: name });
         window.setTimeout(this.mapView.resize.bind(this.mapView), 1510);
     };
     return WorldMap;

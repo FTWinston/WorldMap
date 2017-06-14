@@ -19,10 +19,14 @@
     flex-grow: 0;
     transition: width 1.5s;
     width: 14em;
+    padding: 0.25em;
     z-index: 1;
     background-color: #fff; }
     #worldRoot #editor.hidden {
       width: 0; }
+    #worldRoot #editor h1 {
+      margin-top: 0;
+      margin-bottom: 0.5em; }
 
 #editorControls {
   display: flex;
@@ -70,21 +74,19 @@
     overflow: scroll;
     position: absolute; }
 
-#editor > form {
-  margin: 0.25em; }
-  #editor > form > div[role="group"] {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-content: flex-start; }
-    #editor > form > div[role="group"] > label {
-      min-width: 4em; }
-    #editor > form > div[role="group"]:not(:first-child) {
-      margin-top: 1em; }
-    #editor > form > div[role="group"] > input {
-      flex-shrink: 1;
-      width: 10em;
-      text-align: center; }
+#editor > form > div[role="group"] {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-content: flex-start; }
+  #editor > form > div[role="group"] > label {
+    min-width: 4em; }
+  #editor > form > div[role="group"]:not(:first-child) {
+    margin-top: 1em; }
+  #editor > form > div[role="group"] > input {
+    flex-shrink: 1;
+    width: 10em;
+    text-align: center; }
 
 .resizeAnchor {
   height: 8em;

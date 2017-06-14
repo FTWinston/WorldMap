@@ -15,6 +15,7 @@ interface IWorldMapProps {
 interface IWorldMapState {
     map?: MapData;
     activeEditor?: EditorType;
+    editorHeading?: string;
 }
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
@@ -36,6 +37,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             <MapView map={this.state.map} ref={(c) => this.mapView = c} />
             <EditorControls activeEditor={this.state.activeEditor} editorSelected={this.selectEditor.bind(this)} />
             <div id="editor" className={editorClass}>
+                <h1>{this.state.editorHeading}</h1>
                 {activeEditor}
             </div>
         </div>;
@@ -91,8 +93,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapView.redraw();
         this.setState({map: this.state.map});
     }
-    private selectEditor(editor: EditorType) {
-        this.setState({activeEditor: editor});
+    private selectEditor(editor: EditorType, name: string) {
+        this.setState({activeEditor: editor, editorHeading: name});
         window.setTimeout(this.mapView.resize.bind(this.mapView), 1510);
     }
 }
