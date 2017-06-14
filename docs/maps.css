@@ -88,24 +88,38 @@
     width: 10em;
     text-align: center; }
 
-.resizeAnchor {
+#editor .resizeAnchor {
   height: 8em;
   width: 8em;
   display: flex;
-  flex-direction: column;
-  justify-content: stretch; }
-  .resizeAnchor button {
+  flex-direction: column; }
+  #editor .resizeAnchor button {
     margin: 0.1em;
     padding: 0;
     flex-grow: 1;
     flex-basis: 0;
     font-size: 1em; }
-  .resizeAnchor > div {
+  #editor .resizeAnchor > div {
     display: flex;
     flex-direction: row;
     flex-grow: 1;
-    flex-basis: 0;
-    justify-content: stretch; }
+    flex-basis: 0; }
+
+#editor .typeList {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  align-content: flex-start; }
+  #editor .typeList > * {
+    margin: 0.25em;
+    padding: 0.5em;
+    border: solid black 1px;
+    border-radius: 0.2em;
+    min-width: 3em;
+    min-height: 2em;
+    text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white; }
 
 /*
 // map editing

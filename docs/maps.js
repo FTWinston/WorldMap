@@ -183,7 +183,10 @@ var TerrainTypesEditor = (function (_super) {
         this.setState({ cellTypes: newProps.cellTypes.slice() });
     };
     TerrainTypesEditor.prototype.render = function () {
-        return React.createElement("div", null);
+        return React.createElement("div", null,
+            React.createElement("div", { className: "typeList" }, this.state.cellTypes.map(function (type, id) {
+                return React.createElement("div", { ref: id.toString(), className: "cellType", style: { 'background-color': type.color } }, type.name);
+            }))); // TODO: add link, click-to-edit prompt
     };
     TerrainTypesEditor.prototype.changeSize = function (e) {
         e.preventDefault();

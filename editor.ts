@@ -16,9 +16,6 @@ class MapEditor {
         //(document.querySelector('#brushEdit .dialog-buttons .ok') as HTMLElement).addEventListener('click', this.brushEditConfirmed.bind(this));
 
         this.drawCellTypes();
-
-        let resizeWizard = new Wizard(document.getElementById('resize-wizard') as HTMLElement, this.performResize.bind(this));
-        (document.getElementById('resizeLink') as HTMLElement).addEventListener('click', this.resizeClicked.bind(this, resizeWizard));
     }
     private resizeClicked(wizard: Wizard) {
         wizard.show();
@@ -51,27 +48,6 @@ class MapEditor {
         this.terrainBrush = undefined;
         this.drawCellTypes();
         return false;
-    }
-    private performResize(resize: any) {
-        let number = parseInt(resize.number);
-        if (resize.change != 'add')
-            number = -number;
-
-        switch (resize.edge) {
-            case 'top':
-                this.view.data.changeHeight(number, false);
-                break;
-            case 'bottom':
-                this.view.data.changeHeight(number, true);
-                break;
-            case 'left':
-                this.view.data.changeWidth(number, false);
-                break;
-            case 'right':
-                this.view.data.changeWidth(number, true);
-                break;
-        }
-        this.view.updateSize();
     }
     private cellClicked(cell: MapCell) {
         if (this.terrainBrush === undefined)
