@@ -180,17 +180,119 @@ var TerrainTypesEditor = (function (_super) {
         return _this;
     }
     TerrainTypesEditor.prototype.componentWillReceiveProps = function (newProps) {
-        this.setState({ cellTypes: newProps.cellTypes.slice() });
+        this.setState({
+            cellTypes: newProps.cellTypes.slice(),
+            editingType: undefined,
+        });
     };
     TerrainTypesEditor.prototype.render = function () {
-        return React.createElement("div", null,
-            React.createElement("div", { className: "typeList" }, this.state.cellTypes.map(function (type, id) {
-                return React.createElement("div", { ref: id.toString(), className: "cellType", style: { 'background-color': type.color } }, type.name);
-            }))); // TODO: add link, click-to-edit prompt
+        if (this.state.editName === undefined)
+            return this.renderAllTypes();
+        else
+            return this.renderTypeEdit();
     };
-    TerrainTypesEditor.prototype.changeSize = function (e) {
+    TerrainTypesEditor.prototype.renderAllTypes = function () {
+        var that = this;
+        return React.createElement("div", null,
+            React.createElement("div", { className: "palleteList" }, this.state.cellTypes.map(function (type, id) {
+                return React.createElement("div", { key: id.toString(), style: { 'backgroundColor': type.color }, onClick: that.showEdit.bind(that, type) }, type.name);
+            })),
+            React.createElement("p", { className: "prompt" }, "Click a terrain type to edit it."),
+            React.createElement("button", { type: "button", onClick: this.showEdit.bind(this, undefined) }, "Add new type"));
+    };
+    TerrainTypesEditor.prototype.renderTypeEdit = function () {
+        var deleteButton = this.state.editingType === undefined ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        return React.createElement("form", { onSubmit: this.saveType.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtName" }, "Name"),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.editName, onChange: this.nameChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "inColor" }, "Color"),
+                React.createElement("input", { type: "color", id: "inColor", value: this.state.editColor, onChange: this.colorChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save type"),
+                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
+                deleteButton));
+    };
+    TerrainTypesEditor.prototype.nameChanged = function (e) {
+        this.setState({
+            editName: e.target.value,
+            cellTypes: this.state.cellTypes,
+        });
+    };
+    TerrainTypesEditor.prototype.colorChanged = function (e) {
+        this.setState({
+            editColor: e.target.value,
+            cellTypes: this.state.cellTypes,
+        });
+    };
+    TerrainTypesEditor.prototype.showEdit = function (type) {
+        var name, color;
+        if (type === undefined) {
+            name = '';
+            color = '#666666';
+        }
+        else {
+            name = type.name;
+            color = type.color;
+        }
+        this.setState({
+            cellTypes: this.state.cellTypes,
+            editingType: type,
+            editName: name,
+            editColor: color,
+        });
+    };
+    TerrainTypesEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        this.props.updateCellTypes(this.state.cellTypes);
+        var name = this.state.editName === undefined ? '' : this.state.editName.trim();
+        if (name == '')
+            return;
+        var color = this.state.editColor === undefined ? '' : this.state.editColor;
+        if (color == '')
+            return;
+        var editType = this.state.editingType;
+        this.setState(function (state) {
+            var cellTypes = state.cellTypes;
+            if (editType === undefined) {
+                cellTypes.push(new CellType(name, color));
+            }
+            else {
+                editType.name = name;
+                editType.color = color;
+            }
+            this.props.updateCellTypes(cellTypes);
+            return {
+                cellTypes: cellTypes,
+                editingType: undefined,
+                editName: undefined,
+                editColor: undefined,
+            };
+        });
+    };
+    TerrainTypesEditor.prototype.cancelEdit = function () {
+        this.setState({
+            editingType: undefined,
+            editName: undefined,
+            editColor: undefined,
+            cellTypes: this.state.cellTypes,
+        });
+    };
+    TerrainTypesEditor.prototype.deleteType = function () {
+        this.setState(function (state) {
+            var cellTypes = state.cellTypes;
+            if (state.editingType !== undefined) {
+                var pos = cellTypes.indexOf(state.editingType);
+                cellTypes.splice(pos, 1);
+            }
+            this.props.updateCellTypes(cellTypes);
+            return {
+                editingType: undefined,
+                editName: undefined,
+                editColor: undefined,
+                cellTypes: cellTypes,
+            };
+        });
     };
     return TerrainTypesEditor;
 }(React.Component));

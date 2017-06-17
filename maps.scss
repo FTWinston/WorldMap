@@ -163,7 +163,7 @@ $editorBackground: #fff;
     }
   }
 
-  .typeList {
+  .palleteList {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -178,6 +178,7 @@ $editorBackground: #fff;
       min-width: 3em;
       min-height: 2em;
       text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
+      cursor: pointer;
     }
   }
 }

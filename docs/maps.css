@@ -105,42 +105,24 @@
     flex-grow: 1;
     flex-basis: 0; }
 
-#editor .typeList {
+#editor .palleteList {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
   align-content: flex-start; }
-  #editor .typeList > * {
+  #editor .palleteList > * {
     margin: 0.25em;
     padding: 0.5em;
     border: solid black 1px;
     border-radius: 0.2em;
     min-width: 3em;
     min-height: 2em;
-    text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white; }
+    text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
+    cursor: pointer; }
 
 /*
-// map editing
-#sidebar {
-    .tool {
-      border: solid 1px grey;
-      border-radius: 0.5em;
-      padding: 0.5em;
-      margin: 0.5em 0;
-
-      &::before {
-        content: attr(data-title);
-      }
-
-      &.terrain::after {
-        content: "double-click to edit";
-        color: #ccc;
-      }
-    }
-}
-
 #brushList .brush {
   cursor: pointer;
   display: inline-block;
@@ -163,39 +145,6 @@
   }
   &:hover {
     text-decoration: underline;
-  }
-}
-
-
-// popups
-.dialog {
-  position: fixed;
-  margin: 0 auto;
-  top: 20%;
-  left: 50%;
-  margin-left: -300px;
-  width: 300px;
-  background-color: white;
-  border: solid 1px grey;
-  border-radius: 0.5em;
-  padding: 0 0.5em 0.5em 0.5em;
-
-  .dialog-buttons {
-    margin-top: 1em;
-  }
-}
-
-.wizard .step {
-  li {
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  &.done li:not(.selected) {
-    color: #ccc;
   }
 }
 */
