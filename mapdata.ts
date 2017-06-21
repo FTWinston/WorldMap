@@ -2,7 +2,7 @@ class CellType {
     constructor(public name: string, public color: string) {
     }
 
-    public static empty = new CellType('Empty', '#fff');
+    public static empty = new CellType('Empty', '#ffffff');
 }
 
 class MapCell {
@@ -94,7 +94,7 @@ class MapData {
         this.width = width;
         this.height = height;
         this.cells = new Array<MapCell>(this.underlyingWidth * this.height);
-        this.cellTypes = [];
+        this.cellTypes = [CellType.empty];
         this.name = '';
         this.description = '';
 
@@ -103,9 +103,9 @@ class MapData {
                 if (this.shouldIndexHaveCell(i))
                     this.cells[i] = new MapCell(this, CellType.empty);
 
-            this.cellTypes.push(new CellType('red', '#ff0000'));
-            this.cellTypes.push(new CellType('green', '#00cc00'));
-            this.cellTypes.push(new CellType('blue', '#0099ff'));
+            this.cellTypes.push(new CellType('Red', '#ff0000'));
+            this.cellTypes.push(new CellType('Green', '#00cc00'));
+            this.cellTypes.push(new CellType('Blue', '#0099ff'));
 
             this.positionCells();
         }

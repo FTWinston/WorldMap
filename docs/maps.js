@@ -201,7 +201,7 @@ var TerrainTypesEditor = (function (_super) {
             React.createElement("button", { type: "button", onClick: this.showEdit.bind(this, undefined) }, "Add new type"));
     };
     TerrainTypesEditor.prototype.renderTypeEdit = function () {
-        var deleteButton = this.state.editingType === undefined ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        var deleteButton = this.state.editingType === undefined || this.state.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -343,7 +343,7 @@ var CellType = (function () {
     }
     return CellType;
 }());
-CellType.empty = new CellType('Empty', '#fff');
+CellType.empty = new CellType('Empty', '#ffffff');
 var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
@@ -359,16 +359,16 @@ var MapData = (function () {
         this.width = width;
         this.height = height;
         this.cells = new Array(this.underlyingWidth * this.height);
-        this.cellTypes = [];
+        this.cellTypes = [CellType.empty];
         this.name = '';
         this.description = '';
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
                 if (this.shouldIndexHaveCell(i))
                     this.cells[i] = new MapCell(this, CellType.empty);
-            this.cellTypes.push(new CellType('red', '#ff0000'));
-            this.cellTypes.push(new CellType('green', '#00cc00'));
-            this.cellTypes.push(new CellType('blue', '#0099ff'));
+            this.cellTypes.push(new CellType('Red', '#ff0000'));
+            this.cellTypes.push(new CellType('Green', '#00cc00'));
+            this.cellTypes.push(new CellType('Blue', '#0099ff'));
             this.positionCells();
         }
     }

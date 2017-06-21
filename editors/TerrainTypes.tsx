@@ -42,7 +42,7 @@ class TerrainTypesEditor extends React.Component<ITerrainEditorProps, ITerrainEd
         </div>;
     }
     private renderTypeEdit() {
-        let deleteButton = this.state.editingType === undefined ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
+        let deleteButton = this.state.editingType === undefined || this.state.editingType == CellType.empty ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
 
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.editName} onChange={this.nameChanged.bind(this)} /></div>
