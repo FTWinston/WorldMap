@@ -2,7 +2,7 @@ interface ILayersEditorState {
     
 }
 
-class LayersEditor extends React.Component<IEditorProps, ILayersEditorState> {
+class LayersEditor extends React.Component<{}, ILayersEditorState> {
     render() {
         return <div></div>;
     }

@@ -116,11 +116,17 @@
     margin: 0.25em;
     padding: 0.5em;
     border: solid black 1px;
+    color: black;
     border-radius: 0.2em;
     min-width: 3em;
     min-height: 2em;
     text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
     cursor: pointer; }
+    #editor .palleteList > *.selected {
+      border-color: white;
+      color: white;
+      text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 2px black, 0 0 2px black;
+      outline: solid black 2px; }
 
 /*
 #brushList .brush {

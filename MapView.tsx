@@ -1,6 +1,9 @@
 interface IMapViewProps {
     map: MapData;
-    cellClicked?: (cell: MapCell) => void
+    cellMouseDown: (cell: MapCell) => void;
+    cellMouseUp: (cell: MapCell) => void;
+    cellMouseEnter: (cell: MapCell) => void;
+    cellMouseLeave: (cell: MapCell) => void;
 }
 
 interface IMapViewState {
@@ -57,7 +60,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 onTouchMove={this.touchMove.bind(this)}
                 onMouseMove={this.mouseMove.bind(this)}
                 onMouseEnter={this.mouseMove.bind(this)}
-                onClick={this.clicked.bind(this)}>
+                onMouseDown={this.mouseDown.bind(this)}
+                onMouseUp={this.mouseUp.bind(this)}>
                     <div ref={(c) => this.scrollSize = c} className="scrollSize" />
             </div>
         </div>;
@@ -274,22 +278,44 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight});
     }
+    private mouseDownCell: PossibleMapCell;
     private mouseMove(e: MouseEvent) {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
-    }
-    private clicked(e: MouseEvent) {
+        if (this.mouseDownCell === undefined)
+            return;
+        
         let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             let cell = this.props.map.cells[cellIndex];
-            if (cell != null) {
-                if (this.props.cellClicked === undefined || !this.props.cellClicked(cell)) {
-                    cell.selected = cell.selected !== true;
-                }
-                this.redraw();
-                return;
+            if (cell !== this.mouseDownCell) {
+                if (this.props.cellMouseLeave !== undefined)
+                    this.props.cellMouseLeave(this.mouseDownCell);
+                    
+                this.mouseDownCell = cell;
+
+                if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+                    this.props.cellMouseEnter(cell);
             }
         }
+    }
+    private mouseDown(e: MouseEvent) {
+        let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            let cell = this.props.map.cells[cellIndex];
+            if (cell !== undefined && this.props.cellMouseDown !== undefined)
+                this.props.cellMouseDown(cell);
+            this.mouseDownCell = cell;
+        }
+    }
+    private mouseUp(e: MouseEvent) {
+        let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            let cell = this.props.map.cells[cellIndex];
+            if (cell !== undefined && this.props.cellMouseUp !== undefined)
+                this.props.cellMouseUp(cell);
+        }
+        this.mouseDownCell = undefined;
     }
     private getCellIndexAtPoint(screenX: number, screenY: number) {
         let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;

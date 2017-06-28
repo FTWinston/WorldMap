@@ -298,11 +298,38 @@ var TerrainTypesEditor = (function (_super) {
 }(React.Component));
 var TerrainEditor = (function (_super) {
     __extends(TerrainEditor, _super);
-    function TerrainEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function TerrainEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            selectedTerrainType: props.cellTypes[0],
+        };
+        return _this;
     }
+    TerrainEditor.prototype.componentWillReceiveProps = function (newProps) {
+        this.setState({
+            selectedTerrainType: newProps.cellTypes[0],
+        });
+    };
     TerrainEditor.prototype.render = function () {
-        return React.createElement("div", null);
+        var that = this;
+        return React.createElement("div", null,
+            React.createElement("div", { className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
+                var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
+                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type) }, type.name);
+            })));
+    };
+    TerrainEditor.prototype.selectTerrainType = function (type) {
+        this.setState({
+            selectedTerrainType: type,
+        });
+    };
+    TerrainEditor.prototype.mouseDown = function (cell) {
+        cell.cellType = this.state.selectedTerrainType;
+        this.props.redraw();
+    };
+    TerrainEditor.prototype.mouseEnter = function (cell) {
+        cell.cellType = this.state.selectedTerrainType;
+        this.props.redraw();
     };
     return TerrainEditor;
 }(React.Component));
@@ -635,7 +662,7 @@ var MapView = (function (_super) {
         var _this = this;
         return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
             React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
-            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onTouchStart: this.touchStart.bind(this), onTouchEnd: this.touchEnd.bind(this), onTouchMove: this.touchMove.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onClick: this.clicked.bind(this) },
+            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onTouchStart: this.touchStart.bind(this), onTouchEnd: this.touchEnd.bind(this), onTouchMove: this.touchMove.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
                 React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize" })));
     };
     MapView.prototype.redraw = function () {
@@ -813,19 +840,37 @@ var MapView = (function (_super) {
     MapView.prototype.mouseMove = function (e) {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
-    };
-    MapView.prototype.clicked = function (e) {
+        if (this.mouseDownCell === undefined)
+            return;
         var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
-            if (cell != null) {
-                if (this.props.cellClicked === undefined || !this.props.cellClicked(cell)) {
-                    cell.selected = cell.selected !== true;
-                }
-                this.redraw();
-                return;
+            if (cell !== this.mouseDownCell) {
+                if (this.props.cellMouseLeave !== undefined)
+                    this.props.cellMouseLeave(this.mouseDownCell);
+                this.mouseDownCell = cell;
+                if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+                    this.props.cellMouseEnter(cell);
             }
         }
+    };
+    MapView.prototype.mouseDown = function (e) {
+        var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            var cell = this.props.map.cells[cellIndex];
+            if (cell !== undefined && this.props.cellMouseDown !== undefined)
+                this.props.cellMouseDown(cell);
+            this.mouseDownCell = cell;
+        }
+    };
+    MapView.prototype.mouseUp = function (e) {
+        var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            var cell = this.props.map.cells[cellIndex];
+            if (cell !== undefined && this.props.cellMouseUp !== undefined)
+                this.props.cellMouseUp(cell);
+        }
+        this.mouseDownCell = undefined;
     };
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
         var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
@@ -927,13 +972,21 @@ var EditorControls = (function (_super) {
     };
     EditorControls.prototype.renderButton = function (editor, text, image) {
         var classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return React.createElement("button", { className: classes, onClick: this.selectEditor.bind(this, editor, text) }, image);
+        return React.createElement("button", { className: classes, title: text, onClick: this.selectEditor.bind(this, editor, text) }, image);
     };
     EditorControls.prototype.selectEditor = function (editor, name) {
         this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
     };
     return EditorControls;
 }(React.Component));
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 var WorldMap = (function (_super) {
     __extends(WorldMap, _super);
     function WorldMap(props) {
@@ -950,31 +1003,51 @@ var WorldMap = (function (_super) {
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
         return React.createElement("div", { id: "worldRoot" },
-            React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; } }),
+            React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) }),
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
             React.createElement("div", { id: "editor", className: editorClass },
                 React.createElement("h1", null, this.state.editorHeading),
                 activeEditor));
     };
     WorldMap.prototype.renderEditor = function (editor) {
+        var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", null, "No map");
+        var props = {
+            ref: function (c) { return _this.activeEditor = c; }
+        };
         switch (editor) {
             case 0 /* Overview */:
-                return React.createElement(OverviewEditor, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) });
+                return React.createElement(OverviewEditor, __assign({}, props, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) }));
             case 1 /* Size */:
-                return React.createElement(SizeEditor, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) });
+                return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
             case 2 /* TerrainTypes */:
-                return React.createElement(TerrainTypesEditor, { cellTypes: this.state.map.cellTypes, updateCellTypes: this.updateCellTypes.bind(this) });
+                return React.createElement(TerrainTypesEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, updateCellTypes: this.updateCellTypes.bind(this) }));
             case 3 /* Terrain */:
-                return React.createElement(TerrainEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.mapView.redraw.bind(this.mapView) }));
             case 4 /* Lines */:
-                return React.createElement(LinesEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+                return React.createElement(LinesEditor, __assign({}, props));
             case 5 /* Locations */:
-                return React.createElement(LocationsEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+                return React.createElement(LocationsEditor, __assign({}, props));
             case 6 /* Layers */:
-                return React.createElement(LayersEditor, { mapChanged: this.mapChanged.bind(this), map: this.state.map });
+                return React.createElement(LayersEditor, __assign({}, props));
         }
+    };
+    WorldMap.prototype.cellMouseDown = function (cell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseDown !== undefined)
+            this.activeEditor.mouseDown(cell);
+    };
+    WorldMap.prototype.cellMouseUp = function (cell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseUp !== undefined)
+            this.activeEditor.mouseUp(cell);
+    };
+    WorldMap.prototype.cellMouseEnter = function (cell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseEnter !== undefined)
+            this.activeEditor.mouseEnter(cell);
+    };
+    WorldMap.prototype.cellMouseLeave = function (cell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseLeave !== undefined)
+            this.activeEditor.mouseLeave(cell);
     };
     WorldMap.prototype.updateDetails = function (name, desc) {
         if (this.state.map === undefined)

@@ -1,23 +1,23 @@
-interface ITerrainEditorState {
+interface ITerrainTypeEditorState {
     cellTypes: CellType[];
     editingType?: CellType;
     editName?: string;
     editColor?: string;
 }
 
-interface ITerrainEditorProps extends ITerrainEditorState {
+interface ITerrainTypeEditorProps extends ITerrainTypeEditorState {
     updateCellTypes: (cellTypes: CellType[]) => void;
 }
 
-class TerrainTypesEditor extends React.Component<ITerrainEditorProps, ITerrainEditorState> {
-    constructor(props: ITerrainEditorProps) {
+class TerrainTypesEditor extends React.Component<ITerrainTypeEditorProps, ITerrainTypeEditorState> implements IMapEditor {
+    constructor(props: ITerrainTypeEditorProps) {
         super(props);
 
         this.state = {
             cellTypes: props.cellTypes.slice(),
         };
     }
-    componentWillReceiveProps(newProps: ITerrainEditorProps) {
+    componentWillReceiveProps(newProps: ITerrainTypeEditorProps) {
         this.setState({
             cellTypes: newProps.cellTypes.slice(),
             editingType: undefined,

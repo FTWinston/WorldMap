@@ -54,7 +54,7 @@ class EditorControls extends React.Component<IEditorControlsProps, {}> {
     }
     private renderButton(editor: EditorType, text: string, image: JSX.Element) {
         let classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return <button className={classes} onClick={this.selectEditor.bind(this, editor, text)}>{image}</button>;
+        return <button className={classes} title={text} onClick={this.selectEditor.bind(this, editor, text)}>{image}</button>;
     }
     private selectEditor(editor: EditorType, name: string) {
         this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);

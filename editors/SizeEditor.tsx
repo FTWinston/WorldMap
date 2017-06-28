@@ -1,8 +1,3 @@
-interface IEditorProps {
-    mapChanged: () => void;
-    map: MapData;
-}
-
 interface ISizeEditorProps {
     width: number;
     height: number;

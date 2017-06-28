@@ -8,6 +8,13 @@ const enum EditorType {
     Layers,
 }
 
+interface IMapEditor {
+    mouseDown?: (cell: MapCell) => void;
+    mouseUp?: (cell: MapCell) => void;
+    mouseEnter?: (cell: MapCell) => void;
+    mouseLeave?: (cell: MapCell) => void;
+}
+
 interface IWorldMapProps {
     
 }
@@ -34,7 +41,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             return <div id="worldRoot" />;
 
         return <div id="worldRoot">
-            <MapView map={this.state.map} ref={(c) => this.mapView = c} />
+            <MapView map={this.state.map} ref={(c) => this.mapView = c} cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)} cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />
             <EditorControls activeEditor={this.state.activeEditor} editorSelected={this.selectEditor.bind(this)} />
             <div id="editor" className={editorClass}>
                 <h1>{this.state.editorHeading}</h1>
@@ -46,22 +53,43 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         if (this.state.map === undefined)
             return <div>No map</div>;
 
+        const props = {
+            ref: (c: IMapEditor) => this.activeEditor = c
+        };
+        
         switch(editor) {
             case EditorType.Overview:
-                return <OverviewEditor name={this.state.map.name} description={this.state.map.description} saveChanges={this.updateDetails.bind(this)} />;
+                return <OverviewEditor {...props} name={this.state.map.name} description={this.state.map.description} saveChanges={this.updateDetails.bind(this)} />;
             case EditorType.Size:
-                return <SizeEditor width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
+                return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.TerrainTypes:
-                return <TerrainTypesEditor cellTypes={this.state.map.cellTypes} updateCellTypes={this.updateCellTypes.bind(this)} />;
+                return <TerrainTypesEditor {...props} cellTypes={this.state.map.cellTypes} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.mapView.redraw.bind(this.mapView)} />;
             case EditorType.Lines:
-                return <LinesEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+                return <LinesEditor {...props} />;
             case EditorType.Locations:
-                return <LocationsEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+                return <LocationsEditor {...props} />;
             case EditorType.Layers:
-                return <LayersEditor mapChanged={this.mapChanged.bind(this)} map={this.state.map} />;
+                return <LayersEditor {...props} />;
         }
+    }
+    private activeEditor?: IMapEditor;
+    private cellMouseDown(cell: MapCell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseDown !== undefined)
+            this.activeEditor.mouseDown(cell);
+    }
+    private cellMouseUp(cell: MapCell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseUp !== undefined)
+            this.activeEditor.mouseUp(cell);
+    }
+    private cellMouseEnter(cell: MapCell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseEnter !== undefined)
+            this.activeEditor.mouseEnter(cell);
+    }
+    private cellMouseLeave(cell: MapCell) {
+        if (this.activeEditor !== undefined && this.activeEditor.mouseLeave !== undefined)
+            this.activeEditor.mouseLeave(cell);
     }
     private updateDetails(name: string, desc: string) {
         if (this.state.map === undefined)
