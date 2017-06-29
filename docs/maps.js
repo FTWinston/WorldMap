@@ -794,19 +794,41 @@ var MapView = (function (_super) {
             this.zoomOut(0.1);
     };
     MapView.prototype.touchStart = function (e) {
-        if (e.touches.length != 2) {
-            this.touchZoomDist = undefined;
+        if (e.touches.length == 2) {
+            var t1_1 = e.touches.item(0), t2 = e.touches.item(1);
+            if (t1_1 !== null && t2 !== null)
+                this.touchZoomDist = (t1_1.screenX - t2.screenX) * (t1_1.screenX - t2.screenX) + (t1_1.screenY - t2.screenY) * (t1_1.screenY - t2.screenY);
             return;
         }
-        var t1 = e.touches.item(0), t2 = e.touches.item(1);
-        if (t1 !== null && t2 !== null)
-            this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        this.touchZoomDist = undefined;
+        var t1 = e.touches.item(0);
+        if (t1 !== null)
+            this.startCellInteract(t1.clientX, t1.clientY);
     };
     MapView.prototype.touchEnd = function (e) {
         this.touchZoomDist = undefined;
+        if (e.touches.length == 0) {
+            if (e.changedTouches.length == 1) {
+                var t1 = e.changedTouches.item(0);
+                if (t1 !== null)
+                    this.endCellInteract(t1.clientX, t1.clientY);
+            }
+        }
     };
     MapView.prototype.touchMove = function (e) {
-        if (e.touches.length != 2 || this.touchZoomDist === undefined)
+        if (e.touches.length == 2) {
+            this.touchZoom(e);
+            return;
+        }
+        if (e.touches.length == 1) {
+            e.preventDefault();
+            var t = e.touches.item(0);
+            if (t !== null)
+                this.hoverCellAt(t.clientX, t.clientY);
+        }
+    };
+    MapView.prototype.touchZoom = function (e) {
+        if (this.touchZoomDist === undefined)
             return;
         e.preventDefault();
         var t1 = e.touches.item(0), t2 = e.touches.item(1);
@@ -840,22 +862,29 @@ var MapView = (function (_super) {
     MapView.prototype.mouseMove = function (e) {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
-        if (this.mouseDownCell === undefined)
-            return;
-        var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
-        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
-            var cell = this.props.map.cells[cellIndex];
-            if (cell !== this.mouseDownCell) {
-                if (this.props.cellMouseLeave !== undefined)
-                    this.props.cellMouseLeave(this.mouseDownCell);
-                this.mouseDownCell = cell;
-                if (cell !== undefined && this.props.cellMouseEnter !== undefined)
-                    this.props.cellMouseEnter(cell);
-            }
-        }
+        this.hoverCellAt(e.clientX, e.clientY);
     };
     MapView.prototype.mouseDown = function (e) {
-        var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+        this.startCellInteract(e.clientX, e.clientY);
+    };
+    MapView.prototype.mouseUp = function (e) {
+        this.endCellInteract(e.clientX, e.clientY);
+    };
+    MapView.prototype.hoverCellAt = function (x, y) {
+        if (this.mouseDownCell === undefined)
+            return;
+        var cellIndex = this.getCellIndexAtPoint(x, y);
+        var cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : undefined;
+        if (cell !== this.mouseDownCell) {
+            if (this.props.cellMouseLeave !== undefined)
+                this.props.cellMouseLeave(this.mouseDownCell);
+            this.mouseDownCell = cell;
+            if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+                this.props.cellMouseEnter(cell);
+        }
+    };
+    MapView.prototype.startCellInteract = function (x, y) {
+        var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
             if (cell !== undefined && this.props.cellMouseDown !== undefined)
@@ -863,8 +892,8 @@ var MapView = (function (_super) {
             this.mouseDownCell = cell;
         }
     };
-    MapView.prototype.mouseUp = function (e) {
-        var cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+    MapView.prototype.endCellInteract = function (x, y) {
+        var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
             if (cell !== undefined && this.props.cellMouseUp !== undefined)

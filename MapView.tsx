@@ -229,20 +229,43 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.zoomOut(0.1);
     }
     private touchStart(e: TouchEvent) {
-        if (e.touches.length != 2) {
-            this.touchZoomDist = undefined;
+        if (e.touches.length == 2) {
+            let t1 = e.touches.item(0), t2 = e.touches.item(1);
+            if (t1 !== null && t2 !== null)
+                this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
             return;
         }
 
-        let t1 = e.touches.item(0), t2 = e.touches.item(1);
-        if (t1 !== null && t2 !== null)
-            this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
+        this.touchZoomDist = undefined;
+        let t1 = e.touches.item(0);
+        if (t1 !== null)
+        this.startCellInteract(t1.clientX, t1.clientY);
     }
     private touchEnd(e: TouchEvent) {
         this.touchZoomDist = undefined;
+
+        if (e.touches.length == 0) {
+            if (e.changedTouches.length == 1) {
+                let t1 = e.changedTouches.item(0);
+                if (t1 !== null)
+                    this.endCellInteract(t1.clientX, t1.clientY);
+            }
+        }
     }
     private touchMove(e: TouchEvent) {
-        if (e.touches.length != 2 || this.touchZoomDist === undefined)
+        if (e.touches.length == 2) {
+            this.touchZoom(e);
+            return;
+        }
+        if (e.touches.length == 1) {
+            e.preventDefault();
+            let t = e.touches.item(0);
+            if (t !== null)
+                this.hoverCellAt(t.clientX, t.clientY);
+        }
+    }
+    private touchZoom(e: TouchEvent) {
+        if (this.touchZoomDist === undefined)
             return;
         e.preventDefault();
 
@@ -282,25 +305,34 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private mouseMove(e: MouseEvent) {
         this.mouseX = e.clientX;
         this.mouseY = e.clientY;
+        
+        this.hoverCellAt(e.clientX, e.clientY);
+    }
+    private mouseDown(e: MouseEvent) {
+        this.startCellInteract(e.clientX, e.clientY);
+    }
+    private mouseUp(e: MouseEvent) {
+        this.endCellInteract(e.clientX, e.clientY);
+    }
+    private hoverCellAt(x: number, y: number) {
         if (this.mouseDownCell === undefined)
             return;
         
-        let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
-        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
-            let cell = this.props.map.cells[cellIndex];
-            if (cell !== this.mouseDownCell) {
-                if (this.props.cellMouseLeave !== undefined)
-                    this.props.cellMouseLeave(this.mouseDownCell);
-                    
-                this.mouseDownCell = cell;
+        let cellIndex = this.getCellIndexAtPoint(x, y);
+        let cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : undefined;
 
-                if (cell !== undefined && this.props.cellMouseEnter !== undefined)
-                    this.props.cellMouseEnter(cell);
-            }
+        if (cell !== this.mouseDownCell) {
+            if (this.props.cellMouseLeave !== undefined)
+                this.props.cellMouseLeave(this.mouseDownCell);
+                
+            this.mouseDownCell = cell;
+
+            if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+                this.props.cellMouseEnter(cell);
         }
     }
-    private mouseDown(e: MouseEvent) {
-        let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+    private startCellInteract(x: number, y: number) {
+        let cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             let cell = this.props.map.cells[cellIndex];
             if (cell !== undefined && this.props.cellMouseDown !== undefined)
@@ -308,8 +340,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.mouseDownCell = cell;
         }
     }
-    private mouseUp(e: MouseEvent) {
-        let cellIndex = this.getCellIndexAtPoint(e.clientX, e.clientY);
+    private endCellInteract(x: number, y: number) {
+        let cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             let cell = this.props.map.cells[cellIndex];
             if (cell !== undefined && this.props.cellMouseUp !== undefined)

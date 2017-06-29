@@ -72,7 +72,8 @@
     position: absolute; }
   #mapRoot .scrollPane {
     overflow: scroll;
-    position: absolute; }
+    position: absolute;
+    touch-action: none; }
 
 #editor > form > div[role="group"] {
   display: flex;
