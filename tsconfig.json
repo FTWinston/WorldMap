@@ -17,10 +17,7 @@
         "typings/react.d.ts",
         "typings/react-dom.d.ts",
         "typings/react-global.d.ts",
-
-//        "ui.ts",
-//        "editor.ts",
-//        "setup.ts",
+        "typings/hammer.d.ts",
 
         "controls/ResizeAnchorInput.tsx",
 

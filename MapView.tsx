@@ -24,6 +24,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private readonly backgroundColor: string = '#ccc';
     private mouseX?: number;
     private mouseY?: number;
+    private hammer?: HammerManager;
 
     constructor(props: IMapViewProps) {
         super(props);
@@ -44,10 +45,50 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         if (ctx !== null)
             this.ctx = ctx;
 
+        this.setupTouch();
         this.resize();
     }
     componentWillUnmount() {
         window.removeEventListener('resize', this.resize.bind(this));
+        // TODO: remove hammer etc
+    }
+    private setupTouch() {
+        this.hammer = new Hammer.Manager(this.scrollPane);
+
+        let zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
+        this.hammer.add(zoom);
+
+        this.hammer.on('zoomend', function(ev: HammerInput) {
+            if (ev.scale > 1)
+                this.zoomIn(ev.scale - 1);
+            else if (ev.scale < 1)
+                this.zoomOut(1 - ev.scale);
+        }.bind(this));
+
+
+        let pan = new Hammer.Pan({ event: 'pan', threshold: 10, pointers: 3, direction: Hammer.DIRECTION_ALL });
+        this.hammer.add(pan);
+
+        let lastX = 0, lastY = 0, panScale = 1.5;
+        this.hammer.on('pan', function(ev: HammerInput) {
+            let dX = ev.deltaX - lastX;
+            lastX = ev.deltaX;
+
+            let dY = ev.deltaY - lastY;
+            lastY = ev.deltaY;
+
+            this.scrollPane.scrollLeft -= dX * panScale;
+            this.scrollPane.scrollTop -= dY * panScale;
+            this.redraw();
+        }.bind(this));
+        
+        this.hammer.on('panend', function(ev: HammerInput) {
+            lastX = lastY = 0;
+        }.bind(this));
+        
+
+        pan.requireFailure(zoom);
+        zoom.requireFailure(pan);
     }
     render() {
         return <div id="mapRoot" ref={(c) => this.root = c}>
@@ -253,33 +294,12 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
     }
     private touchMove(e: TouchEvent) {
-        if (e.touches.length == 2) {
-            this.touchZoom(e);
-            return;
-        }
         if (e.touches.length == 1) {
             e.preventDefault();
             let t = e.touches.item(0);
             if (t !== null)
                 this.hoverCellAt(t.clientX, t.clientY);
         }
-    }
-    private touchZoom(e: TouchEvent) {
-        if (this.touchZoomDist === undefined)
-            return;
-        e.preventDefault();
-
-        let t1 = e.touches.item(0), t2 = e.touches.item(1);
-        let distSq = t1 === null || t2 === null ? 0 :
-            (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
-
-        let diff = (distSq - this.touchZoomDist) * 0.0000002;
-        if (diff > 0)
-            this.zoomIn(diff);
-        else if (diff < 0)
-            this.zoomOut(-diff);
-
-        this.touchZoomDist = distSq;
     }
     zoomIn(stepScale: number) {
         this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
@@ -298,7 +318,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             displayRadius *= 2;
             cellDrawInterval *= 2;
         }
-
+        console.log('cell radius:', radius);
         this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight});
     }
     private mouseDownCell: PossibleMapCell;
