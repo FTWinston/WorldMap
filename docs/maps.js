@@ -667,12 +667,17 @@ var MapView = (function (_super) {
         this.hammer = new Hammer.Manager(this.scrollPane);
         var zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
         this.hammer.add(zoom);
-        this.hammer.on('zoomend', function (ev) {
-            if (ev.scale > 1)
-                this.zoomIn(ev.scale - 1);
-            else if (ev.scale < 1)
-                this.zoomOut(1 - ev.scale);
+        var prevScale = 1;
+        this.hammer.on('zoom', function (ev) {
+            var touchZoomScale = ev.scale / prevScale;
+            if (touchZoomScale > 0.9 && touchZoomScale < 1.1)
+                return;
+            prevScale = ev.scale;
+            this.zoom(touchZoomScale);
         }.bind(this));
+        this.hammer.on('zoomend', function (ev) {
+            prevScale = 1;
+        });
         var pan = new Hammer.Pan({ event: 'pan', threshold: 10, pointers: 3, direction: Hammer.DIRECTION_ALL });
         this.hammer.add(pan);
         var lastX = 0, lastY = 0, panScale = 1.5;
@@ -809,16 +814,19 @@ var MapView = (function (_super) {
         requestAnimationFrame(this.updateSize.bind(this));
         this.resizing = true;
     };
-    MapView.prototype.updateSize = function () {
-        var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
-        var viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
-        var screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
-        var screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
+    MapView.prototype.updateScrollSize = function () {
+        var screenFocusX, screenFocusY;
+        if (this.mouseX !== undefined && this.mouseY !== undefined) {
+            screenFocusX = this.mouseX;
+            screenFocusY = this.mouseY;
+        }
+        else {
+            screenFocusX = this.canvas.width / 2;
+            screenFocusY = this.canvas.height / 2;
+        }
         var scrollBounds = this.scrollSize.getBoundingClientRect();
         var scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
         var scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
-        this.canvas.setAttribute('width', viewWidth.toString());
-        this.canvas.setAttribute('height', viewHeight.toString());
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
         var overallWidth = (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius;
@@ -827,25 +835,26 @@ var MapView = (function (_super) {
         this.scrollSize.style.height = overallHeight + 'px';
         this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
         this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
+    };
+    MapView.prototype.updateSize = function () {
+        var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
+        var viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
+        this.canvas.setAttribute('width', viewWidth.toString());
+        this.canvas.setAttribute('height', viewHeight.toString());
+        this.updateScrollSize();
         this.redraw();
         this.resizing = false;
     };
     MapView.prototype.mouseScroll = function (e) {
-        if (!e.ctrlKey)
+        if (!e.ctrlKey || e.deltaY == 0)
             return;
         e.preventDefault();
-        if (e.deltaY < 0)
-            this.zoomIn(0.1);
-        else if (e.deltaY > 0)
-            this.zoomOut(0.1);
+        this.zoom(e.deltaY < 0 ? 1.1 : 0.9);
     };
-    MapView.prototype.zoomIn = function (stepScale) {
-        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
-        this.resize();
-    };
-    MapView.prototype.zoomOut = function (stepScale) {
-        this.setCellRadius(Math.max(0.1, Math.floor(this.state.cellRadius * (1 - stepScale))));
-        this.resize();
+    MapView.prototype.zoom = function (scale) {
+        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * scale)));
+        this.updateScrollSize();
+        this.redraw();
     };
     MapView.prototype.setCellRadius = function (radius) {
         var displayRadius = radius;

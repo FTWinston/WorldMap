@@ -61,12 +61,19 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
         this.hammer.add(zoom);
 
-        this.hammer.on('zoomend', function(ev: HammerInput) {
-            if (ev.scale > 1)
-                this.zoomIn(ev.scale - 1);
-            else if (ev.scale < 1)
-                this.zoomOut(1 - ev.scale);
+        let prevScale = 1;
+        this.hammer.on('zoom', function(ev: HammerInput) {
+            let touchZoomScale = ev.scale / prevScale;
+            if (touchZoomScale > 0.9 && touchZoomScale < 1.1)
+                return;
+
+            prevScale = ev.scale;
+            this.zoom(touchZoomScale);
         }.bind(this));
+
+        this.hammer.on('zoomend', function(ev: HammerInput) {
+            prevScale = 1;
+        });
 
 
         let pan = new Hammer.Pan({ event: 'pan', threshold: 10, pointers: 3, direction: Hammer.DIRECTION_ALL });
@@ -244,21 +251,21 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         requestAnimationFrame(this.updateSize.bind(this));
         this.resizing = true;
     }
+    private updateScrollSize() {
+        let screenFocusX: number, screenFocusY: number;
 
-    private updateSize() {
-        let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
-        let viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
-        
-        let screenFocusX = this.mouseX !== undefined ? this.mouseX : viewWidth / 2;
-        let screenFocusY = this.mouseY !== undefined ? this.mouseY : viewHeight / 2;
+        if (this.mouseX !== undefined && this.mouseY !== undefined) {
+            screenFocusX = this.mouseX;
+            screenFocusY = this.mouseY;
+        }
+        else {
+            screenFocusX = this.canvas.width / 2;
+            screenFocusY = this.canvas.height / 2;
+        }
 
         let scrollBounds = this.scrollSize.getBoundingClientRect();
         let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
         let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
-
-        this.canvas.setAttribute('width', viewWidth.toString());
-        this.canvas.setAttribute('height', viewHeight.toString());
-
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
 
@@ -270,27 +277,29 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
         this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
+    }
+    private updateSize() {
+        let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
+        let viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
 
+        this.canvas.setAttribute('width', viewWidth.toString());
+        this.canvas.setAttribute('height', viewHeight.toString());
+
+        this.updateScrollSize();
         this.redraw();
         this.resizing = false;
     }
     private mouseScroll(e: MouseWheelEvent) {
-        if (!e.ctrlKey)
+        if (!e.ctrlKey || e.deltaY == 0)
             return;
         e.preventDefault();
 
-        if (e.deltaY < 0)
-            this.zoomIn(0.1);
-        else if (e.deltaY > 0)
-            this.zoomOut(0.1);
+        this.zoom(e.deltaY < 0 ? 1.1 : 0.9);
     }
-    zoomIn(stepScale: number) {
-        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
-        this.resize();
-    }
-    zoomOut(stepScale: number) {
-        this.setCellRadius(Math.max(0.1, Math.floor(this.state.cellRadius * (1 - stepScale))));
-        this.resize();
+    zoom(scale: number) {
+        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * scale)));
+        this.updateScrollSize();
+        this.redraw();
     }
     private setCellRadius(radius: number) {
         let displayRadius = radius;
