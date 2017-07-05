@@ -658,7 +658,10 @@ var MapView = (function (_super) {
     };
     MapView.prototype.componentWillUnmount = function () {
         window.removeEventListener('resize', this.resize.bind(this));
-        // TODO: remove hammer etc
+        if (this.hammer !== undefined) {
+            this.hammer.destroy();
+            this.hammer = undefined;
+        }
     };
     MapView.prototype.setupTouch = function () {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -685,14 +688,27 @@ var MapView = (function (_super) {
         this.hammer.on('panend', function (ev) {
             lastX = lastY = 0;
         }.bind(this));
+        var touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
+        this.hammer.add(touch);
+        this.hammer.on('touchstart', function (ev) {
+            this.startCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touch', function (ev) {
+            this.hoverCellAt(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touchend', function (ev) {
+            this.endCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
         pan.requireFailure(zoom);
         zoom.requireFailure(pan);
+        touch.requireFailure(pan);
+        touch.requireFailure(zoom);
     };
     MapView.prototype.render = function () {
         var _this = this;
         return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
             React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
-            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onTouchStart: this.touchStart.bind(this), onTouchEnd: this.touchEnd.bind(this), onTouchMove: this.touchMove.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
+            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
                 React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize" })));
     };
     MapView.prototype.redraw = function () {
@@ -823,36 +839,6 @@ var MapView = (function (_super) {
         else if (e.deltaY > 0)
             this.zoomOut(0.1);
     };
-    MapView.prototype.touchStart = function (e) {
-        if (e.touches.length == 2) {
-            var t1_1 = e.touches.item(0), t2 = e.touches.item(1);
-            if (t1_1 !== null && t2 !== null)
-                this.touchZoomDist = (t1_1.screenX - t2.screenX) * (t1_1.screenX - t2.screenX) + (t1_1.screenY - t2.screenY) * (t1_1.screenY - t2.screenY);
-            return;
-        }
-        this.touchZoomDist = undefined;
-        var t1 = e.touches.item(0);
-        if (t1 !== null)
-            this.startCellInteract(t1.clientX, t1.clientY);
-    };
-    MapView.prototype.touchEnd = function (e) {
-        this.touchZoomDist = undefined;
-        if (e.touches.length == 0) {
-            if (e.changedTouches.length == 1) {
-                var t1 = e.changedTouches.item(0);
-                if (t1 !== null)
-                    this.endCellInteract(t1.clientX, t1.clientY);
-            }
-        }
-    };
-    MapView.prototype.touchMove = function (e) {
-        if (e.touches.length == 1) {
-            e.preventDefault();
-            var t = e.touches.item(0);
-            if (t !== null)
-                this.hoverCellAt(t.clientX, t.clientY);
-        }
-    };
     MapView.prototype.zoomIn = function (stepScale) {
         this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
         this.resize();
@@ -869,7 +855,6 @@ var MapView = (function (_super) {
             displayRadius *= 2;
             cellDrawInterval *= 2;
         }
-        console.log('cell radius:', radius);
         this.setState({ cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight });
     };
     MapView.prototype.mouseMove = function (e) {

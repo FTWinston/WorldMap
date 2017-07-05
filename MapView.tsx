@@ -19,7 +19,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private ctx: CanvasRenderingContext2D;
     private scrollPane: HTMLElement;
     private scrollSize: HTMLElement;
-    private touchZoomDist?: number;
 
     private readonly backgroundColor: string = '#ccc';
     private mouseX?: number;
@@ -50,7 +49,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     componentWillUnmount() {
         window.removeEventListener('resize', this.resize.bind(this));
-        // TODO: remove hammer etc
+
+        if (this.hammer !== undefined) {
+            this.hammer.destroy();
+            this.hammer = undefined;
+        }
     }
     private setupTouch() {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -85,10 +88,25 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.hammer.on('panend', function(ev: HammerInput) {
             lastX = lastY = 0;
         }.bind(this));
+
         
+        let touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
+        this.hammer.add(touch);
+        this.hammer.on('touchstart', function(ev: HammerInput) {
+            this.startCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touch', function(ev: HammerInput) {
+            this.hoverCellAt(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touchend', function(ev: HammerInput) {
+            this.endCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
+
 
         pan.requireFailure(zoom);
         zoom.requireFailure(pan);
+        touch.requireFailure(pan);
+        touch.requireFailure(zoom);
     }
     render() {
         return <div id="mapRoot" ref={(c) => this.root = c}>
@@ -96,9 +114,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             <div ref={(c) => this.scrollPane = c} className="scrollPane"
                 onScroll={this.redraw.bind(this)}
                 onWheel={this.mouseScroll.bind(this)}
-                onTouchStart={this.touchStart.bind(this)}
-                onTouchEnd={this.touchEnd.bind(this)}
-                onTouchMove={this.touchMove.bind(this)}
                 onMouseMove={this.mouseMove.bind(this)}
                 onMouseEnter={this.mouseMove.bind(this)}
                 onMouseDown={this.mouseDown.bind(this)}
@@ -269,38 +284,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         else if (e.deltaY > 0)
             this.zoomOut(0.1);
     }
-    private touchStart(e: TouchEvent) {
-        if (e.touches.length == 2) {
-            let t1 = e.touches.item(0), t2 = e.touches.item(1);
-            if (t1 !== null && t2 !== null)
-                this.touchZoomDist = (t1.screenX - t2.screenX) * (t1.screenX - t2.screenX) + (t1.screenY - t2.screenY) * (t1.screenY - t2.screenY);
-            return;
-        }
-
-        this.touchZoomDist = undefined;
-        let t1 = e.touches.item(0);
-        if (t1 !== null)
-        this.startCellInteract(t1.clientX, t1.clientY);
-    }
-    private touchEnd(e: TouchEvent) {
-        this.touchZoomDist = undefined;
-
-        if (e.touches.length == 0) {
-            if (e.changedTouches.length == 1) {
-                let t1 = e.changedTouches.item(0);
-                if (t1 !== null)
-                    this.endCellInteract(t1.clientX, t1.clientY);
-            }
-        }
-    }
-    private touchMove(e: TouchEvent) {
-        if (e.touches.length == 1) {
-            e.preventDefault();
-            let t = e.touches.item(0);
-            if (t !== null)
-                this.hoverCellAt(t.clientX, t.clientY);
-        }
-    }
     zoomIn(stepScale: number) {
         this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * (1 + stepScale))));
         this.resize();
@@ -318,7 +301,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             displayRadius *= 2;
             cellDrawInterval *= 2;
         }
-        console.log('cell radius:', radius);
+        
         this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight});
     }
     private mouseDownCell: PossibleMapCell;
