@@ -16,7 +16,7 @@ interface IMapEditor {
 }
 
 interface IWorldMapProps {
-    
+    editable: boolean;
 }
 
 interface IWorldMapState {
@@ -31,19 +31,24 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
 
         this.state = {
             map: new MapData(50, 50),
+            activeEditor: props.editable ? EditorType.Overview : undefined,
         }
     }
     mapView: MapView;
     render() {
-        let editorClass = this.state.activeEditor === undefined ? 'hidden' : undefined;
-        let activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         if (this.state.map === undefined)
             return <div id="worldRoot" />;
 
+        if (!this.props.editable)
+            return <div id="worldRoot">
+            <MapView map={this.state.map} ref={(c) => this.mapView = c} cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)} cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />
+        </div>
+
+        let activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return <div id="worldRoot">
             <MapView map={this.state.map} ref={(c) => this.mapView = c} cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)} cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />
             <EditorControls activeEditor={this.state.activeEditor} editorSelected={this.selectEditor.bind(this)} />
-            <div id="editor" className={editorClass}>
+            <div id="editor">
                 <h1>{this.state.editorHeading}</h1>
                 {activeEditor}
             </div>
@@ -123,11 +128,11 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
     private selectEditor(editor: EditorType, name: string) {
         this.setState({activeEditor: editor, editorHeading: name});
-        window.setTimeout(this.mapView.resize.bind(this.mapView), 1510);
     }
 }
 
+let editable = document.location.search != '?readonly';
 let worldMap = ReactDOM.render(
-    <WorldMap />,
+    <WorldMap editable={editable} />,
     document.getElementById('uiRoot') as HTMLElement
 ) as WorldMap;

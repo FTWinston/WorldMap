@@ -17,7 +17,6 @@
   #worldRoot #editor {
     flex-shrink: 0;
     flex-grow: 0;
-    transition: width 1.5s;
     width: 14em;
     padding: 0.25em;
     z-index: 1;

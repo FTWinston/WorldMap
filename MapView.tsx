@@ -32,7 +32,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         this.state = {
             cellRadius: 30,
-            cellDrawInterval: 2,
+            cellDrawInterval: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
         };

@@ -642,7 +642,7 @@ var MapView = (function (_super) {
         var scrollSize = _this.getScrollbarSize();
         _this.state = {
             cellRadius: 30,
-            cellDrawInterval: 2,
+            cellDrawInterval: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
         };
@@ -1029,19 +1029,22 @@ var WorldMap = (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             map: new MapData(50, 50),
+            activeEditor: props.editable ? 0 /* Overview */ : undefined,
         };
         return _this;
     }
     WorldMap.prototype.render = function () {
         var _this = this;
-        var editorClass = this.state.activeEditor === undefined ? 'hidden' : undefined;
-        var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
+        if (!this.props.editable)
+            return React.createElement("div", { id: "worldRoot" },
+                React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) }));
+        var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return React.createElement("div", { id: "worldRoot" },
             React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) }),
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
-            React.createElement("div", { id: "editor", className: editorClass },
+            React.createElement("div", { id: "editor" },
                 React.createElement("h1", null, this.state.editorHeading),
                 activeEditor));
     };
@@ -1114,9 +1117,9 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.selectEditor = function (editor, name) {
         this.setState({ activeEditor: editor, editorHeading: name });
-        window.setTimeout(this.mapView.resize.bind(this.mapView), 1510);
     };
     return WorldMap;
 }(React.Component));
-var worldMap = ReactDOM.render(React.createElement(WorldMap, null), document.getElementById('uiRoot'));
+var editable = document.location.search != '?readonly';
+var worldMap = ReactDOM.render(React.createElement(WorldMap, { editable: editable }), document.getElementById('uiRoot'));
 //# sourceMappingURL=maps.js.map
