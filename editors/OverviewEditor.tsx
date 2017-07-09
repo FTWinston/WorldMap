@@ -18,12 +18,9 @@ class OverviewEditor extends React.Component<IOverviewEditorProps, IOverviewEdit
     }
 
     render() {
-        return <form onSubmit={this.updateDetails.bind(this)}>
-            <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtDesc">Info</label><textarea id="txtDesc" onChange={this.descChanged.bind(this)} rows={20} value={this.state.description} /></div>
-            <div role="group">
-                <button type="submit">Save details</button>
-            </div>
+        return <form>
+            <div role="group" className="vertical"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
+            <div role="group" className="vertical"><label htmlFor="txtDesc">Description</label><textarea id="txtDesc" onChange={this.descChanged.bind(this)} rows={20} value={this.state.description} /></div>
         </form>;
     }
     private nameChanged(e: any) {
@@ -32,9 +29,8 @@ class OverviewEditor extends React.Component<IOverviewEditorProps, IOverviewEdit
     private descChanged(e: any) {
         this.setState({name: this.state.name, description: e.target.value});
     }
-    private updateDetails(e: Event) {
-        e.preventDefault();
-
-        this.props.saveChanges(this.state.name, this.state.description);
+    componentDidUpdate(prevProps: IOverviewEditorProps, prevState: IOverviewEditorState) {
+        if (this.state.name != prevState.name || this.state.description != prevState.description)
+            this.props.saveChanges(this.state.name, this.state.description);
     }
 }

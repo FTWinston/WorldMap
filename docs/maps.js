@@ -102,11 +102,11 @@ var SaveLoadEditor = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     SaveLoadEditor.prototype.render = function () {
-        var clearButton = window.localStorage.length == 0 ? undefined : React.createElement("div", { role: "group" },
+        var clearButton = window.localStorage.length == 0 ? undefined : React.createElement("div", { role: "group", className: "vertical" },
             React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
             React.createElement("button", { type: "button", onClick: this.clearSavedData.bind(this) }, "Clear saved map"));
         return React.createElement("form", { onSubmit: this.updateDetails.bind(this) },
-            React.createElement("div", { role: "group" },
+            React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
                 React.createElement("button", { type: "submit" }, "Save map")),
             clearButton);
@@ -134,15 +134,13 @@ var OverviewEditor = (function (_super) {
         return _this;
     }
     OverviewEditor.prototype.render = function () {
-        return React.createElement("form", { onSubmit: this.updateDetails.bind(this) },
-            React.createElement("div", { role: "group" },
+        return React.createElement("form", null,
+            React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
                 React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
-            React.createElement("div", { role: "group" },
-                React.createElement("label", { htmlFor: "txtDesc" }, "Info"),
-                React.createElement("textarea", { id: "txtDesc", onChange: this.descChanged.bind(this), rows: 20, value: this.state.description })),
-            React.createElement("div", { role: "group" },
-                React.createElement("button", { type: "submit" }, "Save details")));
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtDesc" }, "Description"),
+                React.createElement("textarea", { id: "txtDesc", onChange: this.descChanged.bind(this), rows: 20, value: this.state.description })));
     };
     OverviewEditor.prototype.nameChanged = function (e) {
         this.setState({ name: e.target.value, description: this.state.description });
@@ -150,9 +148,9 @@ var OverviewEditor = (function (_super) {
     OverviewEditor.prototype.descChanged = function (e) {
         this.setState({ name: this.state.name, description: e.target.value });
     };
-    OverviewEditor.prototype.updateDetails = function (e) {
-        e.preventDefault();
-        this.props.saveChanges(this.state.name, this.state.description);
+    OverviewEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
+        if (this.state.name != prevState.name || this.state.description != prevState.description)
+            this.props.saveChanges(this.state.name, this.state.description);
     };
     return OverviewEditor;
 }(React.Component));

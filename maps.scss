@@ -123,6 +123,14 @@ $editorBackground: #fff;
     justify-content: flex-start;
     align-content: flex-start;
 
+    &.vertical {
+      flex-direction: column;
+
+      > p {
+        margin-bottom: 0;
+      }
+    }
+
     > label {
       min-width: 4em;
     }
@@ -130,8 +138,8 @@ $editorBackground: #fff;
     &:not(:first-child) {
       margin-top: 1em;
     }
-
-    > input {
+    
+    &:not(.vertical) > input {
       flex-shrink: 1;
       width: 10em;
       text-align: center;
