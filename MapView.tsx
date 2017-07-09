@@ -327,11 +327,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.endCellInteract(e.clientX, e.clientY);
     }
     private hoverCellAt(x: number, y: number) {
-        if (this.mouseDownCell === undefined)
+        if (this.mouseDownCell === null)
             return;
         
         let cellIndex = this.getCellIndexAtPoint(x, y);
-        let cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : undefined;
+        let cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : null;
 
         if (cell !== this.mouseDownCell) {
             if (this.props.cellMouseLeave !== undefined)
@@ -339,7 +339,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 
             this.mouseDownCell = cell;
 
-            if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+            if (cell !== null && this.props.cellMouseEnter !== undefined)
                 this.props.cellMouseEnter(cell);
         }
     }
@@ -347,7 +347,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             let cell = this.props.map.cells[cellIndex];
-            if (cell !== undefined && this.props.cellMouseDown !== undefined)
+            if (cell !== null && this.props.cellMouseDown !== undefined)
                 this.props.cellMouseDown(cell);
             this.mouseDownCell = cell;
         }
@@ -356,10 +356,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             let cell = this.props.map.cells[cellIndex];
-            if (cell !== undefined && this.props.cellMouseUp !== undefined)
+            if (cell !== null && this.props.cellMouseUp !== undefined)
                 this.props.cellMouseUp(cell);
         }
-        this.mouseDownCell = undefined;
+        this.mouseDownCell = null;
     }
     private getCellIndexAtPoint(screenX: number, screenY: number) {
         let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;

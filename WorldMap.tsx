@@ -1,4 +1,5 @@
 const enum EditorType {
+    SaveLoad,
     Overview,
     Size,
     TerrainTypes,
@@ -29,8 +30,11 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     constructor(props: IWorldMapProps) {
         super(props);
 
+        let dataJson = window.localStorage.getItem(SaveLoadEditor.localStorageName);
+        let map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
+
         this.state = {
-            map: new MapData(50, 50),
+            map: map,
             activeEditor: props.editable ? EditorType.Overview : undefined,
         }
     }
@@ -63,6 +67,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         };
         
         switch(editor) {
+            case EditorType.SaveLoad:
+                return <SaveLoadEditor {...props} map={this.state.map} />;
             case EditorType.Overview:
                 return <OverviewEditor {...props} name={this.state.map.name} description={this.state.map.description} saveChanges={this.updateDetails.bind(this)} />;
             case EditorType.Size:

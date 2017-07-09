@@ -96,6 +96,33 @@ var ResizeAnchorInput = (function (_super) {
     };
     return ResizeAnchorInput;
 }(React.Component));
+var SaveLoadEditor = (function (_super) {
+    __extends(SaveLoadEditor, _super);
+    function SaveLoadEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    SaveLoadEditor.prototype.render = function () {
+        var clearButton = window.localStorage.length == 0 ? undefined : React.createElement("div", { role: "group" },
+            React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
+            React.createElement("button", { type: "button", onClick: this.clearSavedData.bind(this) }, "Clear saved map"));
+        return React.createElement("form", { onSubmit: this.updateDetails.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
+                React.createElement("button", { type: "submit" }, "Save map")),
+            clearButton);
+    };
+    SaveLoadEditor.prototype.updateDetails = function (e) {
+        e.preventDefault();
+        window.localStorage.setItem(SaveLoadEditor.localStorageName, this.props.map.saveToJSON());
+        this.forceUpdate();
+    };
+    SaveLoadEditor.prototype.clearSavedData = function () {
+        window.localStorage.removeItem(SaveLoadEditor.localStorageName);
+        location.reload();
+    };
+    return SaveLoadEditor;
+}(React.Component));
+SaveLoadEditor.localStorageName = 'savedMap';
 var OverviewEditor = (function (_super) {
     __extends(OverviewEditor, _super);
     function OverviewEditor(props) {
@@ -515,7 +542,7 @@ var MapData = (function () {
                 var rowStart = row * this.underlyingWidth;
                 var insertPos = rowStart + rowInsertIndex + overallDelta;
                 for (var i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? undefined : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
                 overallDelta += delta;
             }
         }
@@ -547,7 +574,7 @@ var MapData = (function () {
                 if (this.cells.length + 1 > this.underlyingWidth * this.height)
                     this.height++;
                 var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : undefined);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
             }
         }
         else if (delta < 0) {
@@ -557,29 +584,19 @@ var MapData = (function () {
         }
     };
     MapData.prototype.saveToJSON = function () {
-        this.setCellTypeIndexes();
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell !== null)
+                cell.typeID = this.cellTypes.indexOf(cell.cellType);
+        }
         var json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'selected')
+                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth')
                 return undefined;
             return value;
         }, '	');
         return json;
-    };
-    MapData.prototype.setCellTypeIndexes = function () {
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell !== undefined)
-                cell.typeID = this.cellTypes.indexOf(cell.cellType);
-        }
-    };
-    MapData.prototype.setCellTypesFromIndexes = function () {
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell !== undefined)
-                cell.cellType = this.cellTypes[cell.typeID];
-        }
     };
     /*
     createCellGroups(size: number) {
@@ -615,19 +632,20 @@ var MapData = (function () {
     }
     */
     MapData.loadFromJSON = function (json) {
-        var map = new MapData(json.width, json.height, false);
-        map.name = json.name;
-        map.description = json.description;
-        map.cells = json.cells.map(function (cell) {
-            if (cell == null)
-                return null;
-            return new MapCell(map, cell.type);
-        });
-        map.positionCells();
-        map.cellTypes = json.cellTypes.map(function (type) {
+        var data = JSON.parse(json);
+        var map = new MapData(data.width, data.height, false);
+        map.name = data.name;
+        map.description = data.description;
+        map.cellTypes = data.cellTypes.map(function (type) {
             return new CellType(type.name, type.color);
         });
-        map.setCellTypesFromIndexes();
+        map.cells = data.cells.map(function (cell) {
+            if (cell == null)
+                return null;
+            var cellType = map.cellTypes[cell.typeID];
+            return new MapCell(map, cellType);
+        });
+        map.positionCells();
         return map;
     };
     return MapData;
@@ -878,15 +896,15 @@ var MapView = (function (_super) {
         this.endCellInteract(e.clientX, e.clientY);
     };
     MapView.prototype.hoverCellAt = function (x, y) {
-        if (this.mouseDownCell === undefined)
+        if (this.mouseDownCell === null)
             return;
         var cellIndex = this.getCellIndexAtPoint(x, y);
-        var cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : undefined;
+        var cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : null;
         if (cell !== this.mouseDownCell) {
             if (this.props.cellMouseLeave !== undefined)
                 this.props.cellMouseLeave(this.mouseDownCell);
             this.mouseDownCell = cell;
-            if (cell !== undefined && this.props.cellMouseEnter !== undefined)
+            if (cell !== null && this.props.cellMouseEnter !== undefined)
                 this.props.cellMouseEnter(cell);
         }
     };
@@ -894,7 +912,7 @@ var MapView = (function (_super) {
         var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
-            if (cell !== undefined && this.props.cellMouseDown !== undefined)
+            if (cell !== null && this.props.cellMouseDown !== undefined)
                 this.props.cellMouseDown(cell);
             this.mouseDownCell = cell;
         }
@@ -903,10 +921,10 @@ var MapView = (function (_super) {
         var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
-            if (cell !== undefined && this.props.cellMouseUp !== undefined)
+            if (cell !== null && this.props.cellMouseUp !== undefined)
                 this.props.cellMouseUp(cell);
         }
-        this.mouseDownCell = undefined;
+        this.mouseDownCell = null;
     };
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
         var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
@@ -968,12 +986,17 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Overview */, 'Overview', // info
+            this.renderButton(0 /* SaveLoad */, 'Save / Load', // save
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
+                React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
+                React.createElement("polyline", { points: "7 3 7 8 15 8" }))),
+            this.renderButton(1 /* Overview */, 'Overview', // info
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
                 React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
-            this.renderButton(1 /* Size */, 'Size', // move
+            this.renderButton(2 /* Size */, 'Size', // move
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polyline", { points: "5 9 2 12 5 15" }),
                 React.createElement("polyline", { points: "9 5 12 2 15 5" }),
@@ -981,25 +1004,25 @@ var EditorControls = (function (_super) {
                 React.createElement("polyline", { points: "19 9 22 12 19 15" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
-            this.renderButton(2 /* TerrainTypes */, 'Terrain Types', // grid
+            this.renderButton(3 /* TerrainTypes */, 'Terrain Types', // grid
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("rect", { x: "3", y: "3", width: "7", height: "7" }),
                 React.createElement("rect", { x: "14", y: "3", width: "7", height: "7" }),
                 React.createElement("rect", { x: "14", y: "14", width: "7", height: "7" }),
                 React.createElement("rect", { x: "3", y: "14", width: "7", height: "7" }))),
-            this.renderButton(3 /* Terrain */, 'Terrain', // edit
+            this.renderButton(4 /* Terrain */, 'Terrain', // edit
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" }),
                 React.createElement("polygon", { points: "18 2 22 6 12 16 8 16 8 12 18 2" }))),
-            this.renderButton(4 /* Lines */, 'Lines', // edit-3
+            this.renderButton(5 /* Lines */, 'Lines', // edit-3
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "14 2 18 6 7 17 3 17 3 13 14 2" }),
                 React.createElement("line", { x1: "3", y1: "22", x2: "21", y2: "22" }))),
-            this.renderButton(5 /* Locations */, 'Locations', // map-pin
+            this.renderButton(6 /* Locations */, 'Locations', // map-pin
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
                 React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(6 /* Layers */, 'Layers', // layers
+            this.renderButton(7 /* Layers */, 'Layers', // layers
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
                 React.createElement("polyline", { points: "2 17 12 22 22 17" }),
@@ -1027,9 +1050,11 @@ var WorldMap = (function (_super) {
     __extends(WorldMap, _super);
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
+        var dataJson = window.localStorage.getItem(SaveLoadEditor.localStorageName);
+        var map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
         _this.state = {
-            map: new MapData(50, 50),
-            activeEditor: props.editable ? 0 /* Overview */ : undefined,
+            map: map,
+            activeEditor: props.editable ? 1 /* Overview */ : undefined,
         };
         return _this;
     }
@@ -1056,19 +1081,21 @@ var WorldMap = (function (_super) {
             ref: function (c) { return _this.activeEditor = c; }
         };
         switch (editor) {
-            case 0 /* Overview */:
+            case 0 /* SaveLoad */:
+                return React.createElement(SaveLoadEditor, __assign({}, props, { map: this.state.map }));
+            case 1 /* Overview */:
                 return React.createElement(OverviewEditor, __assign({}, props, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) }));
-            case 1 /* Size */:
+            case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
-            case 2 /* TerrainTypes */:
+            case 3 /* TerrainTypes */:
                 return React.createElement(TerrainTypesEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, updateCellTypes: this.updateCellTypes.bind(this) }));
-            case 3 /* Terrain */:
+            case 4 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.mapView.redraw.bind(this.mapView) }));
-            case 4 /* Lines */:
+            case 5 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
-            case 5 /* Locations */:
+            case 6 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props));
-            case 6 /* Layers */:
+            case 7 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
     };

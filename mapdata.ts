@@ -74,7 +74,7 @@ class CellGroup {
     }
 }
 */
-type PossibleMapCell = MapCell | undefined;
+type PossibleMapCell = MapCell | null;
 
 class MapData {
     name: string;
@@ -235,7 +235,7 @@ class MapData {
                 let insertPos = rowStart + rowInsertIndex + overallDelta;
 
                 for (let i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? undefined : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
 
                 overallDelta += delta;
             }
@@ -271,7 +271,7 @@ class MapData {
                     this.height++;
 
                 let globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : undefined);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
             }
         }
         else if (delta < 0) {
@@ -281,27 +281,19 @@ class MapData {
         }
     }
     saveToJSON() {
-        this.setCellTypeIndexes();
+        for (let cell of this.cells)
+            if (cell !== null)
+                cell.typeID = this.cellTypes.indexOf(cell.cellType);
 
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'selected')
+                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth')
                 return undefined;
             return value;
         }, '	');
 
         return json;
-    }
-    private setCellTypeIndexes() {
-        for (let cell of this.cells)
-            if (cell !== undefined)
-                cell.typeID = this.cellTypes.indexOf(cell.cellType);
-    }
-    private setCellTypesFromIndexes() {
-        for (let cell of this.cells)
-            if (cell !== undefined)
-                cell.cellType = this.cellTypes[cell.typeID];
     }
     /*
     createCellGroups(size: number) {
@@ -336,24 +328,25 @@ class MapData {
         }
     }
     */
-    static loadFromJSON(json: any) {
-        let map = new MapData(json.width, json.height, false);
-        map.name = json.name;
-        map.description = json.description;
+    static loadFromJSON(json: string) {
+        let data: any = JSON.parse(json);
+        let map = new MapData(data.width, data.height, false);
+        map.name = data.name;
+        map.description = data.description;
 
-        map.cells = json.cells.map(function (cell: {type: CellType}) {
-            if (cell == null)
-                return null;
-            return new MapCell(map, cell.type);
-        });
-
-        map.positionCells();
-
-        map.cellTypes = json.cellTypes.map(function (type: {name: string, color: string}) {
+        map.cellTypes = data.cellTypes.map(function (type: {name: string, color: string}) {
             return new CellType(type.name, type.color);
         });
 
-        map.setCellTypesFromIndexes();
+        map.cells = data.cells.map(function (cell: {typeID: number}) {
+            if (cell == null)
+                return null;
+
+            let cellType = map.cellTypes[cell.typeID];
+            return new MapCell(map, cellType);
+        });
+
+        map.positionCells();
 
         return map;
     }
