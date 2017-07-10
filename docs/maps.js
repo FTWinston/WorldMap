@@ -264,7 +264,6 @@ var CellTypeEditor = (function (_super) {
         if (this.props.editingType !== undefined) {
             var pos = cellTypes.indexOf(this.props.editingType);
             cellTypes.splice(pos, 1);
-            // TODO: deleting a cell type should convert all cells using that type to "empty"
         }
         this.props.updateCellTypes(cellTypes);
     };
@@ -575,6 +574,13 @@ var MapData = (function () {
             var diff = -delta * this.underlyingWidth;
             this.height += delta;
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
+        }
+    };
+    MapData.prototype.replaceCellType = function (find, replace) {
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell !== null && cell.cellType === find)
+                cell.cellType = replace;
         }
     };
     MapData.prototype.saveToJSON = function () {
@@ -1007,8 +1013,8 @@ var EditorControls = (function (_super) {
                 React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
             this.renderButton(4 /* Lines */, 'Lines', // edit-3
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("polygon", { points: "14 2 18 6 7 17 3 17 3 13 14 2" }),
-                React.createElement("line", { x1: "3", y1: "22", x2: "21", y2: "22" }))),
+                React.createElement("polyline", { points: "23 18 13.5 8.5 8.5 13.5 1 6" }),
+                React.createElement("polyline", { points: "17 18 23 18 23 12" }))),
             this.renderButton(5 /* Locations */, 'Locations', // map-pin
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
@@ -1119,10 +1125,14 @@ var WorldMap = (function (_super) {
         this.setState({ map: this.state.map });
     };
     WorldMap.prototype.updateCellTypes = function (cellTypes) {
-        if (this.state.map === undefined)
+        if (this.state.map === undefined || cellTypes.length == 0)
             return;
-        // TODO: surely check that a cell type isn't in use before we get this far?
-        // or just clear all cells of a "removed" type, but the user should be warned first.
+        // if a cell type is removed from the map, replace it with another type
+        for (var _i = 0, _a = this.state.map.cellTypes; _i < _a.length; _i++) {
+            var currentType = _a[_i];
+            if (cellTypes.indexOf(currentType) == -1)
+                this.state.map.replaceCellType(currentType, cellTypes[0]);
+        }
         this.state.map.cellTypes = cellTypes;
         this.mapView.redraw();
         this.setState({ map: this.state.map });
@@ -1132,7 +1142,7 @@ var WorldMap = (function (_super) {
         this.setState({ map: this.state.map });
     };
     WorldMap.prototype.selectEditor = function (editor, name) {
-        this.setState({ activeEditor: editor, editorHeading: name });
+        this.setState({ activeEditor: editor, editorHeading: name, map: this.state.map });
     };
     return WorldMap;
 }(React.Component));

@@ -280,6 +280,11 @@ class MapData {
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
     }
+    replaceCellType(find: CellType, replace: CellType) {
+        for (let cell of this.cells)
+            if (cell !== null && cell.cellType === find)
+                cell.cellType = replace;
+    }
     saveToJSON() {
         for (let cell of this.cells)
             if (cell !== null)

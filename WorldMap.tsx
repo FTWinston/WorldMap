@@ -20,7 +20,7 @@ interface IWorldMapProps {
 }
 
 interface IWorldMapState {
-    map?: MapData;
+    map: MapData;
     activeEditor?: EditorType;
     editorHeading?: string;
 }
@@ -116,11 +116,14 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.setState({map: this.state.map});
     }
     private updateCellTypes(cellTypes: CellType[]) {
-        if (this.state.map === undefined)
+        if (this.state.map === undefined || cellTypes.length == 0)
             return;
         
-        // TODO: surely check that a cell type isn't in use before we get this far?
-        // or just clear all cells of a "removed" type, but the user should be warned first.
+        // if a cell type is removed from the map, replace it with another type
+        for (let currentType of this.state.map.cellTypes)
+            if (cellTypes.indexOf(currentType) == -1)
+                this.state.map.replaceCellType(currentType, cellTypes[0]);
+
         this.state.map.cellTypes = cellTypes;
         this.mapView.redraw();
         this.setState({map: this.state.map});
@@ -130,7 +133,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.setState({map: this.state.map});
     }
     private selectEditor(editor: EditorType, name: string) {
-        this.setState({activeEditor: editor, editorHeading: name});
+        this.setState({activeEditor: editor, editorHeading: name, map: this.state.map});
     }
 }
 

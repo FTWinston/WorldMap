@@ -77,7 +77,6 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         if (this.props.editingType !== undefined) {
             let pos = cellTypes.indexOf(this.props.editingType);
             cellTypes.splice(pos, 1);
-            // TODO: deleting a cell type should convert all cells using that type to "empty"
         }
         
         this.props.updateCellTypes(cellTypes);
