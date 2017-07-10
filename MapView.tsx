@@ -245,10 +245,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     
     private resizing: boolean = false;
-    resize() {
+    private resize() {
         if (this.resizing)
             return;
         requestAnimationFrame(this.updateSize.bind(this));
+        this.redraw();
         this.resizing = true;
     }
     private updateScrollSize() {
@@ -278,7 +279,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
         this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
     }
-    private updateSize() {
+    updateSize() {
         let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
         let viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
 
@@ -286,7 +287,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.canvas.setAttribute('height', viewHeight.toString());
 
         this.updateScrollSize();
-        this.redraw();
         this.resizing = false;
     }
     private mouseScroll(e: MouseWheelEvent) {

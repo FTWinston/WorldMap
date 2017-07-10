@@ -35,7 +35,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             return <CellTypeEditor editingType={this.state.selectedTerrainType} cellTypes={this.props.cellTypes} updateCellTypes={this.cellTypesChanged.bind(this)} />;
 
         let that = this;
-        return <div>
+        return <form>
             <p>Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it.</p>
             <div className="palleteList">
                 {this.props.cellTypes.map(function(type, id) {
@@ -44,7 +44,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
                 })}
             </div>
             <button type="button" onClick={this.showTerrainEdit.bind(this, undefined)}>Add new type</button>
-        </div>;
+        </form>;
     }
     private selectTerrainType(type: CellType) {
         this.setState({

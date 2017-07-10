@@ -37,7 +37,11 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             activeEditor: props.editable ? EditorType.Overview : undefined,
         }
     }
-    mapView: MapView;
+    private changes: ChangeHistory;
+    private mapView: MapView;
+    componentDidMount() {
+        this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+    }
     render() {
         if (this.state.map === undefined)
             return <div id="worldRoot" />;
@@ -54,6 +58,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             <div id="editor">
                 <h1>{this.state.editorHeading}</h1>
                 {activeEditor}
+                <ChangeHistory ref={(c) => this.changes = c} updateMap={this.replaceMap.bind(this)} />
             </div>
         </div>;
     }
@@ -73,7 +78,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Size:
                 return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.mapView.redraw.bind(this.mapView)} updateCellTypes={this.updateCellTypes.bind(this)} />;
+                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.terrainDrawn.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
                 return <LinesEditor {...props} />;
             case EditorType.Locations:
@@ -105,32 +110,41 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         
         this.state.map.name = name;
         this.state.map.description = desc;
-        this.setState({map: this.state.map});
+        this.mapChanged();
     }
     private changeSize(width: number, height: number, mode: ResizeAnchorMode) {
         if (this.state.map === undefined)
             return;
         
         this.state.map.changeSize(width, height, mode);
-        this.mapView.redraw();
-        this.setState({map: this.state.map});
+        this.mapView.updateSize();
+        this.mapChanged();
     }
     private updateCellTypes(cellTypes: CellType[]) {
         if (this.state.map === undefined || cellTypes.length == 0)
             return;
         
-        // if a cell type is removed from the map, replace it with another type
+        // if a cell type is removed from the map, replace it with the "empty" type
         for (let currentType of this.state.map.cellTypes)
             if (cellTypes.indexOf(currentType) == -1)
                 this.state.map.replaceCellType(currentType, cellTypes[0]);
 
         this.state.map.cellTypes = cellTypes;
-        this.mapView.redraw();
-        this.setState({map: this.state.map});
+        this.mapChanged();
+    }
+    private terrainDrawn() {
+        // TODO: at some point we want to batch all those drawn in the one stroke into a single undo step
+        this.mapChanged();
     }
     private mapChanged() {
         this.mapView.redraw();
-        this.setState({map: this.state.map});
+        this.changes.recordChange(this.state.map);
+    }
+    private replaceMap(map: MapData){ 
+        this.setState({
+            map: map
+        });
+        this.mapView.redraw();
     }
     private selectEditor(editor: EditorType, name: string) {
         this.setState({activeEditor: editor, editorHeading: name, map: this.state.map});

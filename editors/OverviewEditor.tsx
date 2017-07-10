@@ -1,36 +1,37 @@
-interface IOverviewEditorProps extends IOverviewEditorState {
+interface IOverviewEditorProps {
+    name: string;
+    description: string;    
     saveChanges: (name: string, desc: string) => void;
 }
 
-interface IOverviewEditorState {
-    name: string;
-    description: string;    
-}
-
-class OverviewEditor extends React.Component<IOverviewEditorProps, IOverviewEditorState> {
+class OverviewEditor extends React.Component<IOverviewEditorProps, {}> {
     constructor(props: IOverviewEditorProps) {
         super(props);
-
-        this.state = {
-            name: props.name,
-            description: props.description,
-        };
+    }
+    private name: HTMLInputElement;
+    private desc: HTMLTextAreaElement;
+    private detectPropChange: boolean = false;
+    
+    componentWillReceiveProps() {
+        // This is a hack: updating the key of the inputs when the props change causes them to render their defaultValue again, which has just changed.
+        // This allows undo/redo to visibly change the name / description.
+        this.detectPropChange = !this.detectPropChange;
     }
 
     render() {
         return <form>
-            <div role="group" className="vertical"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
-            <div role="group" className="vertical"><label htmlFor="txtDesc">Description</label><textarea id="txtDesc" onChange={this.descChanged.bind(this)} rows={20} value={this.state.description} /></div>
+            <div role="group" className="vertical"><label htmlFor="txtName">Name</label><input type="text" defaultValue={this.props.name} key={this.detectPropChange ? 'txtA' : 'txtB'} ref={(c) => this.name = c} onBlur={this.nameChanged.bind(this)} /></div>
+            <div role="group" className="vertical"><label htmlFor="txtDesc">Description</label><textarea defaultValue={this.props.description} key={this.detectPropChange ? 'descA' : 'descB'} ref={(c) => this.desc = c} onBlur={this.descChanged.bind(this)} rows={20} /></div>
         </form>;
     }
     private nameChanged(e: any) {
-        this.setState({name: e.target.value, description: this.state.description});
+        let value: string = e.target.value;
+        if (this.props.name != value)
+            this.props.saveChanges(value, this.props.description);
     }
     private descChanged(e: any) {
-        this.setState({name: this.state.name, description: e.target.value});
-    }
-    componentDidUpdate(prevProps: IOverviewEditorProps, prevState: IOverviewEditorState) {
-        if (this.state.name != prevState.name || this.state.description != prevState.description)
-            this.props.saveChanges(this.state.name, this.state.description);
+        let value: string = e.target.value;
+        if (this.props.description != value)
+            this.props.saveChanges(this.props.name, value);
     }
 }

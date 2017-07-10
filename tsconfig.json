@@ -20,6 +20,7 @@
         "typings/hammer.d.ts",
 
         "controls/ResizeAnchorInput.tsx",
+        "controls/ChangeHistory.tsx",
 
         "editors/SaveLoadEditor.tsx",
         "editors/OverviewEditor.tsx",

@@ -96,6 +96,73 @@ var ResizeAnchorInput = (function (_super) {
     };
     return ResizeAnchorInput;
 }(React.Component));
+var ChangeHistory = (function (_super) {
+    __extends(ChangeHistory, _super);
+    function ChangeHistory(props) {
+        var _this = _super.call(this, props) || this;
+        _this.changes = [];
+        _this.maxUndoSteps = 10;
+        _this.state = {
+            lastAppliedChangeIndex: -1,
+        };
+        return _this;
+    }
+    ChangeHistory.prototype.render = function () {
+        var undoClasses = this.canUndo() ? 'roundLeft' : 'roundLeft disabled';
+        var redoClasses = this.canRedo() ? 'roundRight' : 'roundRight disabled';
+        return React.createElement("div", { id: "undoRedo" },
+            React.createElement("button", { className: undoClasses, title: "Undo the last change", onClick: this.undo.bind(this) },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                    React.createElement("polygon", { points: "19 20 9 12 19 4 19 20" }),
+                    React.createElement("line", { x1: "5", y1: "19", x2: "5", y2: "5" }))),
+            React.createElement("button", { className: redoClasses, title: "Redo the next change", onClick: this.redo.bind(this) },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                    React.createElement("polygon", { points: "5 4 15 12 5 20 5 4" }),
+                    React.createElement("line", { x1: "19", y1: "5", x2: "19", y2: "19" }))));
+    };
+    ChangeHistory.prototype.recordChange = function (map) {
+        // if changes have been undone, clear the queue after this point, as they can't now be redone
+        if (this.changes.length > this.state.lastAppliedChangeIndex - 1)
+            this.changes.splice(this.state.lastAppliedChangeIndex + 1, this.changes.length);
+        // if the queue is full, remove the first item. otherwise, note that we've moved up one.
+        if (this.changes.length > this.maxUndoSteps)
+            this.changes.shift();
+        else
+            this.setState(function (prevState) {
+                return {
+                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1
+                };
+            });
+        this.changes.push(map.saveToJSON());
+    };
+    ChangeHistory.prototype.undo = function () {
+        if (!this.canUndo())
+            return null;
+        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex - 1]));
+        this.setState(function (prevState) {
+            return {
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1
+            };
+        });
+    };
+    ChangeHistory.prototype.redo = function () {
+        if (!this.canRedo())
+            return;
+        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex + 1]));
+        this.setState(function (prevState) {
+            return {
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1
+            };
+        });
+    };
+    ChangeHistory.prototype.canUndo = function () {
+        return this.state.lastAppliedChangeIndex > 0;
+    };
+    ChangeHistory.prototype.canRedo = function () {
+        return this.state.lastAppliedChangeIndex < this.changes.length - 1;
+    };
+    return ChangeHistory;
+}(React.Component));
 var SaveLoadEditor = (function (_super) {
     __extends(SaveLoadEditor, _super);
     function SaveLoadEditor() {
@@ -127,30 +194,33 @@ var OverviewEditor = (function (_super) {
     __extends(OverviewEditor, _super);
     function OverviewEditor(props) {
         var _this = _super.call(this, props) || this;
-        _this.state = {
-            name: props.name,
-            description: props.description,
-        };
+        _this.detectPropChange = false;
         return _this;
     }
+    OverviewEditor.prototype.componentWillReceiveProps = function () {
+        // This is a hack: updating the key of the inputs when the props change causes them to render their defaultValue again, which has just changed.
+        // This allows undo/redo to visibly change the name / description.
+        this.detectPropChange = !this.detectPropChange;
+    };
     OverviewEditor.prototype.render = function () {
+        var _this = this;
         return React.createElement("form", null,
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
-                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
+                React.createElement("input", { type: "text", defaultValue: this.props.name, key: this.detectPropChange ? 'txtA' : 'txtB', ref: function (c) { return _this.name = c; }, onBlur: this.nameChanged.bind(this) })),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("label", { htmlFor: "txtDesc" }, "Description"),
-                React.createElement("textarea", { id: "txtDesc", onChange: this.descChanged.bind(this), rows: 20, value: this.state.description })));
+                React.createElement("textarea", { defaultValue: this.props.description, key: this.detectPropChange ? 'descA' : 'descB', ref: function (c) { return _this.desc = c; }, onBlur: this.descChanged.bind(this), rows: 20 })));
     };
     OverviewEditor.prototype.nameChanged = function (e) {
-        this.setState({ name: e.target.value, description: this.state.description });
+        var value = e.target.value;
+        if (this.props.name != value)
+            this.props.saveChanges(value, this.props.description);
     };
     OverviewEditor.prototype.descChanged = function (e) {
-        this.setState({ name: this.state.name, description: e.target.value });
-    };
-    OverviewEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (this.state.name != prevState.name || this.state.description != prevState.description)
-            this.props.saveChanges(this.state.name, this.state.description);
+        var value = e.target.value;
+        if (this.props.description != value)
+            this.props.saveChanges(this.props.name, value);
     };
     return OverviewEditor;
 }(React.Component));
@@ -294,7 +364,7 @@ var TerrainEditor = (function (_super) {
         if (this.state.isEditingTerrainType)
             return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
         var that = this;
-        return React.createElement("div", null,
+        return React.createElement("form", null,
             React.createElement("p", null, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
             React.createElement("div", { className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
                 var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
@@ -359,7 +429,7 @@ var LinesEditor = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     LinesEditor.prototype.render = function () {
-        return React.createElement("div", null);
+        return React.createElement("form", null);
     };
     return LinesEditor;
 }(React.Component));
@@ -369,7 +439,7 @@ var LocationsEditor = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     LocationsEditor.prototype.render = function () {
-        return React.createElement("div", null);
+        return React.createElement("form", null);
     };
     return LocationsEditor;
 }(React.Component));
@@ -379,7 +449,7 @@ var LayersEditor = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     LayersEditor.prototype.render = function () {
-        return React.createElement("div", null);
+        return React.createElement("form", null);
     };
     return LayersEditor;
 }(React.Component));
@@ -830,6 +900,7 @@ var MapView = (function (_super) {
         if (this.resizing)
             return;
         requestAnimationFrame(this.updateSize.bind(this));
+        this.redraw();
         this.resizing = true;
     };
     MapView.prototype.updateScrollSize = function () {
@@ -860,7 +931,6 @@ var MapView = (function (_super) {
         this.canvas.setAttribute('width', viewWidth.toString());
         this.canvas.setAttribute('height', viewHeight.toString());
         this.updateScrollSize();
-        this.redraw();
         this.resizing = false;
     };
     MapView.prototype.mouseScroll = function (e) {
@@ -1055,6 +1125,9 @@ var WorldMap = (function (_super) {
         };
         return _this;
     }
+    WorldMap.prototype.componentDidMount = function () {
+        this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+    };
     WorldMap.prototype.render = function () {
         var _this = this;
         if (this.state.map === undefined)
@@ -1068,7 +1141,8 @@ var WorldMap = (function (_super) {
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
             React.createElement("div", { id: "editor" },
                 React.createElement("h1", null, this.state.editorHeading),
-                activeEditor));
+                activeEditor,
+                React.createElement(ChangeHistory, { ref: function (c) { return _this.changes = c; }, updateMap: this.replaceMap.bind(this) })));
     };
     WorldMap.prototype.renderEditor = function (editor) {
         var _this = this;
@@ -1085,7 +1159,7 @@ var WorldMap = (function (_super) {
             case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
             case 3 /* Terrain */:
-                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.mapView.redraw.bind(this.mapView), updateCellTypes: this.updateCellTypes.bind(this) }));
+                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.terrainDrawn.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
             case 5 /* Locations */:
@@ -1115,31 +1189,40 @@ var WorldMap = (function (_super) {
             return;
         this.state.map.name = name;
         this.state.map.description = desc;
-        this.setState({ map: this.state.map });
+        this.mapChanged();
     };
     WorldMap.prototype.changeSize = function (width, height, mode) {
         if (this.state.map === undefined)
             return;
         this.state.map.changeSize(width, height, mode);
-        this.mapView.redraw();
-        this.setState({ map: this.state.map });
+        this.mapView.updateSize();
+        this.mapChanged();
     };
     WorldMap.prototype.updateCellTypes = function (cellTypes) {
         if (this.state.map === undefined || cellTypes.length == 0)
             return;
-        // if a cell type is removed from the map, replace it with another type
+        // if a cell type is removed from the map, replace it with the "empty" type
         for (var _i = 0, _a = this.state.map.cellTypes; _i < _a.length; _i++) {
             var currentType = _a[_i];
             if (cellTypes.indexOf(currentType) == -1)
                 this.state.map.replaceCellType(currentType, cellTypes[0]);
         }
         this.state.map.cellTypes = cellTypes;
-        this.mapView.redraw();
-        this.setState({ map: this.state.map });
+        this.mapChanged();
+    };
+    WorldMap.prototype.terrainDrawn = function () {
+        // TODO: at some point we want to batch all those drawn in the one stroke into a single undo step
+        this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {
         this.mapView.redraw();
-        this.setState({ map: this.state.map });
+        this.changes.recordChange(this.state.map);
+    };
+    WorldMap.prototype.replaceMap = function (map) {
+        this.setState({
+            map: map
+        });
+        this.mapView.redraw();
     };
     WorldMap.prototype.selectEditor = function (editor, name) {
         this.setState({ activeEditor: editor, editorHeading: name, map: this.state.map });

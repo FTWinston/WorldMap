@@ -1,4 +1,8 @@
 $editorBackground: #fff;
+$buttonStrokeColor: #000;
+$buttonBackgroundColor: lightgray;
+$buttonFocusColor: #f60;
+$buttonHoverColor: #0af;
 
 // page layout
 #worldRoot {
@@ -43,7 +47,6 @@ $editorBackground: #fff;
   }
 }
 
-
 // editor tabs
 #editorControls {
   display: flex;
@@ -54,19 +57,18 @@ $editorBackground: #fff;
   button {
     z-index: 2;
     font-size: 1.25em;
-    background-color: lightgray;
-    border: solid black 1px;
+    background-color: $buttonBackgroundColor;
+    border: solid $buttonStrokeColor 1px;
     border-top-left-radius: 0.5em;
     border-bottom-left-radius: 0.5em;
     padding: 0.25em;
     transition: background-color 0.25s, border-right-color 0.25s;
 
     cursor: pointer;
-    text-align: left;
 
     svg {
       fill: none;
-      stroke: #000;
+      stroke: $buttonStrokeColor;
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
@@ -77,17 +79,15 @@ $editorBackground: #fff;
       border-right-color: $editorBackground;
       flex-shrink: 0;
     }
-
+    &:hover svg {
+      stroke: $buttonHoverColor;
+    }
     &:focus {
       outline: none;
 
       svg {
-        stroke: #f60;
+        stroke: $buttonFocusColor;
       }
-    }
-
-    &:hover svg {
-      stroke: #0af;
     }
   }
 
@@ -97,7 +97,6 @@ $editorBackground: #fff;
     border-right: solid black 1px;
   }
 }
-
 
 // map scrolling
 #mapRoot {
@@ -138,7 +137,7 @@ $editorBackground: #fff;
     &:not(:first-child) {
       margin-top: 1em;
     }
-    
+
     &:not(.vertical) > input {
       flex-shrink: 1;
       width: 10em;
@@ -148,6 +147,13 @@ $editorBackground: #fff;
 }
 
 #editor {
+  display: flex;
+  flex-direction: column;
+
+  & > form {
+    flex-grow: 1;
+  }
+
   .resizeAnchor {
     height: 8em;
     width: 8em;
@@ -199,6 +205,52 @@ $editorBackground: #fff;
   }
 }
 
+#undoRedo {
+  align-self: center;
+  display: flex;
+
+  button {
+    margin: 0.25em;
+    font-size: 1.5em;
+    background-color: $buttonBackgroundColor;
+    border: solid $buttonStrokeColor 1px;
+    padding: 0.25em;
+    transition: background-color 0.25s, border-right-color 0.25s;
+    cursor: pointer;
+
+    &.roundLeft {
+      border-top-left-radius: 1em;
+      border-bottom-left-radius: 1em;
+    }
+    &.roundRight {
+      border-top-right-radius: 1em;
+      border-bottom-right-radius: 1em;
+    }
+    svg {
+      fill: none;
+      stroke: $buttonStrokeColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    &:hover svg {
+      stroke: $buttonHoverColor;
+    }
+    &:focus {
+      outline: none;
+
+      svg {
+        stroke: $buttonFocusColor;
+      }
+    }
+    &.disabled {
+      cursor: not-allowed;
+      svg {
+        stroke: grey !important;
+      }
+    }
+  }
+}
 
 /*
 #brushList .brush {
