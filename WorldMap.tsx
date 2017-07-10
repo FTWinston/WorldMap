@@ -78,7 +78,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Size:
                 return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.terrainDrawn.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
+                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
                 return <LinesEditor {...props} />;
             case EditorType.Locations:
@@ -132,9 +132,12 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.state.map.cellTypes = cellTypes;
         this.mapChanged();
     }
-    private terrainDrawn() {
-        // TODO: at some point we want to batch all those drawn in the one stroke into a single undo step
-        this.mapChanged();
+    private terrainEdited(endOfStroke: boolean = true) {
+        // batch all "drawing" in the one stroke into a single undo step
+        if (endOfStroke)
+            this.mapChanged();
+        else
+            this.mapView.redraw();
     }
     private mapChanged() {
         this.mapView.redraw();

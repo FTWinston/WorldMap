@@ -360,6 +360,10 @@ var TerrainEditor = (function (_super) {
                 };
             });
     };
+    TerrainEditor.prototype.componentWillUpdate = function (nextProps, nextState) {
+        if (this.state.isDrawingOnMap && !nextState.isDrawingOnMap)
+            this.props.hasDrawn(true);
+    };
     TerrainEditor.prototype.render = function () {
         if (this.state.isEditingTerrainType)
             return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
@@ -403,7 +407,7 @@ var TerrainEditor = (function (_super) {
             };
         });
         cell.cellType = this.state.selectedTerrainType;
-        this.props.redraw();
+        this.props.hasDrawn(false);
     };
     TerrainEditor.prototype.mouseUp = function (cell) {
         if (!this.state.isDrawingOnMap)
@@ -419,7 +423,7 @@ var TerrainEditor = (function (_super) {
         if (!this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
         cell.cellType = this.state.selectedTerrainType;
-        this.props.redraw();
+        this.props.hasDrawn(false);
     };
     return TerrainEditor;
 }(React.Component));
@@ -1159,7 +1163,7 @@ var WorldMap = (function (_super) {
             case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
             case 3 /* Terrain */:
-                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.terrainDrawn.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
+                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
             case 5 /* Locations */:
@@ -1210,9 +1214,13 @@ var WorldMap = (function (_super) {
         this.state.map.cellTypes = cellTypes;
         this.mapChanged();
     };
-    WorldMap.prototype.terrainDrawn = function () {
-        // TODO: at some point we want to batch all those drawn in the one stroke into a single undo step
-        this.mapChanged();
+    WorldMap.prototype.terrainEdited = function (endOfStroke) {
+        if (endOfStroke === void 0) { endOfStroke = true; }
+        // batch all "drawing" in the one stroke into a single undo step
+        if (endOfStroke)
+            this.mapChanged();
+        else
+            this.mapView.redraw();
     };
     WorldMap.prototype.mapChanged = function () {
         this.mapView.redraw();

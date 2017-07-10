@@ -1,7 +1,7 @@
 interface ITerrainEditorProps {
     cellTypes: CellType[];
     updateCellTypes: (cellTypes: CellType[]) => void;
-    redraw: () => void;
+    hasDrawn: (endOfStroke: boolean) => void;
 }
 
 interface ITerrainEditorState {
@@ -29,6 +29,10 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
                     selectedTerrainType: newProps.cellTypes[0],
                 }
             });
+    }
+    componentWillUpdate(nextProps: ITerrainEditorProps, nextState: ITerrainEditorState) {
+        if (this.state.isDrawingOnMap && !nextState.isDrawingOnMap)
+            this.props.hasDrawn(true);
     }
     render() {
         if (this.state.isEditingTerrainType)
@@ -77,11 +81,12 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             }
         });
         cell.cellType = this.state.selectedTerrainType;
-        this.props.redraw();
+        this.props.hasDrawn(false);
     }
     mouseUp(cell: MapCell) {
         if (!this.state.isDrawingOnMap)
             return;
+
         this.setState(function (prevState) {
             return {
                 isEditingTerrainType: prevState.isEditingTerrainType,
@@ -94,6 +99,6 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             return;
 
         cell.cellType = this.state.selectedTerrainType;
-        this.props.redraw();
+        this.props.hasDrawn(false);
     }
 }
