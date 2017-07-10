@@ -168,6 +168,7 @@ var SizeEditor = (function (_super) {
     SizeEditor.prototype.render = function () {
         var sameSize = this.state.newWidth == this.props.width && this.state.newHeight == this.props.height;
         return React.createElement("form", { onSubmit: this.changeSize.bind(this) },
+            React.createElement("p", null, "Adjust the overall size of the map, and control what edges have cells are added or removed."),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtResizeWidth" }, "Width"),
                 React.createElement("input", { type: "number", id: "txtResizeWidth", value: this.state.newWidth.toString(), onChange: this.widthChanged.bind(this) })),
@@ -195,164 +196,159 @@ var SizeEditor = (function (_super) {
     };
     return SizeEditor;
 }(React.Component));
-var TerrainTypesEditor = (function (_super) {
-    __extends(TerrainTypesEditor, _super);
-    function TerrainTypesEditor(props) {
-        var _this = _super.call(this, props) || this;
-        _this.state = {
-            cellTypes: props.cellTypes.slice(),
-        };
-        return _this;
+var CellTypeEditor = (function (_super) {
+    __extends(CellTypeEditor, _super);
+    function CellTypeEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    TerrainTypesEditor.prototype.componentWillReceiveProps = function (newProps) {
-        this.setState({
-            cellTypes: newProps.cellTypes.slice(),
-            editingType: undefined,
-        });
-    };
-    TerrainTypesEditor.prototype.render = function () {
-        if (this.state.editName === undefined)
-            return this.renderAllTypes();
+    CellTypeEditor.prototype.componentWillMount = function () {
+        if (this.props.editingType === undefined)
+            this.setState({
+                name: '',
+                color: '#666666',
+            });
         else
-            return this.renderTypeEdit();
+            this.setState({
+                name: this.props.editingType.name,
+                color: this.props.editingType.color,
+            });
     };
-    TerrainTypesEditor.prototype.renderAllTypes = function () {
-        var that = this;
-        return React.createElement("div", null,
-            React.createElement("div", { className: "palleteList" }, this.state.cellTypes.map(function (type, id) {
-                return React.createElement("div", { key: id.toString(), style: { 'backgroundColor': type.color }, onClick: that.showEdit.bind(that, type) }, type.name);
-            })),
-            React.createElement("p", { className: "prompt" }, "Click a terrain type to edit it."),
-            React.createElement("button", { type: "button", onClick: this.showEdit.bind(this, undefined) }, "Add new type"));
-    };
-    TerrainTypesEditor.prototype.renderTypeEdit = function () {
-        var deleteButton = this.state.editingType === undefined || this.state.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+    CellTypeEditor.prototype.render = function () {
+        var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
-                React.createElement("input", { type: "text", id: "txtName", value: this.state.editName, onChange: this.nameChanged.bind(this) })),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "inColor" }, "Color"),
-                React.createElement("input", { type: "color", id: "inColor", value: this.state.editColor, onChange: this.colorChanged.bind(this) })),
+                React.createElement("input", { type: "color", id: "inColor", value: this.state.color, onChange: this.colorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
                 deleteButton));
     };
-    TerrainTypesEditor.prototype.nameChanged = function (e) {
+    CellTypeEditor.prototype.nameChanged = function (e) {
         this.setState({
-            editName: e.target.value,
-            cellTypes: this.state.cellTypes,
+            name: e.target.value
         });
     };
-    TerrainTypesEditor.prototype.colorChanged = function (e) {
+    CellTypeEditor.prototype.colorChanged = function (e) {
         this.setState({
-            editColor: e.target.value,
-            cellTypes: this.state.cellTypes,
+            color: e.target.value
         });
     };
-    TerrainTypesEditor.prototype.showEdit = function (type) {
-        var name, color;
-        if (type === undefined) {
-            name = '';
-            color = '#666666';
-        }
-        else {
-            name = type.name;
-            color = type.color;
-        }
-        this.setState({
-            cellTypes: this.state.cellTypes,
-            editingType: type,
-            editName: name,
-            editColor: color,
-        });
-    };
-    TerrainTypesEditor.prototype.saveType = function (e) {
+    CellTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        var name = this.state.editName === undefined ? '' : this.state.editName.trim();
+        var name = this.state.name === undefined ? '' : this.state.name.trim();
         if (name == '')
             return;
-        var color = this.state.editColor === undefined ? '' : this.state.editColor;
+        var color = this.state.color === undefined ? '' : this.state.color;
         if (color == '')
             return;
-        var editType = this.state.editingType;
-        this.setState(function (state) {
-            var cellTypes = state.cellTypes;
-            if (editType === undefined) {
-                cellTypes.push(new CellType(name, color));
-            }
-            else {
-                editType.name = name;
-                editType.color = color;
-            }
-            this.props.updateCellTypes(cellTypes);
-            return {
-                cellTypes: cellTypes,
-                editingType: undefined,
-                editName: undefined,
-                editColor: undefined,
-            };
-        });
+        var editType = this.props.editingType;
+        var cellTypes = this.props.cellTypes.slice();
+        if (editType === undefined) {
+            cellTypes.push(new CellType(name, color));
+        }
+        else {
+            editType.name = name;
+            editType.color = color;
+        }
+        this.props.updateCellTypes(cellTypes);
     };
-    TerrainTypesEditor.prototype.cancelEdit = function () {
-        this.setState({
-            editingType: undefined,
-            editName: undefined,
-            editColor: undefined,
-            cellTypes: this.state.cellTypes,
-        });
+    CellTypeEditor.prototype.cancelEdit = function () {
+        this.props.updateCellTypes(this.props.cellTypes);
     };
-    TerrainTypesEditor.prototype.deleteType = function () {
-        this.setState(function (state) {
-            var cellTypes = state.cellTypes;
-            if (state.editingType !== undefined) {
-                var pos = cellTypes.indexOf(state.editingType);
-                cellTypes.splice(pos, 1);
-            }
-            this.props.updateCellTypes(cellTypes);
-            return {
-                editingType: undefined,
-                editName: undefined,
-                editColor: undefined,
-                cellTypes: cellTypes,
-            };
-        });
+    CellTypeEditor.prototype.deleteType = function () {
+        var cellTypes = this.props.cellTypes.slice();
+        if (this.props.editingType !== undefined) {
+            var pos = cellTypes.indexOf(this.props.editingType);
+            cellTypes.splice(pos, 1);
+            // TODO: deleting a cell type should convert all cells using that type to "empty"
+        }
+        this.props.updateCellTypes(cellTypes);
     };
-    return TerrainTypesEditor;
+    return CellTypeEditor;
 }(React.Component));
 var TerrainEditor = (function (_super) {
     __extends(TerrainEditor, _super);
     function TerrainEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
+            isEditingTerrainType: false,
+            isDrawingOnMap: false,
             selectedTerrainType: props.cellTypes[0],
         };
         return _this;
     }
     TerrainEditor.prototype.componentWillReceiveProps = function (newProps) {
-        this.setState({
-            selectedTerrainType: newProps.cellTypes[0],
-        });
+        if (this.state.selectedTerrainType === undefined || newProps.cellTypes.indexOf(this.state.selectedTerrainType) == -1)
+            this.setState(function (prevState) {
+                return {
+                    isEditingTerrainType: prevState.isEditingTerrainType,
+                    isDrawingOnMap: prevState.isDrawingOnMap,
+                    selectedTerrainType: newProps.cellTypes[0],
+                };
+            });
     };
     TerrainEditor.prototype.render = function () {
+        if (this.state.isEditingTerrainType)
+            return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
         var that = this;
         return React.createElement("div", null,
+            React.createElement("p", null, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
             React.createElement("div", { className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
                 var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
-                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type) }, type.name);
-            })));
+                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type), onDoubleClick: that.showTerrainEdit.bind(that, type) }, type.name);
+            })),
+            React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type"));
     };
     TerrainEditor.prototype.selectTerrainType = function (type) {
         this.setState({
+            isEditingTerrainType: false,
+            isDrawingOnMap: false,
             selectedTerrainType: type,
         });
     };
+    TerrainEditor.prototype.showTerrainEdit = function (type) {
+        this.setState({
+            isEditingTerrainType: true,
+            isDrawingOnMap: false,
+            selectedTerrainType: type,
+        });
+    };
+    TerrainEditor.prototype.cellTypesChanged = function (cellTypes) {
+        this.setState({
+            isEditingTerrainType: false,
+            isDrawingOnMap: false,
+        });
+        this.props.updateCellTypes(cellTypes);
+    };
     TerrainEditor.prototype.mouseDown = function (cell) {
+        if (this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
+            return;
+        this.setState(function (prevState) {
+            return {
+                isEditingTerrainType: prevState.isEditingTerrainType,
+                isDrawingOnMap: true,
+            };
+        });
         cell.cellType = this.state.selectedTerrainType;
         this.props.redraw();
     };
+    TerrainEditor.prototype.mouseUp = function (cell) {
+        if (!this.state.isDrawingOnMap)
+            return;
+        this.setState(function (prevState) {
+            return {
+                isEditingTerrainType: prevState.isEditingTerrainType,
+                isDrawingOnMap: false,
+            };
+        });
+    };
     TerrainEditor.prototype.mouseEnter = function (cell) {
+        if (!this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
+            return;
         cell.cellType = this.state.selectedTerrainType;
         this.props.redraw();
     };
@@ -888,10 +884,12 @@ var MapView = (function (_super) {
         this.hoverCellAt(e.clientX, e.clientY);
     };
     MapView.prototype.mouseDown = function (e) {
-        this.startCellInteract(e.clientX, e.clientY);
+        if (e.button == 0)
+            this.startCellInteract(e.clientX, e.clientY);
     };
     MapView.prototype.mouseUp = function (e) {
-        this.endCellInteract(e.clientX, e.clientY);
+        if (e.button == 0)
+            this.endCellInteract(e.clientX, e.clientY);
     };
     MapView.prototype.hoverCellAt = function (x, y) {
         if (this.mouseDownCell === null)
@@ -984,7 +982,7 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* SaveLoad */, 'Save / Load', // save
+            this.renderButton(0 /* SaveLoad */, 'Save Map', // save
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
                 React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
@@ -1002,25 +1000,20 @@ var EditorControls = (function (_super) {
                 React.createElement("polyline", { points: "19 9 22 12 19 15" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
-            this.renderButton(3 /* TerrainTypes */, 'Terrain Types', // grid
+            this.renderButton(3 /* Terrain */, 'Terrain', // globe
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("rect", { x: "3", y: "3", width: "7", height: "7" }),
-                React.createElement("rect", { x: "14", y: "3", width: "7", height: "7" }),
-                React.createElement("rect", { x: "14", y: "14", width: "7", height: "7" }),
-                React.createElement("rect", { x: "3", y: "14", width: "7", height: "7" }))),
-            this.renderButton(4 /* Terrain */, 'Terrain', // edit
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("path", { d: "M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" }),
-                React.createElement("polygon", { points: "18 2 22 6 12 16 8 16 8 12 18 2" }))),
-            this.renderButton(5 /* Lines */, 'Lines', // edit-3
+                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
+                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
+                React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
+            this.renderButton(4 /* Lines */, 'Lines', // edit-3
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "14 2 18 6 7 17 3 17 3 13 14 2" }),
                 React.createElement("line", { x1: "3", y1: "22", x2: "21", y2: "22" }))),
-            this.renderButton(6 /* Locations */, 'Locations', // map-pin
+            this.renderButton(5 /* Locations */, 'Locations', // map-pin
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
                 React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(7 /* Layers */, 'Layers', // layers
+            this.renderButton(6 /* Layers */, 'Layers', // layers
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
                 React.createElement("polyline", { points: "2 17 12 22 22 17" }),
@@ -1085,15 +1078,13 @@ var WorldMap = (function (_super) {
                 return React.createElement(OverviewEditor, __assign({}, props, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) }));
             case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
-            case 3 /* TerrainTypes */:
-                return React.createElement(TerrainTypesEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, updateCellTypes: this.updateCellTypes.bind(this) }));
-            case 4 /* Terrain */:
-                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.mapView.redraw.bind(this.mapView) }));
-            case 5 /* Lines */:
+            case 3 /* Terrain */:
+                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, redraw: this.mapView.redraw.bind(this.mapView), updateCellTypes: this.updateCellTypes.bind(this) }));
+            case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
-            case 6 /* Locations */:
+            case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props));
-            case 7 /* Layers */:
+            case 6 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
     };

@@ -6,7 +6,7 @@ interface IEditorControlsProps {
 class EditorControls extends React.Component<IEditorControlsProps, {}> { 
     render() {
         return <div id="editorControls">
-            {this.renderButton(EditorType.SaveLoad, 'Save / Load', // save
+            {this.renderButton(EditorType.SaveLoad, 'Save Map', // save
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
     <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -27,17 +27,11 @@ class EditorControls extends React.Component<IEditorControlsProps, {}> {
     <line x1="2" y1="12" x2="22" y2="12"/>
     <line x1="12" y1="2" x2="12" y2="22"/>
 </svg>)}
-            {this.renderButton(EditorType.TerrainTypes, 'Terrain Types', // grid
+            {this.renderButton(EditorType.Terrain, 'Terrain', // globe
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-</svg>)}
-            {this.renderButton(EditorType.Terrain, 'Terrain', // edit
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/>
-    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/>
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="2" y1="12" x2="22" y2="12"></line>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
 </svg>)}
             {this.renderButton(EditorType.Lines, 'Lines', // edit-3
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">

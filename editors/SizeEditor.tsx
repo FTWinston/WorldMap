@@ -24,6 +24,7 @@ class SizeEditor extends React.Component<ISizeEditorProps, ISizeEditorState> {
         let sameSize = this.state.newWidth == this.props.width && this.state.newHeight == this.props.height;
 
         return <form onSubmit={this.changeSize.bind(this)}>
+            <p>Adjust the overall size of the map, and control what edges have cells are added or removed.</p>
             <div role="group"><label htmlFor="txtResizeWidth">Width</label><input type="number" id="txtResizeWidth" value={this.state.newWidth.toString()} onChange={this.widthChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtResizeHeight">Height</label><input type="number" id="txtResizeHeight" value={this.state.newHeight.toString()} onChange={this.heightChanged.bind(this)} /></div>
             <div role="group"><label>Anchor</label>

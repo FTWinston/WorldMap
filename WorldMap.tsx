@@ -2,7 +2,6 @@ const enum EditorType {
     SaveLoad,
     Overview,
     Size,
-    TerrainTypes,
     Terrain,
     Lines,
     Locations,
@@ -73,10 +72,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
                 return <OverviewEditor {...props} name={this.state.map.name} description={this.state.map.description} saveChanges={this.updateDetails.bind(this)} />;
             case EditorType.Size:
                 return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
-            case EditorType.TerrainTypes:
-                return <TerrainTypesEditor {...props} cellTypes={this.state.map.cellTypes} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.mapView.redraw.bind(this.mapView)} />;
+                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} redraw={this.mapView.redraw.bind(this.mapView)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
                 return <LinesEditor {...props} />;
             case EditorType.Locations:

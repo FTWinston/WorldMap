@@ -24,7 +24,7 @@
         "editors/SaveLoadEditor.tsx",
         "editors/OverviewEditor.tsx",
         "editors/SizeEditor.tsx",
-        "editors/TerrainTypes.tsx",
+        "editors/CellTypeEditor.tsx",
         "editors/TerrainEditor.tsx",
         "editors/LinesEditor.tsx",
         "editors/LocationsEditor.tsx",

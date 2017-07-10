@@ -321,10 +321,12 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.hoverCellAt(e.clientX, e.clientY);
     }
     private mouseDown(e: MouseEvent) {
-        this.startCellInteract(e.clientX, e.clientY);
+        if (e.button == 0)
+            this.startCellInteract(e.clientX, e.clientY);
     }
     private mouseUp(e: MouseEvent) {
-        this.endCellInteract(e.clientX, e.clientY);
+        if (e.button == 0)
+            this.endCellInteract(e.clientX, e.clientY);
     }
     private hoverCellAt(x: number, y: number) {
         if (this.mouseDownCell === null)
