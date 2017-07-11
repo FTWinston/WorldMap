@@ -100,12 +100,14 @@ class MapData {
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
-                if (this.shouldIndexHaveCell(i))
-                    this.cells[i] = new MapCell(this, CellType.empty);
+                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
 
-            this.cellTypes.push(new CellType('Red', '#ff0000'));
-            this.cellTypes.push(new CellType('Green', '#00cc00'));
-            this.cellTypes.push(new CellType('Blue', '#0099ff'));
+            this.cellTypes.push(new CellType('Water', '#179ce6'));
+            this.cellTypes.push(new CellType('Grass', '#9cd22b'));
+            this.cellTypes.push(new CellType('Forest', '#1b8015'));
+            this.cellTypes.push(new CellType('Hills', '#7bac46'));
+            this.cellTypes.push(new CellType('Mountains', '#7c7c4b'));
+            this.cellTypes.push(new CellType('Desert', '#ebd178'));
 
             this.positionCells();
         }
