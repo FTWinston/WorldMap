@@ -2,6 +2,7 @@ interface IMapViewProps {
     map: MapData;
     scrollUI: boolean;
     renderGrid: boolean;
+    fixedCellRadius?: number;
     cellMouseDown?: (cell: MapCell) => void;
     cellMouseUp?: (cell: MapCell) => void;
     cellMouseEnter?: (cell: MapCell) => void;
@@ -35,7 +36,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let scrollSize = props.scrollUI ? this.getScrollbarSize() : {width: 0, height: 0};
 
         this.state = {
-            cellRadius: 30,
+            cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
             cellDrawInterval: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
@@ -61,6 +62,15 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.hammer.destroy();
             this.hammer = undefined;
         }
+    }
+    componentWillReceiveProps(nextProps: IMapViewProps) {
+        if (nextProps.fixedCellRadius !== undefined && nextProps.fixedCellRadius != this.props.fixedCellRadius)
+            this.setState({
+                cellRadius: nextProps.fixedCellRadius,
+                cellDrawInterval: this.state.cellDrawInterval,
+                scrollbarWidth: this.state.scrollbarWidth,
+                scrollbarHeight: this.state.scrollbarHeight,
+            });
     }
     private setupTouch() {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -159,12 +169,14 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         let twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         let drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
+        let outline = this.props.renderGrid && !twoLevels;
+        let writeCoords = this.props.scrollUI && !twoLevels;
 
-        this.drawCells(drawInterval, this.props.renderGrid && !twoLevels, true, !twoLevels, !twoLevels);
+        this.drawCells(drawInterval, outline, true, !twoLevels, writeCoords);
 
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, true, true);
+            this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
 
         if (this.props.scrollUI)
@@ -450,10 +462,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             width: widthNoScroll - widthWithScroll,
             height: heightNoScroll - heightWithScroll
         }
-    }
-    extractData() {
-        let json = this.props.map.saveToJSON();
-        window.open('data:text/json,' + encodeURIComponent(json));
     }
     downloadImage() {
         this.canvas.toBlob(function(blob: Blob) {

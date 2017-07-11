@@ -196,7 +196,7 @@ var DownloadEditor = (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             showGrid: true,
-            gridSize: 30,
+            gridSize: 60,
         };
         return _this;
     }
@@ -207,12 +207,22 @@ var DownloadEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", null,
                     "Show grid ",
-                    React.createElement("input", { type: "checkbox", checked: this.state.showGrid, onChange: this.renderMap.bind(this) }))),
+                    React.createElement("input", { type: "checkbox", checked: this.state.showGrid, onChange: this.toggleGrid.bind(this) }))),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtCellSize" }, "Cell size"),
+                React.createElement("input", { type: "number", id: "txtCellSize", value: this.state.gridSize.toString(), onChange: this.cellSizeChanged.bind(this) })),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("button", { type: "submit" }, "Download map")),
-            React.createElement(MapView, { map: this.props.map, scrollUI: false, renderGrid: this.state.showGrid, ref: function (c) { return _this.view = c; } }));
+            React.createElement(MapView, { map: this.props.map, scrollUI: false, renderGrid: this.state.showGrid, fixedCellRadius: this.state.gridSize / 2, ref: function (c) { return _this.view = c; } }));
     };
-    DownloadEditor.prototype.renderMap = function (e) {
+    DownloadEditor.prototype.cellSizeChanged = function (e) {
+        this.setState({
+            showGrid: this.state.showGrid,
+            gridSize: e.target.value,
+        });
+        this.view.redraw();
+    };
+    DownloadEditor.prototype.toggleGrid = function (e) {
         this.setState({
             showGrid: !this.state.showGrid,
             gridSize: this.state.gridSize,
@@ -771,7 +781,7 @@ var MapView = (function (_super) {
         _this.resizing = false;
         var scrollSize = props.scrollUI ? _this.getScrollbarSize() : { width: 0, height: 0 };
         _this.state = {
-            cellRadius: 30,
+            cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
             cellDrawInterval: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
@@ -795,6 +805,15 @@ var MapView = (function (_super) {
             this.hammer.destroy();
             this.hammer = undefined;
         }
+    };
+    MapView.prototype.componentWillReceiveProps = function (nextProps) {
+        if (nextProps.fixedCellRadius !== undefined && nextProps.fixedCellRadius != this.props.fixedCellRadius)
+            this.setState({
+                cellRadius: nextProps.fixedCellRadius,
+                cellDrawInterval: this.state.cellDrawInterval,
+                scrollbarWidth: this.state.scrollbarWidth,
+                scrollbarHeight: this.state.scrollbarHeight,
+            });
     };
     MapView.prototype.setupTouch = function () {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -866,10 +885,12 @@ var MapView = (function (_super) {
             this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
         var twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
-        this.drawCells(drawInterval, this.props.renderGrid && !twoLevels, true, !twoLevels, !twoLevels);
+        var outline = this.props.renderGrid && !twoLevels;
+        var writeCoords = this.props.scrollUI && !twoLevels;
+        this.drawCells(drawInterval, outline, true, !twoLevels, writeCoords);
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, true, true);
+            this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
@@ -1108,10 +1129,6 @@ var MapView = (function (_super) {
             width: widthNoScroll - widthWithScroll,
             height: heightNoScroll - heightWithScroll
         };
-    };
-    MapView.prototype.extractData = function () {
-        var json = this.props.map.saveToJSON();
-        window.open('data:text/json,' + encodeURIComponent(json));
     };
     MapView.prototype.downloadImage = function () {
         this.canvas.toBlob(function (blob) {
