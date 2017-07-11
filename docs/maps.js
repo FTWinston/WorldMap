@@ -163,12 +163,12 @@ var ChangeHistory = (function (_super) {
     };
     return ChangeHistory;
 }(React.Component));
-var SaveLoadEditor = (function (_super) {
-    __extends(SaveLoadEditor, _super);
-    function SaveLoadEditor() {
+var SaveEditor = (function (_super) {
+    __extends(SaveEditor, _super);
+    function SaveEditor() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    SaveLoadEditor.prototype.render = function () {
+    SaveEditor.prototype.render = function () {
         var clearButton = window.localStorage.length == 0 ? undefined : React.createElement("div", { role: "group", className: "vertical" },
             React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
             React.createElement("button", { type: "button", onClick: this.clearSavedData.bind(this) }, "Clear saved map"));
@@ -178,18 +178,53 @@ var SaveLoadEditor = (function (_super) {
                 React.createElement("button", { type: "submit" }, "Save map")),
             clearButton);
     };
-    SaveLoadEditor.prototype.updateDetails = function (e) {
+    SaveEditor.prototype.updateDetails = function (e) {
         e.preventDefault();
-        window.localStorage.setItem(SaveLoadEditor.localStorageName, this.props.map.saveToJSON());
+        window.localStorage.setItem(SaveEditor.localStorageName, this.props.map.saveToJSON());
         this.forceUpdate();
     };
-    SaveLoadEditor.prototype.clearSavedData = function () {
-        window.localStorage.removeItem(SaveLoadEditor.localStorageName);
+    SaveEditor.prototype.clearSavedData = function () {
+        window.localStorage.removeItem(SaveEditor.localStorageName);
         location.reload();
     };
-    return SaveLoadEditor;
+    return SaveEditor;
 }(React.Component));
-SaveLoadEditor.localStorageName = 'savedMap';
+SaveEditor.localStorageName = 'savedMap';
+var DownloadEditor = (function (_super) {
+    __extends(DownloadEditor, _super);
+    function DownloadEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            showGrid: true,
+            gridSize: 30,
+        };
+        return _this;
+    }
+    DownloadEditor.prototype.render = function () {
+        var _this = this;
+        return React.createElement("form", { id: "setupDownload", onSubmit: this.prepareDownload.bind(this) },
+            React.createElement("p", null, "Save your map to an image file, for use elsewhere."),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", null,
+                    "Show grid ",
+                    React.createElement("input", { type: "checkbox", checked: this.state.showGrid, onChange: this.renderMap.bind(this) }))),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("button", { type: "submit" }, "Download map")),
+            React.createElement(MapView, { map: this.props.map, scrollUI: false, renderGrid: this.state.showGrid, ref: function (c) { return _this.view = c; } }));
+    };
+    DownloadEditor.prototype.renderMap = function (e) {
+        this.setState({
+            showGrid: !this.state.showGrid,
+            gridSize: this.state.gridSize,
+        });
+        this.view.redraw();
+    };
+    DownloadEditor.prototype.prepareDownload = function (e) {
+        e.preventDefault();
+        this.view.downloadImage();
+    };
+    return DownloadEditor;
+}(React.Component));
 var OverviewEditor = (function (_super) {
     __extends(OverviewEditor, _super);
     function OverviewEditor(props) {
@@ -248,7 +283,7 @@ var SizeEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", null, "Anchor"),
                 React.createElement(ResizeAnchorInput, { oldWidth: this.props.width, newWidth: this.state.newWidth, oldHeight: this.props.height, newHeight: this.state.newHeight, mode: this.state.resizeAnchor, setMode: this.setMode.bind(this) })),
-            React.createElement("div", { role: "group" },
+            React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("button", { type: "submit", disabled: sameSize }, "Change size")));
     };
     SizeEditor.prototype.widthChanged = function (e) {
@@ -374,7 +409,8 @@ var TerrainEditor = (function (_super) {
                 var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
                 return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type), onDoubleClick: that.showTerrainEdit.bind(that, type) }, type.name);
             })),
-            React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type"));
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type")));
     };
     TerrainEditor.prototype.selectTerrainType = function (type) {
         this.setState({
@@ -487,8 +523,8 @@ var MapData = (function () {
             for (var i = 0; i < this.cells.length; i++)
                 this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
             this.cellTypes.push(new CellType('Water', '#179ce6'));
-            this.cellTypes.push(new CellType('Grass', '#9cd22b'));
-            this.cellTypes.push(new CellType('Forest', '#1b8015'));
+            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
+            this.cellTypes.push(new CellType('Forest', '#189b11'));
             this.cellTypes.push(new CellType('Hills', '#7bac46'));
             this.cellTypes.push(new CellType('Mountains', '#7c7c4b'));
             this.cellTypes.push(new CellType('Desert', '#ebd178'));
@@ -733,7 +769,7 @@ var MapView = (function (_super) {
         _this.backgroundColor = '#ccc';
         _this.redrawing = false;
         _this.resizing = false;
-        var scrollSize = _this.getScrollbarSize();
+        var scrollSize = props.scrollUI ? _this.getScrollbarSize() : { width: 0, height: 0 };
         _this.state = {
             cellRadius: 30,
             cellDrawInterval: 1,
@@ -743,15 +779,18 @@ var MapView = (function (_super) {
         return _this;
     }
     MapView.prototype.componentDidMount = function () {
-        window.addEventListener('resize', this.resize.bind(this));
+        if (this.props.scrollUI)
+            window.addEventListener('resize', this.resize.bind(this));
         var ctx = this.canvas.getContext('2d');
         if (ctx !== null)
             this.ctx = ctx;
-        this.setupTouch();
+        if (this.props.scrollUI)
+            this.setupTouch();
         this.resize();
     };
     MapView.prototype.componentWillUnmount = function () {
-        window.removeEventListener('resize', this.resize.bind(this));
+        if (this.props.scrollUI)
+            window.removeEventListener('resize', this.resize.bind(this));
         if (this.hammer !== undefined) {
             this.hammer.destroy();
             this.hammer = undefined;
@@ -805,6 +844,10 @@ var MapView = (function (_super) {
     };
     MapView.prototype.render = function () {
         var _this = this;
+        if (!this.props.scrollUI) {
+            var size = this.getOverallSize();
+            return React.createElement("canvas", { ref: function (c) { return _this.canvas = c; }, width: size.width, height: size.height });
+        }
         return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
             React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
             React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
@@ -818,16 +861,18 @@ var MapView = (function (_super) {
     };
     MapView.prototype.draw = function () {
         this.ctx.fillStyle = this.backgroundColor;
-        this.ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
-        this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
-        var twoLevels = this.state.cellRadius < 40;
+        this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+        if (this.props.scrollUI)
+            this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+        var twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
-        this.drawCells(drawInterval, !twoLevels, true, !twoLevels, !twoLevels);
+        this.drawCells(drawInterval, this.props.renderGrid && !twoLevels, true, !twoLevels, !twoLevels);
         if (twoLevels) {
             // outline of next zoom level
             this.drawCells(drawInterval * 2, true, false, true, true);
         }
-        this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        if (this.props.scrollUI)
+            this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
         this.redrawing = false;
     };
     MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent, showSelection, writeCoords) {
@@ -836,11 +881,18 @@ var MapView = (function (_super) {
             if (outline)
                 drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
             else
-                ; //drawCellRadius += 0.4; // overlap cells slightly so there's no gap
-        var minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
-        var minDrawY = this.scrollPane.scrollTop - drawCellRadius;
-        var maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
-        var maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
+                drawCellRadius += 0.4; // overlap cells slightly so there's no gap
+        var minDrawX, maxDrawX, minDrawY, maxDrawY;
+        if (this.props.scrollUI) {
+            minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
+            minDrawY = this.scrollPane.scrollTop - drawCellRadius;
+            maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
+            maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
+        }
+        else {
+            minDrawX = minDrawY = Number.MIN_VALUE;
+            maxDrawX = maxDrawY = Number.MAX_VALUE;
+        }
         var map = this.props.map;
         var cellRadius = this.state.cellRadius;
         var halfInterval = Math.ceil(cellDrawInterval / 2);
@@ -905,9 +957,16 @@ var MapView = (function (_super) {
     MapView.prototype.resize = function () {
         if (this.resizing)
             return;
-        requestAnimationFrame(this.updateSize.bind(this));
+        if (this.props.scrollUI)
+            requestAnimationFrame(this.updateSize.bind(this));
         this.redraw();
         this.resizing = true;
+    };
+    MapView.prototype.getOverallSize = function () {
+        return {
+            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
+            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+        };
     };
     MapView.prototype.updateScrollSize = function () {
         var screenFocusX, screenFocusY;
@@ -924,12 +983,11 @@ var MapView = (function (_super) {
         var scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
-        var overallWidth = (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius;
-        var overallHeight = (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius;
-        this.scrollSize.style.width = overallWidth + 'px';
-        this.scrollSize.style.height = overallHeight + 'px';
-        this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
-        this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
+        var overallSize = this.getOverallSize();
+        this.scrollSize.style.width = overallSize.width + 'px';
+        this.scrollSize.style.height = overallSize.height + 'px';
+        this.scrollPane.scrollLeft = scrollFractionX * overallSize.width - screenFocusX;
+        this.scrollPane.scrollTop = scrollFractionY * overallSize.height - screenFocusY;
     };
     MapView.prototype.updateSize = function () {
         var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
@@ -1055,6 +1113,11 @@ var MapView = (function (_super) {
         var json = this.props.map.saveToJSON();
         window.open('data:text/json,' + encodeURIComponent(json));
     };
+    MapView.prototype.downloadImage = function () {
+        this.canvas.toBlob(function (blob) {
+            saveAs(blob, this.props.map.name + '.png');
+        }.bind(this));
+    };
     return MapView;
 }(React.Component));
 var EditorControls = (function (_super) {
@@ -1064,17 +1127,22 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* SaveLoad */, 'Save Map', // save
+            this.renderButton(0 /* Save */, 'Save Map', // save
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
                 React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
                 React.createElement("polyline", { points: "7 3 7 8 15 8" }))),
-            this.renderButton(1 /* Overview */, 'Overview', // info
+            this.renderButton(1 /* Download */, 'Download', // download
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" }),
+                React.createElement("polyline", { points: "8 12 12 16 16 12" }),
+                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "16" }))),
+            this.renderButton(2 /* Overview */, 'Overview', // info
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
                 React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
-            this.renderButton(2 /* Size */, 'Size', // move
+            this.renderButton(3 /* Size */, 'Size', // move
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polyline", { points: "5 9 2 12 5 15" }),
                 React.createElement("polyline", { points: "9 5 12 2 15 5" }),
@@ -1082,20 +1150,20 @@ var EditorControls = (function (_super) {
                 React.createElement("polyline", { points: "19 9 22 12 19 15" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
-            this.renderButton(3 /* Terrain */, 'Terrain', // globe
+            this.renderButton(4 /* Terrain */, 'Terrain', // globe
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
-            this.renderButton(4 /* Lines */, 'Lines', // edit-3
+            this.renderButton(5 /* Lines */, 'Lines', // edit-3
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polyline", { points: "23 18 13.5 8.5 8.5 13.5 1 6" }),
                 React.createElement("polyline", { points: "17 18 23 18 23 12" }))),
-            this.renderButton(5 /* Locations */, 'Locations', // map-pin
+            this.renderButton(6 /* Locations */, 'Locations', // map-pin
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
                 React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(6 /* Layers */, 'Layers', // layers
+            this.renderButton(7 /* Layers */, 'Layers', // layers
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
                 React.createElement("polyline", { points: "2 17 12 22 22 17" }),
@@ -1123,11 +1191,11 @@ var WorldMap = (function (_super) {
     __extends(WorldMap, _super);
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
-        var dataJson = window.localStorage.getItem(SaveLoadEditor.localStorageName);
+        var dataJson = window.localStorage.getItem(SaveEditor.localStorageName);
         var map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
         _this.state = {
             map: map,
-            activeEditor: props.editable ? 1 /* Overview */ : undefined,
+            activeEditor: props.editable ? 2 /* Overview */ : undefined,
         };
         return _this;
     }
@@ -1138,12 +1206,12 @@ var WorldMap = (function (_super) {
         var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
+        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
         if (!this.props.editable)
-            return React.createElement("div", { id: "worldRoot" },
-                React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) }));
+            return React.createElement("div", { id: "worldRoot" }, map);
         var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return React.createElement("div", { id: "worldRoot" },
-            React.createElement(MapView, { map: this.state.map, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) }),
+            map,
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
             React.createElement("div", { id: "editor" },
                 React.createElement("h1", null, this.state.editorHeading),
@@ -1158,19 +1226,21 @@ var WorldMap = (function (_super) {
             ref: function (c) { return _this.activeEditor = c; }
         };
         switch (editor) {
-            case 0 /* SaveLoad */:
-                return React.createElement(SaveLoadEditor, __assign({}, props, { map: this.state.map }));
-            case 1 /* Overview */:
+            case 0 /* Save */:
+                return React.createElement(SaveEditor, __assign({}, props, { map: this.state.map }));
+            case 1 /* Download */:
+                return React.createElement(DownloadEditor, __assign({}, props, { map: this.state.map }));
+            case 2 /* Overview */:
                 return React.createElement(OverviewEditor, __assign({}, props, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) }));
-            case 2 /* Size */:
+            case 3 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
-            case 3 /* Terrain */:
+            case 4 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
-            case 4 /* Lines */:
+            case 5 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
-            case 5 /* Locations */:
+            case 6 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props));
-            case 6 /* Layers */:
+            case 7 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
     };

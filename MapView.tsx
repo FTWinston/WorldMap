@@ -1,9 +1,11 @@
 interface IMapViewProps {
     map: MapData;
-    cellMouseDown: (cell: MapCell) => void;
-    cellMouseUp: (cell: MapCell) => void;
-    cellMouseEnter: (cell: MapCell) => void;
-    cellMouseLeave: (cell: MapCell) => void;
+    scrollUI: boolean;
+    renderGrid: boolean;
+    cellMouseDown?: (cell: MapCell) => void;
+    cellMouseUp?: (cell: MapCell) => void;
+    cellMouseEnter?: (cell: MapCell) => void;
+    cellMouseLeave?: (cell: MapCell) => void;
 }
 
 interface IMapViewState {
@@ -12,6 +14,8 @@ interface IMapViewState {
     scrollbarWidth: number;
     scrollbarHeight: number;
 }
+
+declare function saveAs(blob: Blob, name: string): void;
 
 class MapView extends React.Component<IMapViewProps, IMapViewState> { 
     private root: HTMLElement;
@@ -28,7 +32,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     constructor(props: IMapViewProps) {
         super(props);
 
-        let scrollSize = this.getScrollbarSize();
+        let scrollSize = props.scrollUI ? this.getScrollbarSize() : {width: 0, height: 0};
 
         this.state = {
             cellRadius: 30,
@@ -38,17 +42,20 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         };
     }
     componentDidMount() {
-        window.addEventListener('resize', this.resize.bind(this));
+        if (this.props.scrollUI)
+            window.addEventListener('resize', this.resize.bind(this));
         
         let ctx = this.canvas.getContext('2d');
         if (ctx !== null)
             this.ctx = ctx;
 
-        this.setupTouch();
+        if (this.props.scrollUI)
+            this.setupTouch();
         this.resize();
     }
     componentWillUnmount() {
-        window.removeEventListener('resize', this.resize.bind(this));
+        if (this.props.scrollUI)
+            window.removeEventListener('resize', this.resize.bind(this));
 
         if (this.hammer !== undefined) {
             this.hammer.destroy();
@@ -116,6 +123,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         touch.requireFailure(zoom);
     }
     render() {
+        if (!this.props.scrollUI) {
+            let size = this.getOverallSize();
+            return <canvas ref={(c) => this.canvas = c} width={size.width} height={size.height}></canvas>;
+        }
+        
         return <div id="mapRoot" ref={(c) => this.root = c}>
             <canvas ref={(c) => this.canvas = c}></canvas>
             <div ref={(c) => this.scrollPane = c} className="scrollPane"
@@ -140,20 +152,23 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
     private draw() {
         this.ctx.fillStyle = this.backgroundColor;
-        this.ctx.fillRect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
-        this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+        this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
 
-        let twoLevels = this.state.cellRadius < 40;
+        if (this.props.scrollUI)
+            this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+
+        let twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         let drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
 
-        this.drawCells(drawInterval, !twoLevels, true, !twoLevels, !twoLevels);
+        this.drawCells(drawInterval, this.props.renderGrid && !twoLevels, true, !twoLevels, !twoLevels);
 
         if (twoLevels) {
             // outline of next zoom level
             this.drawCells(drawInterval * 2, true, false, true, true);
         }
 
-        this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        if (this.props.scrollUI)
+            this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
         this.redrawing = false;
     }
     private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
@@ -163,12 +178,20 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             if (outline)
                 drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
             else
-                ;//drawCellRadius += 0.4; // overlap cells slightly so there's no gap
+                drawCellRadius += 0.4; // overlap cells slightly so there's no gap
+        
+        let minDrawX: number, maxDrawX: number, minDrawY: number, maxDrawY: number;
 
-        let minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
-        let minDrawY = this.scrollPane.scrollTop - drawCellRadius;
-        let maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
-        let maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
+        if (this.props.scrollUI) {
+            minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
+            minDrawY = this.scrollPane.scrollTop - drawCellRadius;
+            maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
+            maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
+        }
+        else {
+            minDrawX = minDrawY = Number.MIN_VALUE;
+            maxDrawX = maxDrawY = Number.MAX_VALUE;
+        }
 
         let map = this.props.map;
         let cellRadius = this.state.cellRadius;
@@ -248,9 +271,16 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private resize() {
         if (this.resizing)
             return;
-        requestAnimationFrame(this.updateSize.bind(this));
+        if (this.props.scrollUI)
+            requestAnimationFrame(this.updateSize.bind(this));
         this.redraw();
         this.resizing = true;
+    }
+    private getOverallSize() {
+        return {
+            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
+            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+        };
     }
     private updateScrollSize() {
         let screenFocusX: number, screenFocusY: number;
@@ -270,14 +300,13 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.scrollPane.style.width = this.root.offsetWidth + 'px';
         this.scrollPane.style.height = this.root.offsetHeight + 'px';
 
-        let overallWidth = (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius;
-        let overallHeight = (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius;
+        let overallSize = this.getOverallSize();
 
-        this.scrollSize.style.width = overallWidth + 'px';
-        this.scrollSize.style.height = overallHeight + 'px';
+        this.scrollSize.style.width = overallSize.width + 'px';
+        this.scrollSize.style.height = overallSize.height + 'px';
 
-        this.scrollPane.scrollLeft = scrollFractionX * overallWidth - screenFocusX;
-        this.scrollPane.scrollTop = scrollFractionY * overallHeight - screenFocusY;
+        this.scrollPane.scrollLeft = scrollFractionX * overallSize.width - screenFocusX;
+        this.scrollPane.scrollTop = scrollFractionY * overallSize.height - screenFocusY;
     }
     updateSize() {
         let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
@@ -425,5 +454,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     extractData() {
         let json = this.props.map.saveToJSON();
         window.open('data:text/json,' + encodeURIComponent(json));
+    }
+    downloadImage() {
+        this.canvas.toBlob(function(blob: Blob) {
+            saveAs(blob, this.props.map.name + '.png');
+        }.bind(this));
     }
 }

@@ -22,7 +22,8 @@
         "controls/ResizeAnchorInput.tsx",
         "controls/ChangeHistory.tsx",
 
-        "editors/SaveLoadEditor.tsx",
+        "editors/SaveEditor.tsx",
+        "editors/DownloadEditor.tsx",
         "editors/OverviewEditor.tsx",
         "editors/SizeEditor.tsx",
         "editors/CellTypeEditor.tsx",

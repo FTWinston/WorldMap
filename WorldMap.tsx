@@ -1,5 +1,6 @@
 const enum EditorType {
-    SaveLoad,
+    Save,
+    Download,
     Overview,
     Size,
     Terrain,
@@ -29,7 +30,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     constructor(props: IWorldMapProps) {
         super(props);
 
-        let dataJson = window.localStorage.getItem(SaveLoadEditor.localStorageName);
+        let dataJson = window.localStorage.getItem(SaveEditor.localStorageName);
         let map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
 
         this.state = {
@@ -46,14 +47,18 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         if (this.state.map === undefined)
             return <div id="worldRoot" />;
 
+        let map = <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => this.mapView = c}
+                    cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)}
+                    cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />;
+
         if (!this.props.editable)
             return <div id="worldRoot">
-            <MapView map={this.state.map} ref={(c) => this.mapView = c} cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)} cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />
+            {map}
         </div>
 
         let activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return <div id="worldRoot">
-            <MapView map={this.state.map} ref={(c) => this.mapView = c} cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)} cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />
+            {map}
             <EditorControls activeEditor={this.state.activeEditor} editorSelected={this.selectEditor.bind(this)} />
             <div id="editor">
                 <h1>{this.state.editorHeading}</h1>
@@ -71,8 +76,10 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         };
         
         switch(editor) {
-            case EditorType.SaveLoad:
-                return <SaveLoadEditor {...props} map={this.state.map} />;
+            case EditorType.Save:
+                return <SaveEditor {...props} map={this.state.map} />;
+            case EditorType.Download:
+                return <DownloadEditor {...props} map={this.state.map} />;
             case EditorType.Overview:
                 return <OverviewEditor {...props} name={this.state.map.name} description={this.state.map.description} saveChanges={this.updateDetails.bind(this)} />;
             case EditorType.Size:

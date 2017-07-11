@@ -252,29 +252,6 @@ $buttonHoverColor: #0af;
   }
 }
 
-/*
-#brushList .brush {
-  cursor: pointer;
-  display: inline-block;
-  margin: 0.25em;
-  padding: 0 0.1em;
-  min-width: 5em;
-  border: solid 1px grey;
-  text-align: center;
-  color: black;
-  text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white;
-
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-
-  &.selected {
-    color: white;
-    text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black;
-  }
-  &:hover {
-    text-decoration: underline;
-  }
+#setupDownload canvas {
+  display: none;
 }
-*/

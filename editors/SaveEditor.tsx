@@ -1,8 +1,8 @@
-interface ISaveLoadEditorProps {
+interface ISaveEditorProps {
     map: MapData;
 }
 
-class SaveLoadEditor extends React.Component<ISaveLoadEditorProps, {}> {
+class SaveEditor extends React.Component<ISaveEditorProps, {}> {
     render() {
         let clearButton = window.localStorage.length == 0 ? undefined : <div role="group" className="vertical">
             <p>Saving the map will overwrite any existing map saved in your browser.</p>
@@ -19,11 +19,11 @@ class SaveLoadEditor extends React.Component<ISaveLoadEditorProps, {}> {
     }
     private updateDetails(e: React.FormEvent) {
         e.preventDefault();
-        window.localStorage.setItem(SaveLoadEditor.localStorageName, this.props.map.saveToJSON());
+        window.localStorage.setItem(SaveEditor.localStorageName, this.props.map.saveToJSON());
         this.forceUpdate();
     }
     private clearSavedData() {
-        window.localStorage.removeItem(SaveLoadEditor.localStorageName);
+        window.localStorage.removeItem(SaveEditor.localStorageName);
         location.reload();
     }
     public static readonly localStorageName = 'savedMap';

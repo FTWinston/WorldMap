@@ -47,7 +47,9 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
                     return <div key={id.toString()} className={classes} style={{'backgroundColor': type.color}} onClick={that.selectTerrainType.bind(that, type)} onDoubleClick={that.showTerrainEdit.bind(that, type)}>{type.name}</div>;
                 })}
             </div>
-            <button type="button" onClick={this.showTerrainEdit.bind(this, undefined)}>Add new type</button>
+            <div role="group" className="vertical">
+                <button type="button" onClick={this.showTerrainEdit.bind(this, undefined)}>Add new type</button>
+            </div>
         </form>;
     }
     private selectTerrainType(type: CellType) {

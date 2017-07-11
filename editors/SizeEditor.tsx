@@ -32,7 +32,7 @@ class SizeEditor extends React.Component<ISizeEditorProps, ISizeEditorState> {
                                    oldHeight={this.props.height} newHeight={this.state.newHeight}
                                    mode={this.state.resizeAnchor} setMode={this.setMode.bind(this)} />
             </div>
-            <div role="group">
+            <div role="group" className="vertical">
                 <button type="submit" disabled={sameSize}>Change size</button>
             </div>
         </form>;

@@ -103,8 +103,8 @@ class MapData {
                 this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
 
             this.cellTypes.push(new CellType('Water', '#179ce6'));
-            this.cellTypes.push(new CellType('Grass', '#9cd22b'));
-            this.cellTypes.push(new CellType('Forest', '#1b8015'));
+            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
+            this.cellTypes.push(new CellType('Forest', '#189b11'));
             this.cellTypes.push(new CellType('Hills', '#7bac46'));
             this.cellTypes.push(new CellType('Mountains', '#7c7c4b'));
             this.cellTypes.push(new CellType('Desert', '#ebd178'));
