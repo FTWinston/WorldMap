@@ -1,3 +1,279 @@
+var MapData = (function () {
+    function MapData(width, height, createCells) {
+        if (createCells === void 0) { createCells = true; }
+        this.underlyingWidth = width + Math.floor(height / 2) - 1;
+        this.width = width;
+        this.height = height;
+        this.cells = new Array(this.underlyingWidth * this.height);
+        this.cellTypes = [CellType.empty];
+        this.name = '';
+        this.description = '';
+        this.locationTypes = [];
+        this.locations = [];
+        if (createCells !== false) {
+            for (var i = 0; i < this.cells.length; i++)
+                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
+            this.cellTypes.push(new CellType('Water', '#179ce6'));
+            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
+            this.cellTypes.push(new CellType('Forest', '#189b11'));
+            this.cellTypes.push(new CellType('Hills', '#7bac46'));
+            this.cellTypes.push(new CellType('Mountain', '#7c7c4b'));
+            this.cellTypes.push(new CellType('Desert', '#ebd178'));
+            this.locationTypes.push(new LocationType('Town', 16, '#000000', 'small'));
+            this.locationTypes.push(new LocationType('City', 24, '#000000', 'large'));
+            this.positionCells();
+        }
+    }
+    MapData.prototype.positionCells = function () {
+        var packedWidthRatio = 1.7320508075688772, packedHeightRatio = 1.5;
+        var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE;
+        var maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+        for (var i = 0; i < this.cells.length; i++) {
+            var cell = this.cells[i];
+            if (cell == null)
+                continue;
+            cell.row = Math.floor(i / this.underlyingWidth);
+            cell.col = i % this.underlyingWidth;
+            cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
+            cell.yPos = packedHeightRatio * cell.row;
+            if (cell.xPos < minX)
+                minX = cell.xPos;
+            else if (cell.xPos > maxX)
+                maxX = cell.xPos;
+            if (cell.yPos < minY)
+                minY = cell.yPos;
+            else if (cell.yPos > maxY)
+                maxY = cell.yPos;
+        }
+        this.minX = minX - 1;
+        this.minY = minY - 1;
+        this.maxX = maxX + 1;
+        this.maxY = maxY + 1;
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell == null)
+                continue;
+            cell.xPos -= minX;
+            cell.yPos -= minY;
+        }
+    };
+    MapData.prototype.shouldIndexHaveCell = function (index) {
+        var row = Math.floor(index / this.underlyingWidth);
+        var col = index % this.underlyingWidth;
+        if (2 * col + row < this.height - 2)
+            return false; // chop left to get square edge
+        if (row + 2 * col > 2 * this.underlyingWidth - 1)
+            return false; // chop right to get square edge
+        return true;
+    };
+    MapData.prototype.getCellIndex = function (row, col) {
+        return col + row * this.underlyingWidth;
+    };
+    MapData.prototype.changeSize = function (newWidth, newHeight, mode) {
+        var deltaWidth = newWidth - this.width;
+        var deltaHeight = newHeight - this.height;
+        switch (mode) {
+            case 0 /* TopLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 1 /* TopMiddle */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 2 /* TopRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, true);
+                break;
+            case 3 /* CenterLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 4 /* Center */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 5 /* CenterRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(Math.floor(deltaHeight / 2), true);
+                this.changeHeight(Math.ceil(deltaHeight / 2), false);
+                break;
+            case 6 /* BottomLeft */:
+                this.performWidthChange(deltaWidth, true, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case 7 /* BottomMiddle */:
+                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
+                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+            case 8 /* BottomRight */:
+                this.performWidthChange(deltaWidth, false, false);
+                this.changeHeight(deltaHeight, false);
+                break;
+        }
+        this.width += deltaWidth; // this is a "display only" property, and isn't affected by underlying calculations
+        this.positionCells();
+    };
+    MapData.prototype.changeHeight = function (delta, topEdgeFixed) {
+        var increment = delta > 0 ? 1 : -1;
+        var increasing = delta > 0 ? 1 : 0;
+        for (var i = 0; i != delta; i += increment) {
+            if ((this.height + increasing) % 2 == 0)
+                this.performWidthChange(increment, !topEdgeFixed, true);
+            this.performHeightChange(increment, topEdgeFixed);
+        }
+    };
+    MapData.prototype.performWidthChange = function (delta, leftEdgeFixed, forHeightChange) {
+        var overallDelta = 0;
+        if (delta > 0) {
+            for (var row = 0; row < this.height; row++) {
+                var rowInsertIndex = void 0; // this is complicated on account of the "chopping" we did to get square edges
+                if (leftEdgeFixed)
+                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
+                else
+                    rowInsertIndex = Math.floor((this.height - row - 1) / 2);
+                var rowStart = row * this.underlyingWidth;
+                var insertPos = rowStart + rowInsertIndex + overallDelta;
+                for (var i = 0; i < delta; i++)
+                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
+                overallDelta += delta;
+            }
+        }
+        else if (delta < 0) {
+            for (var row = 0; row < this.height; row++) {
+                var rowChopPos = void 0;
+                if (forHeightChange) {
+                    if (leftEdgeFixed)
+                        rowChopPos = this.underlyingWidth + delta;
+                    else
+                        rowChopPos = 0;
+                }
+                else if (leftEdgeFixed)
+                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
+                else
+                    rowChopPos = Math.floor((this.height - row - 1) / 2);
+                var rowStart = row * this.underlyingWidth;
+                var chopPos = rowStart + rowChopPos + overallDelta;
+                this.cells.splice(chopPos, -delta);
+                overallDelta += delta;
+            }
+        }
+        this.underlyingWidth += delta;
+    };
+    MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
+        if (delta > 0) {
+            var diff = delta * this.underlyingWidth;
+            for (var i = 0; i < diff; i++) {
+                if (this.cells.length + 1 > this.underlyingWidth * this.height)
+                    this.height++;
+                var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
+            }
+        }
+        else if (delta < 0) {
+            var diff = -delta * this.underlyingWidth;
+            this.height += delta;
+            this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
+        }
+    };
+    MapData.prototype.replaceCellType = function (find, replace) {
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell !== null && cell.cellType === find)
+                cell.cellType = replace;
+        }
+    };
+    MapData.prototype.saveToJSON = function () {
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell !== null)
+                cell.typeID = this.cellTypes.indexOf(cell.cellType);
+        }
+        for (var _b = 0, _c = this.locations; _b < _c.length; _b++) {
+            var location_1 = _c[_b];
+            location_1.typeID = this.locationTypes.indexOf(location_1.type);
+            location_1.cellID = this.cells.indexOf(location_1.cell);
+        }
+        var map = this;
+        var json = JSON.stringify(this, function (key, value) {
+            if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
+                || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
+                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
+                || key == 'cell' || key == 'type')
+                return undefined;
+            return value;
+        });
+        return json;
+    };
+    MapData.loadFromJSON = function (json) {
+        var data = JSON.parse(json);
+        var map = new MapData(data.width, data.height, false);
+        map.name = data.name;
+        map.description = data.description;
+        map.cellTypes = data.cellTypes.map(function (type) {
+            return new CellType(type.name, type.color);
+        });
+        map.cells = data.cells.map(function (cell) {
+            if (cell == null)
+                return null;
+            var cellType = map.cellTypes[cell.typeID];
+            return new MapCell(map, cellType);
+        });
+        if (data.locationTypes !== undefined)
+            map.locationTypes = data.locationTypes.map(function (type) {
+                return new LocationType(type.name, type.textSize, type.textColor, type.icon);
+            });
+        if (data.locations !== undefined)
+            for (var _i = 0, _a = data.locations; _i < _a.length; _i++) {
+                var location_2 = _a[_i];
+                var locationType = map.locationTypes[location_2.typeID];
+                var cell = map.cells[location_2.cellID];
+                if (cell !== null)
+                    map.locations.push(new MapLocation(cell, location_2.name, locationType));
+            }
+        map.positionCells();
+        return map;
+    };
+    return MapData;
+}());
+var CellType = (function () {
+    function CellType(name, color) {
+        this.name = name;
+        this.color = color;
+    }
+    return CellType;
+}());
+CellType.empty = new CellType('Empty', '#ffffff');
+var MapCell = (function () {
+    function MapCell(map, cellType) {
+        this.map = map;
+        this.cellType = cellType;
+        this.selected = false;
+    }
+    return MapCell;
+}());
+var LocationType = (function () {
+    function LocationType(name, textSize, textColor, icon) {
+        this.name = name;
+        this.textSize = textSize;
+        this.textColor = textColor;
+        this.icon = icon;
+    }
+    return LocationType;
+}());
+var MapLocation = (function () {
+    function MapLocation(cell, name, type) {
+        this.cell = cell;
+        this.name = name;
+        this.type = type;
+    }
+    return MapLocation;
+}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -162,6 +438,441 @@ var ChangeHistory = (function (_super) {
         return this.state.lastAppliedChangeIndex < this.changes.length - 1;
     };
     return ChangeHistory;
+}(React.Component));
+var EditorControls = (function (_super) {
+    __extends(EditorControls, _super);
+    function EditorControls() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    EditorControls.prototype.render = function () {
+        return React.createElement("div", { id: "editorControls" },
+            this.renderButton(0 /* Save */, 'Save Map', // save
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
+                React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
+                React.createElement("polyline", { points: "7 3 7 8 15 8" }))),
+            this.renderButton(1 /* Download */, 'Download', // download
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" }),
+                React.createElement("polyline", { points: "8 12 12 16 16 12" }),
+                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "16" }))),
+            this.renderButton(2 /* Overview */, 'Overview', // info
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
+                React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
+                React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
+            this.renderButton(3 /* Size */, 'Size', // move
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polyline", { points: "5 9 2 12 5 15" }),
+                React.createElement("polyline", { points: "9 5 12 2 15 5" }),
+                React.createElement("polyline", { points: "15 19 12 22 9 19" }),
+                React.createElement("polyline", { points: "19 9 22 12 19 15" }),
+                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
+                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
+            this.renderButton(4 /* Terrain */, 'Terrain', // globe
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
+                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
+                React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
+            this.renderButton(5 /* Lines */, 'Lines', // edit-3
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polyline", { points: "23 18 13.5 8.5 8.5 13.5 1 6" }),
+                React.createElement("polyline", { points: "17 18 23 18 23 12" }))),
+            this.renderButton(6 /* Locations */, 'Locations', // map-pin
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
+                React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
+            this.renderButton(7 /* Layers */, 'Layers', // layers
+            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
+                React.createElement("polyline", { points: "2 17 12 22 22 17" }),
+                React.createElement("polyline", { points: "2 12 12 17 22 12" }))),
+            React.createElement("div", { className: "filler" }));
+    };
+    EditorControls.prototype.renderButton = function (editor, text, image) {
+        var classes = this.props.activeEditor === editor ? 'active' : undefined;
+        return React.createElement("button", { className: classes, title: text, onClick: this.selectEditor.bind(this, editor, text) }, image);
+    };
+    EditorControls.prototype.selectEditor = function (editor, name) {
+        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
+    };
+    return EditorControls;
+}(React.Component));
+var MapView = (function (_super) {
+    __extends(MapView, _super);
+    function MapView(props) {
+        var _this = _super.call(this, props) || this;
+        _this.backgroundColor = '#ccc';
+        _this.redrawing = false;
+        _this.resizing = false;
+        var scrollSize = props.scrollUI ? _this.getScrollbarSize() : { width: 0, height: 0 };
+        _this.state = {
+            cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
+            cellDrawInterval: 1,
+            scrollbarWidth: scrollSize.width,
+            scrollbarHeight: scrollSize.height,
+        };
+        return _this;
+    }
+    MapView.prototype.componentDidMount = function () {
+        if (this.props.scrollUI)
+            window.addEventListener('resize', this.resize.bind(this));
+        var ctx = this.canvas.getContext('2d');
+        if (ctx !== null)
+            this.ctx = ctx;
+        if (this.props.scrollUI)
+            this.setupTouch();
+        this.resize();
+    };
+    MapView.prototype.componentWillUnmount = function () {
+        if (this.props.scrollUI)
+            window.removeEventListener('resize', this.resize.bind(this));
+        if (this.hammer !== undefined) {
+            this.hammer.destroy();
+            this.hammer = undefined;
+        }
+    };
+    MapView.prototype.componentWillReceiveProps = function (nextProps) {
+        if (nextProps.fixedCellRadius !== undefined && nextProps.fixedCellRadius != this.props.fixedCellRadius)
+            this.setState({
+                cellRadius: nextProps.fixedCellRadius,
+                cellDrawInterval: this.state.cellDrawInterval,
+                scrollbarWidth: this.state.scrollbarWidth,
+                scrollbarHeight: this.state.scrollbarHeight,
+            });
+    };
+    MapView.prototype.setupTouch = function () {
+        this.hammer = new Hammer.Manager(this.scrollPane);
+        var zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
+        this.hammer.add(zoom);
+        var prevScale = 1;
+        this.hammer.on('zoom', function (ev) {
+            var touchZoomScale = ev.scale / prevScale;
+            if (touchZoomScale > 0.9 && touchZoomScale < 1.1)
+                return;
+            prevScale = ev.scale;
+            this.zoom(touchZoomScale);
+        }.bind(this));
+        this.hammer.on('zoomend', function (ev) {
+            prevScale = 1;
+        });
+        var pan = new Hammer.Pan({ event: 'pan', threshold: 10, pointers: 3, direction: Hammer.DIRECTION_ALL });
+        this.hammer.add(pan);
+        var lastX = 0, lastY = 0, panScale = 1.5;
+        this.hammer.on('pan', function (ev) {
+            var dX = ev.deltaX - lastX;
+            lastX = ev.deltaX;
+            var dY = ev.deltaY - lastY;
+            lastY = ev.deltaY;
+            this.scrollPane.scrollLeft -= dX * panScale;
+            this.scrollPane.scrollTop -= dY * panScale;
+            this.redraw();
+        }.bind(this));
+        this.hammer.on('panend', function (ev) {
+            lastX = lastY = 0;
+        }.bind(this));
+        var touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
+        this.hammer.add(touch);
+        this.hammer.on('touchstart', function (ev) {
+            this.startCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touch', function (ev) {
+            this.hoverCellAt(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touchend', function (ev) {
+            this.endCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
+        pan.requireFailure(zoom);
+        zoom.requireFailure(pan);
+        touch.requireFailure(pan);
+        touch.requireFailure(zoom);
+    };
+    MapView.prototype.render = function () {
+        var _this = this;
+        if (!this.props.scrollUI) {
+            var size = this.getOverallSize();
+            return React.createElement("canvas", { ref: function (c) { return _this.canvas = c; }, width: size.width, height: size.height });
+        }
+        return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
+            React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
+            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
+                React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize" })));
+    };
+    MapView.prototype.redraw = function () {
+        if (this.redrawing)
+            return;
+        requestAnimationFrame(this.draw.bind(this));
+        this.redrawing = true;
+    };
+    MapView.prototype.draw = function () {
+        this.ctx.fillStyle = this.backgroundColor;
+        this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+        if (this.props.scrollUI)
+            this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+        var twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
+        var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
+        var outline = this.props.renderGrid && !twoLevels;
+        var writeCoords = this.props.scrollUI && !twoLevels;
+        this.drawCells(drawInterval, outline, true, !twoLevels, writeCoords);
+        if (twoLevels) {
+            // outline of next zoom level
+            this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
+        }
+        this.drawLocations();
+        if (this.props.scrollUI)
+            this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        this.redrawing = false;
+    };
+    MapView.prototype.getDrawExtent = function (drawCellRadius) {
+        if (this.props.scrollUI)
+            return {
+                minX: this.scrollPane.scrollLeft - drawCellRadius,
+                minY: this.scrollPane.scrollTop - drawCellRadius,
+                maxX: this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius,
+                maxY: this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius,
+            };
+        else
+            return {
+                minX: Number.MIN_VALUE,
+                minY: Number.MIN_VALUE,
+                maxX: Number.MAX_VALUE,
+                maxY: Number.MAX_VALUE,
+            };
+    };
+    MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent, showSelection, writeCoords) {
+        var drawCellRadius = this.state.cellRadius * cellDrawInterval;
+        if (fillContent)
+            if (outline)
+                drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
+            else
+                drawCellRadius += 0.4; // overlap cells slightly so there's no gap
+        var drawExtent = this.getDrawExtent(drawCellRadius);
+        var map = this.props.map;
+        var cellRadius = this.state.cellRadius;
+        var halfInterval = Math.ceil(cellDrawInterval / 2);
+        var xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
+        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell == null)
+                continue;
+            if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
+                continue;
+            var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
+            if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
+                continue;
+            var centerX = cell.xPos * cellRadius + cellRadius;
+            if (centerX < drawExtent.minX || centerX > drawExtent.maxX)
+                continue;
+            var centerY = cell.yPos * cellRadius + cellRadius;
+            if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
+                continue;
+            this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
+        }
+    };
+    MapView.prototype.drawCell = function (cell, centerX, centerY, radius, outline, fillContent, showSelection, writeCoords) {
+        var ctx = this.ctx;
+        ctx.beginPath();
+        var angle, x, y;
+        for (var point = 0; point < 6; point++) {
+            angle = 2 * Math.PI / 6 * (point + 0.5);
+            x = centerX + radius * Math.cos(angle);
+            y = centerY + radius * Math.sin(angle);
+            if (point === 0)
+                ctx.moveTo(x, y);
+            else
+                ctx.lineTo(x, y);
+        }
+        if (outline) {
+            ctx.strokeStyle = this.backgroundColor;
+            ctx.stroke();
+        }
+        if (fillContent || (cell.selected && showSelection)) {
+            if (cell.selected)
+                ctx.fillStyle = '#fcc';
+            else if (cell.cellType == null)
+                ctx.fillStyle = '#666';
+            else
+                ctx.fillStyle = cell.cellType.color;
+            ctx.fill();
+        }
+        if (writeCoords) {
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
+        }
+    };
+    MapView.prototype.getCellDisplayX = function (cell) {
+        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
+    };
+    MapView.prototype.getCellDisplayY = function (cell) {
+        return cell.row + 1;
+    };
+    MapView.prototype.drawLocations = function () {
+        // TODO: loop over all locations, decide if they should draw based on scroll pos, zoom and loc type
+        // ... can presumably share a bunch of stuff with drawCells, such as the extent calcuations
+    };
+    MapView.prototype.resize = function () {
+        if (this.resizing)
+            return;
+        if (this.props.scrollUI)
+            requestAnimationFrame(this.updateSize.bind(this));
+        this.redraw();
+        this.resizing = true;
+    };
+    MapView.prototype.getOverallSize = function () {
+        return {
+            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
+            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+        };
+    };
+    MapView.prototype.updateScrollSize = function () {
+        var screenFocusX, screenFocusY;
+        if (this.mouseX !== undefined && this.mouseY !== undefined) {
+            screenFocusX = this.mouseX;
+            screenFocusY = this.mouseY;
+        }
+        else {
+            screenFocusX = this.canvas.width / 2;
+            screenFocusY = this.canvas.height / 2;
+        }
+        var scrollBounds = this.scrollSize.getBoundingClientRect();
+        var scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
+        var scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
+        this.scrollPane.style.width = this.root.offsetWidth + 'px';
+        this.scrollPane.style.height = this.root.offsetHeight + 'px';
+        var overallSize = this.getOverallSize();
+        this.scrollSize.style.width = overallSize.width + 'px';
+        this.scrollSize.style.height = overallSize.height + 'px';
+        this.scrollPane.scrollLeft = scrollFractionX * overallSize.width - screenFocusX;
+        this.scrollPane.scrollTop = scrollFractionY * overallSize.height - screenFocusY;
+    };
+    MapView.prototype.updateSize = function () {
+        var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
+        var viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
+        this.canvas.setAttribute('width', viewWidth.toString());
+        this.canvas.setAttribute('height', viewHeight.toString());
+        this.updateScrollSize();
+        this.resizing = false;
+    };
+    MapView.prototype.mouseScroll = function (e) {
+        if (!e.ctrlKey || e.deltaY == 0)
+            return;
+        e.preventDefault();
+        this.zoom(e.deltaY < 0 ? 1.1 : 0.9);
+    };
+    MapView.prototype.zoom = function (scale) {
+        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * scale)));
+        this.updateScrollSize();
+        this.redraw();
+    };
+    MapView.prototype.setCellRadius = function (radius) {
+        var displayRadius = radius;
+        var cellDrawInterval = 1;
+        var minRadius = 20;
+        while (displayRadius < minRadius) {
+            displayRadius *= 2;
+            cellDrawInterval *= 2;
+        }
+        this.setState({ cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight });
+    };
+    MapView.prototype.mouseMove = function (e) {
+        this.mouseX = e.clientX;
+        this.mouseY = e.clientY;
+        this.hoverCellAt(e.clientX, e.clientY);
+    };
+    MapView.prototype.mouseDown = function (e) {
+        if (e.button == 0)
+            this.startCellInteract(e.clientX, e.clientY);
+    };
+    MapView.prototype.mouseUp = function (e) {
+        if (e.button == 0)
+            this.endCellInteract(e.clientX, e.clientY);
+    };
+    MapView.prototype.hoverCellAt = function (x, y) {
+        if (this.mouseDownCell === null)
+            return;
+        var cellIndex = this.getCellIndexAtPoint(x, y);
+        var cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : null;
+        if (cell !== this.mouseDownCell) {
+            if (this.props.cellMouseLeave !== undefined)
+                this.props.cellMouseLeave(this.mouseDownCell);
+            this.mouseDownCell = cell;
+            if (cell !== null && this.props.cellMouseEnter !== undefined)
+                this.props.cellMouseEnter(cell);
+        }
+    };
+    MapView.prototype.startCellInteract = function (x, y) {
+        var cellIndex = this.getCellIndexAtPoint(x, y);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            var cell = this.props.map.cells[cellIndex];
+            if (cell !== null && this.props.cellMouseDown !== undefined)
+                this.props.cellMouseDown(cell);
+            this.mouseDownCell = cell;
+        }
+    };
+    MapView.prototype.endCellInteract = function (x, y) {
+        var cellIndex = this.getCellIndexAtPoint(x, y);
+        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
+            var cell = this.props.map.cells[cellIndex];
+            if (cell !== null && this.props.cellMouseUp !== undefined)
+                this.props.cellMouseUp(cell);
+        }
+        this.mouseDownCell = null;
+    };
+    MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
+        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
+        var fRow = mapY * 2 / 3 / this.state.cellRadius;
+        var fThirdCoord = -fCol - fRow;
+        var rCol = Math.round(fCol);
+        var rRow = Math.round(fRow);
+        var rThird = Math.round(fThirdCoord);
+        var colDiff = Math.abs(rCol - fCol);
+        var rowDiff = Math.abs(rRow - fRow);
+        var thirdDiff = Math.abs(rThird - fThirdCoord);
+        if (colDiff >= rowDiff) {
+            if (colDiff >= thirdDiff)
+                rCol = -rRow - rThird;
+        }
+        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
+            rRow = -rCol - rThird;
+        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
+        return this.props.map.getCellIndex(rRow, rCol);
+    };
+    MapView.prototype.getScrollbarSize = function () {
+        var outer = document.createElement('div');
+        outer.style.visibility = 'hidden';
+        outer.style.width = '100px';
+        outer.style.height = '100px';
+        outer.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
+        document.body.appendChild(outer);
+        var widthNoScroll = outer.offsetWidth;
+        var heightNoScroll = outer.offsetHeight;
+        // force scrollbars
+        outer.style.overflow = 'scroll';
+        // add innerdiv
+        var inner = document.createElement('div');
+        inner.style.width = '100%';
+        inner.style.height = '100%';
+        outer.appendChild(inner);
+        var widthWithScroll = inner.offsetWidth;
+        var heightWithScroll = inner.offsetHeight;
+        // remove divs
+        if (outer.parentNode !== null)
+            outer.parentNode.removeChild(outer);
+        return {
+            width: widthNoScroll - widthWithScroll,
+            height: heightNoScroll - heightWithScroll
+        };
+    };
+    MapView.prototype.downloadImage = function () {
+        this.canvas.toBlob(function (blob) {
+            saveAs(blob, this.props.map.name + '.png');
+        }.bind(this));
+    };
+    return MapView;
 }(React.Component));
 var SaveEditor = (function (_super) {
     __extends(SaveEditor, _super);
@@ -485,8 +1196,13 @@ var LinesEditor = (function (_super) {
 }(React.Component));
 var LocationsEditor = (function (_super) {
     __extends(LocationsEditor, _super);
-    function LocationsEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function LocationsEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            isEditingLocation: false,
+            isEditingLocationType: false,
+        };
+        return _this;
     }
     LocationsEditor.prototype.render = function () {
         return React.createElement("form", null);
@@ -502,699 +1218,6 @@ var LayersEditor = (function (_super) {
         return React.createElement("form", null);
     };
     return LayersEditor;
-}(React.Component));
-var CellType = (function () {
-    function CellType(name, color) {
-        this.name = name;
-        this.color = color;
-    }
-    return CellType;
-}());
-CellType.empty = new CellType('Empty', '#ffffff');
-var MapCell = (function () {
-    function MapCell(map, cellType) {
-        this.map = map;
-        this.cellType = cellType;
-        this.selected = false;
-    }
-    return MapCell;
-}());
-var MapData = (function () {
-    function MapData(width, height, createCells) {
-        if (createCells === void 0) { createCells = true; }
-        this.underlyingWidth = width + Math.floor(height / 2) - 1;
-        this.width = width;
-        this.height = height;
-        this.cells = new Array(this.underlyingWidth * this.height);
-        this.cellTypes = [CellType.empty];
-        this.name = '';
-        this.description = '';
-        if (createCells !== false) {
-            for (var i = 0; i < this.cells.length; i++)
-                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
-            this.cellTypes.push(new CellType('Water', '#179ce6'));
-            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
-            this.cellTypes.push(new CellType('Forest', '#189b11'));
-            this.cellTypes.push(new CellType('Hills', '#7bac46'));
-            this.cellTypes.push(new CellType('Mountains', '#7c7c4b'));
-            this.cellTypes.push(new CellType('Desert', '#ebd178'));
-            this.positionCells();
-        }
-    }
-    MapData.prototype.positionCells = function () {
-        var packedWidthRatio = 1.7320508075688772, packedHeightRatio = 1.5;
-        var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE;
-        var maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
-        for (var i = 0; i < this.cells.length; i++) {
-            var cell = this.cells[i];
-            if (cell == null)
-                continue;
-            cell.row = Math.floor(i / this.underlyingWidth);
-            cell.col = i % this.underlyingWidth;
-            cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
-            cell.yPos = packedHeightRatio * cell.row;
-            if (cell.xPos < minX)
-                minX = cell.xPos;
-            else if (cell.xPos > maxX)
-                maxX = cell.xPos;
-            if (cell.yPos < minY)
-                minY = cell.yPos;
-            else if (cell.yPos > maxY)
-                maxY = cell.yPos;
-        }
-        this.minX = minX - 1;
-        this.minY = minY - 1;
-        this.maxX = maxX + 1;
-        this.maxY = maxY + 1;
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell == null)
-                continue;
-            cell.xPos -= minX;
-            cell.yPos -= minY;
-        }
-    };
-    MapData.prototype.shouldIndexHaveCell = function (index) {
-        var row = Math.floor(index / this.underlyingWidth);
-        var col = index % this.underlyingWidth;
-        if (2 * col + row < this.height - 2)
-            return false; // chop left to get square edge
-        if (row + 2 * col > 2 * this.underlyingWidth - 1)
-            return false; // chop right to get square edge
-        return true;
-    };
-    MapData.prototype.getCellIndex = function (row, col) {
-        return col + row * this.underlyingWidth;
-    };
-    MapData.prototype.changeSize = function (newWidth, newHeight, mode) {
-        var deltaWidth = newWidth - this.width;
-        var deltaHeight = newHeight - this.height;
-        switch (mode) {
-            case 0 /* TopLeft */:
-                this.performWidthChange(deltaWidth, true, false);
-                this.changeHeight(deltaHeight, true);
-                break;
-            case 1 /* TopMiddle */:
-                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
-                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
-                this.changeHeight(deltaHeight, true);
-                break;
-            case 2 /* TopRight */:
-                this.performWidthChange(deltaWidth, false, false);
-                this.changeHeight(deltaHeight, true);
-                break;
-            case 3 /* CenterLeft */:
-                this.performWidthChange(deltaWidth, true, false);
-                this.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 4 /* Center */:
-                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
-                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
-                this.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 5 /* CenterRight */:
-                this.performWidthChange(deltaWidth, false, false);
-                this.changeHeight(Math.floor(deltaHeight / 2), true);
-                this.changeHeight(Math.ceil(deltaHeight / 2), false);
-                break;
-            case 6 /* BottomLeft */:
-                this.performWidthChange(deltaWidth, true, false);
-                this.changeHeight(deltaHeight, false);
-                break;
-            case 7 /* BottomMiddle */:
-                this.performWidthChange(Math.floor(deltaWidth / 2), true, false);
-                this.performWidthChange(Math.ceil(deltaWidth / 2), false, false);
-                this.changeHeight(deltaHeight, false);
-                break;
-            case 8 /* BottomRight */:
-                this.performWidthChange(deltaWidth, false, false);
-                this.changeHeight(deltaHeight, false);
-                break;
-        }
-        this.width += deltaWidth; // this is a "display only" property, and isn't affected by underlying calculations
-        this.positionCells();
-    };
-    MapData.prototype.changeHeight = function (delta, topEdgeFixed) {
-        var increment = delta > 0 ? 1 : -1;
-        var increasing = delta > 0 ? 1 : 0;
-        for (var i = 0; i != delta; i += increment) {
-            if ((this.height + increasing) % 2 == 0)
-                this.performWidthChange(increment, !topEdgeFixed, true);
-            this.performHeightChange(increment, topEdgeFixed);
-        }
-    };
-    MapData.prototype.performWidthChange = function (delta, leftEdgeFixed, forHeightChange) {
-        var overallDelta = 0;
-        if (delta > 0) {
-            for (var row = 0; row < this.height; row++) {
-                var rowInsertIndex = void 0; // this is complicated on account of the "chopping" we did to get square edges
-                if (leftEdgeFixed)
-                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
-                else
-                    rowInsertIndex = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.underlyingWidth;
-                var insertPos = rowStart + rowInsertIndex + overallDelta;
-                for (var i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
-                overallDelta += delta;
-            }
-        }
-        else if (delta < 0) {
-            for (var row = 0; row < this.height; row++) {
-                var rowChopPos = void 0;
-                if (forHeightChange) {
-                    if (leftEdgeFixed)
-                        rowChopPos = this.underlyingWidth + delta;
-                    else
-                        rowChopPos = 0;
-                }
-                else if (leftEdgeFixed)
-                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
-                else
-                    rowChopPos = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.underlyingWidth;
-                var chopPos = rowStart + rowChopPos + overallDelta;
-                this.cells.splice(chopPos, -delta);
-                overallDelta += delta;
-            }
-        }
-        this.underlyingWidth += delta;
-    };
-    MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
-        if (delta > 0) {
-            var diff = delta * this.underlyingWidth;
-            for (var i = 0; i < diff; i++) {
-                if (this.cells.length + 1 > this.underlyingWidth * this.height)
-                    this.height++;
-                var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
-            }
-        }
-        else if (delta < 0) {
-            var diff = -delta * this.underlyingWidth;
-            this.height += delta;
-            this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
-        }
-    };
-    MapData.prototype.replaceCellType = function (find, replace) {
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell !== null && cell.cellType === find)
-                cell.cellType = replace;
-        }
-    };
-    MapData.prototype.saveToJSON = function () {
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell !== null)
-                cell.typeID = this.cellTypes.indexOf(cell.cellType);
-        }
-        var json = JSON.stringify(this, function (key, value) {
-            if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
-                || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth')
-                return undefined;
-            return value;
-        }, '	');
-        return json;
-    };
-    /*
-    createCellGroups(size: number) {
-        let groups = [];
-
-        let halfSizeUp = Math.ceil(size / 2);
-        let halfSizeDown = Math.floor(size / 2);
-        this.createCellGroupSet(size, -size + 1, -halfSizeUp - 1, this.cellTypes[0]);
-        this.createCellGroupSet(size, -halfSizeDown, -halfSizeUp * 3, this.cellTypes[1]);
-        this.createCellGroupSet(size, 1, -size - 2, this.cellTypes[2]);
-
-        return groups;
-    }
-    private createCellGroupSet(size: number, startRow: number, startCol: number, cellType: CellType) {
-        let rowSpacing = size + Math.ceil(size / 2);
-        let colSpacing = size + Math.floor(size / 2);
-        let colOffset = 0;
-
-        for (let row = startRow; row < this.height; row += rowSpacing) {
-            let rowOffset = 0;
-            for (let col = startCol + colOffset; col < this.width; col += colSpacing) {
-                let group = new CellGroup(this, size, row + rowOffset, col);
-
-                if (cellType !== undefined)
-                    for (let cell of group.cells)
-                        cell.cellType = cellType;
-
-                rowOffset++;
-            }
-
-            colOffset -= 1;
-        }
-    }
-    */
-    MapData.loadFromJSON = function (json) {
-        var data = JSON.parse(json);
-        var map = new MapData(data.width, data.height, false);
-        map.name = data.name;
-        map.description = data.description;
-        map.cellTypes = data.cellTypes.map(function (type) {
-            return new CellType(type.name, type.color);
-        });
-        map.cells = data.cells.map(function (cell) {
-            if (cell == null)
-                return null;
-            var cellType = map.cellTypes[cell.typeID];
-            return new MapCell(map, cellType);
-        });
-        map.positionCells();
-        return map;
-    };
-    return MapData;
-}());
-var MapView = (function (_super) {
-    __extends(MapView, _super);
-    function MapView(props) {
-        var _this = _super.call(this, props) || this;
-        _this.backgroundColor = '#ccc';
-        _this.redrawing = false;
-        _this.resizing = false;
-        var scrollSize = props.scrollUI ? _this.getScrollbarSize() : { width: 0, height: 0 };
-        _this.state = {
-            cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
-            cellDrawInterval: 1,
-            scrollbarWidth: scrollSize.width,
-            scrollbarHeight: scrollSize.height,
-        };
-        return _this;
-    }
-    MapView.prototype.componentDidMount = function () {
-        if (this.props.scrollUI)
-            window.addEventListener('resize', this.resize.bind(this));
-        var ctx = this.canvas.getContext('2d');
-        if (ctx !== null)
-            this.ctx = ctx;
-        if (this.props.scrollUI)
-            this.setupTouch();
-        this.resize();
-    };
-    MapView.prototype.componentWillUnmount = function () {
-        if (this.props.scrollUI)
-            window.removeEventListener('resize', this.resize.bind(this));
-        if (this.hammer !== undefined) {
-            this.hammer.destroy();
-            this.hammer = undefined;
-        }
-    };
-    MapView.prototype.componentWillReceiveProps = function (nextProps) {
-        if (nextProps.fixedCellRadius !== undefined && nextProps.fixedCellRadius != this.props.fixedCellRadius)
-            this.setState({
-                cellRadius: nextProps.fixedCellRadius,
-                cellDrawInterval: this.state.cellDrawInterval,
-                scrollbarWidth: this.state.scrollbarWidth,
-                scrollbarHeight: this.state.scrollbarHeight,
-            });
-    };
-    MapView.prototype.setupTouch = function () {
-        this.hammer = new Hammer.Manager(this.scrollPane);
-        var zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
-        this.hammer.add(zoom);
-        var prevScale = 1;
-        this.hammer.on('zoom', function (ev) {
-            var touchZoomScale = ev.scale / prevScale;
-            if (touchZoomScale > 0.9 && touchZoomScale < 1.1)
-                return;
-            prevScale = ev.scale;
-            this.zoom(touchZoomScale);
-        }.bind(this));
-        this.hammer.on('zoomend', function (ev) {
-            prevScale = 1;
-        });
-        var pan = new Hammer.Pan({ event: 'pan', threshold: 10, pointers: 3, direction: Hammer.DIRECTION_ALL });
-        this.hammer.add(pan);
-        var lastX = 0, lastY = 0, panScale = 1.5;
-        this.hammer.on('pan', function (ev) {
-            var dX = ev.deltaX - lastX;
-            lastX = ev.deltaX;
-            var dY = ev.deltaY - lastY;
-            lastY = ev.deltaY;
-            this.scrollPane.scrollLeft -= dX * panScale;
-            this.scrollPane.scrollTop -= dY * panScale;
-            this.redraw();
-        }.bind(this));
-        this.hammer.on('panend', function (ev) {
-            lastX = lastY = 0;
-        }.bind(this));
-        var touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
-        this.hammer.add(touch);
-        this.hammer.on('touchstart', function (ev) {
-            this.startCellInteract(ev.center.x, ev.center.y);
-        }.bind(this));
-        this.hammer.on('touch', function (ev) {
-            this.hoverCellAt(ev.center.x, ev.center.y);
-        }.bind(this));
-        this.hammer.on('touchend', function (ev) {
-            this.endCellInteract(ev.center.x, ev.center.y);
-        }.bind(this));
-        pan.requireFailure(zoom);
-        zoom.requireFailure(pan);
-        touch.requireFailure(pan);
-        touch.requireFailure(zoom);
-    };
-    MapView.prototype.render = function () {
-        var _this = this;
-        if (!this.props.scrollUI) {
-            var size = this.getOverallSize();
-            return React.createElement("canvas", { ref: function (c) { return _this.canvas = c; }, width: size.width, height: size.height });
-        }
-        return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
-            React.createElement("canvas", { ref: function (c) { return _this.canvas = c; } }),
-            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
-                React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize" })));
-    };
-    MapView.prototype.redraw = function () {
-        if (this.redrawing)
-            return;
-        requestAnimationFrame(this.draw.bind(this));
-        this.redrawing = true;
-    };
-    MapView.prototype.draw = function () {
-        this.ctx.fillStyle = this.backgroundColor;
-        this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
-        if (this.props.scrollUI)
-            this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
-        var twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
-        var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
-        var outline = this.props.renderGrid && !twoLevels;
-        var writeCoords = this.props.scrollUI && !twoLevels;
-        this.drawCells(drawInterval, outline, true, !twoLevels, writeCoords);
-        if (twoLevels) {
-            // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
-        }
-        if (this.props.scrollUI)
-            this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
-        this.redrawing = false;
-    };
-    MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent, showSelection, writeCoords) {
-        var drawCellRadius = this.state.cellRadius * cellDrawInterval;
-        if (fillContent)
-            if (outline)
-                drawCellRadius -= 0.4; // ensure there's always a 1px border left between cells
-            else
-                drawCellRadius += 0.4; // overlap cells slightly so there's no gap
-        var minDrawX, maxDrawX, minDrawY, maxDrawY;
-        if (this.props.scrollUI) {
-            minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
-            minDrawY = this.scrollPane.scrollTop - drawCellRadius;
-            maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
-            maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
-        }
-        else {
-            minDrawX = minDrawY = Number.MIN_VALUE;
-            maxDrawX = maxDrawY = Number.MAX_VALUE;
-        }
-        var map = this.props.map;
-        var cellRadius = this.state.cellRadius;
-        var halfInterval = Math.ceil(cellDrawInterval / 2);
-        var xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
-        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell == null)
-                continue;
-            if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
-                continue;
-            var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
-            if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
-                continue;
-            var centerX = cell.xPos * cellRadius + cellRadius;
-            if (centerX < minDrawX || centerX > maxDrawX)
-                continue;
-            var centerY = cell.yPos * cellRadius + cellRadius;
-            if (centerY < minDrawY || centerY > maxDrawY)
-                continue;
-            this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
-        }
-    };
-    MapView.prototype.drawCell = function (cell, centerX, centerY, radius, outline, fillContent, showSelection, writeCoords) {
-        var ctx = this.ctx;
-        ctx.beginPath();
-        var angle, x, y;
-        for (var point = 0; point < 6; point++) {
-            angle = 2 * Math.PI / 6 * (point + 0.5);
-            x = centerX + radius * Math.cos(angle);
-            y = centerY + radius * Math.sin(angle);
-            if (point === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
-        if (outline) {
-            ctx.strokeStyle = this.backgroundColor;
-            ctx.stroke();
-        }
-        if (fillContent || (cell.selected && showSelection)) {
-            if (cell.selected)
-                ctx.fillStyle = '#fcc';
-            else if (cell.cellType == null)
-                ctx.fillStyle = '#666';
-            else
-                ctx.fillStyle = cell.cellType.color;
-            ctx.fill();
-        }
-        if (writeCoords) {
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
-        }
-    };
-    MapView.prototype.getCellDisplayX = function (cell) {
-        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
-    };
-    MapView.prototype.getCellDisplayY = function (cell) {
-        return cell.row + 1;
-    };
-    MapView.prototype.resize = function () {
-        if (this.resizing)
-            return;
-        if (this.props.scrollUI)
-            requestAnimationFrame(this.updateSize.bind(this));
-        this.redraw();
-        this.resizing = true;
-    };
-    MapView.prototype.getOverallSize = function () {
-        return {
-            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
-            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
-        };
-    };
-    MapView.prototype.updateScrollSize = function () {
-        var screenFocusX, screenFocusY;
-        if (this.mouseX !== undefined && this.mouseY !== undefined) {
-            screenFocusX = this.mouseX;
-            screenFocusY = this.mouseY;
-        }
-        else {
-            screenFocusX = this.canvas.width / 2;
-            screenFocusY = this.canvas.height / 2;
-        }
-        var scrollBounds = this.scrollSize.getBoundingClientRect();
-        var scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
-        var scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
-        this.scrollPane.style.width = this.root.offsetWidth + 'px';
-        this.scrollPane.style.height = this.root.offsetHeight + 'px';
-        var overallSize = this.getOverallSize();
-        this.scrollSize.style.width = overallSize.width + 'px';
-        this.scrollSize.style.height = overallSize.height + 'px';
-        this.scrollPane.scrollLeft = scrollFractionX * overallSize.width - screenFocusX;
-        this.scrollPane.scrollTop = scrollFractionY * overallSize.height - screenFocusY;
-    };
-    MapView.prototype.updateSize = function () {
-        var viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
-        var viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
-        this.canvas.setAttribute('width', viewWidth.toString());
-        this.canvas.setAttribute('height', viewHeight.toString());
-        this.updateScrollSize();
-        this.resizing = false;
-    };
-    MapView.prototype.mouseScroll = function (e) {
-        if (!e.ctrlKey || e.deltaY == 0)
-            return;
-        e.preventDefault();
-        this.zoom(e.deltaY < 0 ? 1.1 : 0.9);
-    };
-    MapView.prototype.zoom = function (scale) {
-        this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * scale)));
-        this.updateScrollSize();
-        this.redraw();
-    };
-    MapView.prototype.setCellRadius = function (radius) {
-        var displayRadius = radius;
-        var cellDrawInterval = 1;
-        var minRadius = 20;
-        while (displayRadius < minRadius) {
-            displayRadius *= 2;
-            cellDrawInterval *= 2;
-        }
-        this.setState({ cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight });
-    };
-    MapView.prototype.mouseMove = function (e) {
-        this.mouseX = e.clientX;
-        this.mouseY = e.clientY;
-        this.hoverCellAt(e.clientX, e.clientY);
-    };
-    MapView.prototype.mouseDown = function (e) {
-        if (e.button == 0)
-            this.startCellInteract(e.clientX, e.clientY);
-    };
-    MapView.prototype.mouseUp = function (e) {
-        if (e.button == 0)
-            this.endCellInteract(e.clientX, e.clientY);
-    };
-    MapView.prototype.hoverCellAt = function (x, y) {
-        if (this.mouseDownCell === null)
-            return;
-        var cellIndex = this.getCellIndexAtPoint(x, y);
-        var cell = cellIndex >= 0 && cellIndex < this.props.map.cells.length ? this.props.map.cells[cellIndex] : null;
-        if (cell !== this.mouseDownCell) {
-            if (this.props.cellMouseLeave !== undefined)
-                this.props.cellMouseLeave(this.mouseDownCell);
-            this.mouseDownCell = cell;
-            if (cell !== null && this.props.cellMouseEnter !== undefined)
-                this.props.cellMouseEnter(cell);
-        }
-    };
-    MapView.prototype.startCellInteract = function (x, y) {
-        var cellIndex = this.getCellIndexAtPoint(x, y);
-        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
-            var cell = this.props.map.cells[cellIndex];
-            if (cell !== null && this.props.cellMouseDown !== undefined)
-                this.props.cellMouseDown(cell);
-            this.mouseDownCell = cell;
-        }
-    };
-    MapView.prototype.endCellInteract = function (x, y) {
-        var cellIndex = this.getCellIndexAtPoint(x, y);
-        if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
-            var cell = this.props.map.cells[cellIndex];
-            if (cell !== null && this.props.cellMouseUp !== undefined)
-                this.props.cellMouseUp(cell);
-        }
-        this.mouseDownCell = null;
-    };
-    MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
-        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
-        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
-        var fRow = mapY * 2 / 3 / this.state.cellRadius;
-        var fThirdCoord = -fCol - fRow;
-        var rCol = Math.round(fCol);
-        var rRow = Math.round(fRow);
-        var rThird = Math.round(fThirdCoord);
-        var colDiff = Math.abs(rCol - fCol);
-        var rowDiff = Math.abs(rRow - fRow);
-        var thirdDiff = Math.abs(rThird - fThirdCoord);
-        if (colDiff >= rowDiff) {
-            if (colDiff >= thirdDiff)
-                rCol = -rRow - rThird;
-        }
-        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
-            rRow = -rCol - rThird;
-        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
-        return this.props.map.getCellIndex(rRow, rCol);
-    };
-    MapView.prototype.getScrollbarSize = function () {
-        var outer = document.createElement('div');
-        outer.style.visibility = 'hidden';
-        outer.style.width = '100px';
-        outer.style.height = '100px';
-        outer.style.msOverflowStyle = 'scrollbar'; // needed for WinJS apps
-        document.body.appendChild(outer);
-        var widthNoScroll = outer.offsetWidth;
-        var heightNoScroll = outer.offsetHeight;
-        // force scrollbars
-        outer.style.overflow = 'scroll';
-        // add innerdiv
-        var inner = document.createElement('div');
-        inner.style.width = '100%';
-        inner.style.height = '100%';
-        outer.appendChild(inner);
-        var widthWithScroll = inner.offsetWidth;
-        var heightWithScroll = inner.offsetHeight;
-        // remove divs
-        if (outer.parentNode !== null)
-            outer.parentNode.removeChild(outer);
-        return {
-            width: widthNoScroll - widthWithScroll,
-            height: heightNoScroll - heightWithScroll
-        };
-    };
-    MapView.prototype.downloadImage = function () {
-        this.canvas.toBlob(function (blob) {
-            saveAs(blob, this.props.map.name + '.png');
-        }.bind(this));
-    };
-    return MapView;
-}(React.Component));
-var EditorControls = (function (_super) {
-    __extends(EditorControls, _super);
-    function EditorControls() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    EditorControls.prototype.render = function () {
-        return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Save */, 'Save Map', // save
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
-                React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
-                React.createElement("polyline", { points: "7 3 7 8 15 8" }))),
-            this.renderButton(1 /* Download */, 'Download', // download
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("path", { d: "M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" }),
-                React.createElement("polyline", { points: "8 12 12 16 16 12" }),
-                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "16" }))),
-            this.renderButton(2 /* Overview */, 'Overview', // info
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
-                React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
-                React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
-            this.renderButton(3 /* Size */, 'Size', // move
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("polyline", { points: "5 9 2 12 5 15" }),
-                React.createElement("polyline", { points: "9 5 12 2 15 5" }),
-                React.createElement("polyline", { points: "15 19 12 22 9 19" }),
-                React.createElement("polyline", { points: "19 9 22 12 19 15" }),
-                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
-                React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
-            this.renderButton(4 /* Terrain */, 'Terrain', // globe
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
-                React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
-                React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
-            this.renderButton(5 /* Lines */, 'Lines', // edit-3
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("polyline", { points: "23 18 13.5 8.5 8.5 13.5 1 6" }),
-                React.createElement("polyline", { points: "17 18 23 18 23 12" }))),
-            this.renderButton(6 /* Locations */, 'Locations', // map-pin
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
-                React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(7 /* Layers */, 'Layers', // layers
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
-                React.createElement("polyline", { points: "2 17 12 22 22 17" }),
-                React.createElement("polyline", { points: "2 12 12 17 22 12" }))),
-            React.createElement("div", { className: "filler" }));
-    };
-    EditorControls.prototype.renderButton = function (editor, text, image) {
-        var classes = this.props.activeEditor === editor ? 'active' : undefined;
-        return React.createElement("button", { className: classes, title: text, onClick: this.selectEditor.bind(this, editor, text) }, image);
-    };
-    EditorControls.prototype.selectEditor = function (editor, name) {
-        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
-    };
-    return EditorControls;
 }(React.Component));
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -1256,7 +1279,7 @@ var WorldMap = (function (_super) {
             case 5 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
             case 6 /* Locations */:
-                return React.createElement(LocationsEditor, __assign({}, props));
+                return React.createElement(LocationsEditor, __assign({}, props, { dataChanged: this.locationChanged.bind(this) }));
             case 7 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
@@ -1311,6 +1334,9 @@ var WorldMap = (function (_super) {
             this.mapChanged();
         else
             this.mapView.redraw();
+    };
+    WorldMap.prototype.locationChanged = function () {
+        this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {
         this.mapView.redraw();

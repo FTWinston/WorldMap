@@ -21,6 +21,7 @@
 
         "data/MapData.ts",
         "data/Cells.ts",
+        "data/Locations.ts",
 
         "controls/ResizeAnchorInput.tsx",
         "controls/ChangeHistory.tsx",

@@ -179,9 +179,27 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
 
+        this.drawLocations();
+
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
         this.redrawing = false;
+    }
+    private getDrawExtent(drawCellRadius: number) {
+        if (this.props.scrollUI)
+            return {
+                minX: this.scrollPane.scrollLeft - drawCellRadius,
+                minY: this.scrollPane.scrollTop - drawCellRadius,
+                maxX: this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius,
+                maxY: this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius,
+            }
+        else
+            return {
+                minX: Number.MIN_VALUE,
+                minY: Number.MIN_VALUE,
+                maxX: Number.MAX_VALUE,
+                maxY: Number.MAX_VALUE,
+            }
     }
     private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -192,18 +210,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             else
                 drawCellRadius += 0.4; // overlap cells slightly so there's no gap
         
-        let minDrawX: number, maxDrawX: number, minDrawY: number, maxDrawY: number;
-
-        if (this.props.scrollUI) {
-            minDrawX = this.scrollPane.scrollLeft - drawCellRadius;
-            minDrawY = this.scrollPane.scrollTop - drawCellRadius;
-            maxDrawX = this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius;
-            maxDrawY = this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius;
-        }
-        else {
-            minDrawX = minDrawY = Number.MIN_VALUE;
-            maxDrawX = maxDrawY = Number.MAX_VALUE;
-        }
+        let drawExtent = this.getDrawExtent(drawCellRadius);
 
         let map = this.props.map;
         let cellRadius = this.state.cellRadius;
@@ -222,11 +229,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 continue;
 
             let centerX = cell.xPos * cellRadius + cellRadius;
-            if (centerX < minDrawX || centerX > maxDrawX)
+            if (centerX < drawExtent.minX || centerX > drawExtent.maxX)
                 continue;
 
             let centerY = cell.yPos * cellRadius + cellRadius;
-            if (centerY < minDrawY || centerY > maxDrawY)
+            if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
 
             this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
@@ -277,6 +284,31 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     private getCellDisplayY(cell: MapCell) {
         return cell.row + 1;
+    }
+    private drawLocations() {
+        let cellRadius = this.state.cellRadius;
+        let drawExtent = this.getDrawExtent(cellRadius);
+        let map = this.props.map;
+        
+        for (let loc of map.locations) {
+            if (loc.type.minDrawCellRadius !== undefined && cellRadius < loc.type.minDrawCellRadius)
+                continue; // don't draw this location if not zoomed in enough to see it
+
+            let centerX = loc.cell.xPos * cellRadius + cellRadius;
+            if (centerX < drawExtent.minX || centerX > drawExtent.maxX)
+                continue;
+
+            let centerY = loc.cell.yPos * cellRadius + cellRadius;
+            if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
+                continue;
+
+            this.drawLocation(loc, centerX, centerY);
+        }
+    }
+    private drawLocation(loc: MapLocation, markerX: number, markerY: number) {
+        // TODO: draw icon
+
+        // TODO: draw name label
     }
     
     private resizing: boolean = false;

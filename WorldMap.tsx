@@ -89,7 +89,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Lines:
                 return <LinesEditor {...props} />;
             case EditorType.Locations:
-                return <LocationsEditor {...props} />;
+                return <LocationsEditor {...props} dataChanged={this.locationChanged.bind(this)} />;
             case EditorType.Layers:
                 return <LayersEditor {...props} />;
         }
@@ -147,6 +147,9 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             this.mapChanged();
         else
             this.mapView.redraw();
+    }
+    private locationChanged() {
+        this.mapChanged();
     }
     private mapChanged() {
         this.mapView.redraw();

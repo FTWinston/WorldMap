@@ -12,6 +12,8 @@ class MapData {
     maxX: number;
     minY: number;
     maxY: number;
+    locationTypes: LocationType[];
+    locations: MapLocation[];
 
     constructor(width: number, height: number, createCells: boolean = true) {
         this.underlyingWidth = width + Math.floor(height / 2) - 1;
@@ -21,18 +23,16 @@ class MapData {
         this.cellTypes = [CellType.empty];
         this.name = '';
         this.description = '';
+        this.locationTypes = [];
+        this.locations = [];
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
                 this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
 
-            this.cellTypes.push(new CellType('Water', '#179ce6'));
-            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
-            this.cellTypes.push(new CellType('Forest', '#189b11'));
-            this.cellTypes.push(new CellType('Hills', '#7bac46'));
-            this.cellTypes.push(new CellType('Mountains', '#7c7c4b'));
-            this.cellTypes.push(new CellType('Desert', '#ebd178'));
-
+            CellType.createDefaults(this.cellTypes);
+            LocationType.createDefaults(this.locationTypes);
+            
             this.positionCells();
         }
     }
@@ -214,35 +214,65 @@ class MapData {
     saveToJSON() {
         for (let cell of this.cells)
             if (cell !== null)
-                cell.typeID = this.cellTypes.indexOf(cell.cellType);
+                (cell as any).typeID = this.cellTypes.indexOf(cell.cellType);
 
+        for (let location of this.locations) {
+            (location as any).typeID = this.locationTypes.indexOf(location.type);
+            (location as any).cellID = this.cells.indexOf(location.cell);
+        }
+
+        let map = this;
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth')
+                || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
+                || key == 'cell' || key == 'type')
                 return undefined;
             return value;
-        }, '	');
+        });
 
         return json;
     }
     static loadFromJSON(json: string) {
-        let data: any = JSON.parse(json);
+        let data: {
+            width: number;
+            height: number;
+            name: string;
+            description: string;
+            cellTypes: {name: string, color: string}[];
+            cells: {typeID: number}[];
+            locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
+            locations: {cellID: number, typeID: number, name: string}[];
+        } = JSON.parse(json);
+
         let map = new MapData(data.width, data.height, false);
         map.name = data.name;
         map.description = data.description;
 
-        map.cellTypes = data.cellTypes.map(function (type: {name: string, color: string}) {
+        map.cellTypes = data.cellTypes.map(function (type) {
             return new CellType(type.name, type.color);
         });
 
-        map.cells = data.cells.map(function (cell: {typeID: number}) {
+        map.cells = data.cells.map(function (cell) {
             if (cell == null)
                 return null;
 
             let cellType = map.cellTypes[cell.typeID];
             return new MapCell(map, cellType);
         });
+
+        if (data.locationTypes !== undefined)
+            map.locationTypes = data.locationTypes.map(function (type) {
+                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDrawCellRadius);
+            });
+
+        if (data.locations !== undefined)
+            for (let location of data.locations) {
+                let locationType = map.locationTypes[location.typeID];
+                let cell = map.cells[location.cellID];
+                if (cell !== null)
+                    map.locations.push(new MapLocation(cell, location.name, locationType));
+            }
 
         map.positionCells();
 
