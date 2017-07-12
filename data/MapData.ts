@@ -211,6 +211,11 @@ class MapData {
             if (cell !== null && cell.cellType === find)
                 cell.cellType = replace;
     }
+    replaceLocationType(find: LocationType, replace: LocationType) {
+        for (let loc of this.locations)
+            if (loc !== null && loc.type === find)
+                loc.type = replace;
+    }
     saveToJSON() {
         for (let cell of this.cells)
             if (cell !== null)

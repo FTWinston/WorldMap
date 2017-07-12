@@ -13,14 +13,8 @@ var MapData = (function () {
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
                 this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
-            this.cellTypes.push(new CellType('Water', '#179ce6'));
-            this.cellTypes.push(new CellType('Grass', '#a1e94d'));
-            this.cellTypes.push(new CellType('Forest', '#189b11'));
-            this.cellTypes.push(new CellType('Hills', '#7bac46'));
-            this.cellTypes.push(new CellType('Mountain', '#7c7c4b'));
-            this.cellTypes.push(new CellType('Desert', '#ebd178'));
-            this.locationTypes.push(new LocationType('Town', 16, '#000000', 'small'));
-            this.locationTypes.push(new LocationType('City', 24, '#000000', 'large'));
+            CellType.createDefaults(this.cellTypes);
+            LocationType.createDefaults(this.locationTypes);
             this.positionCells();
         }
     }
@@ -188,6 +182,13 @@ var MapData = (function () {
                 cell.cellType = replace;
         }
     };
+    MapData.prototype.replaceLocationType = function (find, replace) {
+        for (var _i = 0, _a = this.locations; _i < _a.length; _i++) {
+            var loc = _a[_i];
+            if (loc !== null && loc.type === find)
+                loc.type = replace;
+        }
+    };
     MapData.prototype.saveToJSON = function () {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
@@ -226,7 +227,7 @@ var MapData = (function () {
         });
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
-                return new LocationType(type.name, type.textSize, type.textColor, type.icon);
+                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDrawCellRadius);
             });
         if (data.locations !== undefined)
             for (var _i = 0, _a = data.locations; _i < _a.length; _i++) {
@@ -246,6 +247,14 @@ var CellType = (function () {
         this.name = name;
         this.color = color;
     }
+    CellType.createDefaults = function (types) {
+        types.push(new CellType('Water', '#179ce6'));
+        types.push(new CellType('Grass', '#a1e94d'));
+        types.push(new CellType('Forest', '#189b11'));
+        types.push(new CellType('Hills', '#7bac46'));
+        types.push(new CellType('Mountain', '#7c7c4b'));
+        types.push(new CellType('Desert', '#ebd178'));
+    };
     return CellType;
 }());
 CellType.empty = new CellType('Empty', '#ffffff');
@@ -258,12 +267,17 @@ var MapCell = (function () {
     return MapCell;
 }());
 var LocationType = (function () {
-    function LocationType(name, textSize, textColor, icon) {
+    function LocationType(name, textSize, textColor, icon, minDrawCellRadius) {
         this.name = name;
         this.textSize = textSize;
         this.textColor = textColor;
         this.icon = icon;
+        this.minDrawCellRadius = minDrawCellRadius;
     }
+    LocationType.createDefaults = function (types) {
+        types.push(new LocationType('Town', 16, '#000000', 'small', 10));
+        types.push(new LocationType('City', 24, '#000000', 'large'));
+    };
     return LocationType;
 }());
 var MapLocation = (function () {
@@ -709,8 +723,25 @@ var MapView = (function (_super) {
         return cell.row + 1;
     };
     MapView.prototype.drawLocations = function () {
-        // TODO: loop over all locations, decide if they should draw based on scroll pos, zoom and loc type
-        // ... can presumably share a bunch of stuff with drawCells, such as the extent calcuations
+        var cellRadius = this.state.cellRadius;
+        var drawExtent = this.getDrawExtent(cellRadius);
+        var map = this.props.map;
+        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
+            var loc = _a[_i];
+            if (loc.type.minDrawCellRadius !== undefined && cellRadius < loc.type.minDrawCellRadius)
+                continue; // don't draw this location if not zoomed in enough to see it
+            var centerX = loc.cell.xPos * cellRadius + cellRadius;
+            if (centerX < drawExtent.minX || centerX > drawExtent.maxX)
+                continue;
+            var centerY = loc.cell.yPos * cellRadius + cellRadius;
+            if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
+                continue;
+            this.drawLocation(loc, centerX, centerY);
+        }
+    };
+    MapView.prototype.drawLocation = function (loc, markerX, markerY) {
+        // TODO: draw icon
+        // TODO: draw name label
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1194,6 +1225,196 @@ var LinesEditor = (function (_super) {
     };
     return LinesEditor;
 }(React.Component));
+var LocationTypeEditor = (function (_super) {
+    __extends(LocationTypeEditor, _super);
+    function LocationTypeEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    LocationTypeEditor.prototype.componentWillMount = function () {
+        if (this.props.editingType === undefined)
+            this.setState({
+                name: '',
+                textSize: 18,
+                textColor: '#000000',
+                icon: 'small',
+            });
+        else
+            this.setState({
+                name: this.props.editingType.name,
+                textSize: this.props.editingType.textSize,
+                textColor: this.props.editingType.textColor,
+                icon: this.props.editingType.icon,
+                minDrawCellRadius: this.props.editingType.minDrawCellRadius,
+            });
+    };
+    LocationTypeEditor.prototype.render = function () {
+        var deleteButton = this.props.editingType === undefined || this.props.locationTypes.length < 2 ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        return React.createElement("form", { onSubmit: this.saveType.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtName" }, "Name"),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtSize" }, "Text Size"),
+                React.createElement("input", { type: "number", id: "txtSize", value: this.state.textSize === undefined ? '' : this.state.textSize.toString(), onChange: this.textSizeChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "inColor" }, "Color"),
+                React.createElement("input", { type: "color", id: "inColor", value: this.state.textColor, onChange: this.colorChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "ddlIcon" }, "Icon"),
+                React.createElement("select", { id: "ddlIcon", value: this.state.icon, onChange: this.iconChanged.bind(this) },
+                    React.createElement("option", { value: "small" }, "Small"),
+                    React.createElement("option", { value: "medium" }, "Medium"),
+                    React.createElement("option", { value: "large" }, "Large"))),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "minDrawRadius" }, "Threshold"),
+                React.createElement("input", { type: "number", id: "minDrawRadius", value: this.state.minDrawCellRadius === undefined ? '' : this.state.minDrawCellRadius.toString(), onChange: this.minDrawRadiusChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save type"),
+                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
+                deleteButton));
+    };
+    LocationTypeEditor.prototype.nameChanged = function (e) {
+        this.setState({
+            name: e.target.value
+        });
+    };
+    LocationTypeEditor.prototype.colorChanged = function (e) {
+        this.setState({
+            textColor: e.target.value
+        });
+    };
+    LocationTypeEditor.prototype.textSizeChanged = function (e) {
+        this.setState({
+            textSize: e.target.value
+        });
+    };
+    LocationTypeEditor.prototype.iconChanged = function (e) {
+        this.setState({
+            icon: e.target.value
+        });
+    };
+    LocationTypeEditor.prototype.minDrawRadiusChanged = function (e) {
+        this.setState({
+            minDrawCellRadius: e.target.value
+        });
+    };
+    LocationTypeEditor.prototype.saveType = function (e) {
+        e.preventDefault();
+        var name = this.state.name === undefined ? '' : this.state.name.trim();
+        if (name == '')
+            return;
+        var textSize = this.state.textSize === undefined ? 0 : this.state.textSize;
+        if (textSize <= 0)
+            return;
+        var textColor = this.state.textColor === undefined ? '' : this.state.textColor;
+        if (textColor == '')
+            return;
+        var icon = this.state.icon === undefined ? '' : this.state.icon;
+        if (icon == '')
+            return;
+        var minDrawRadius = this.state.minDrawCellRadius;
+        if (minDrawRadius !== undefined && minDrawRadius < 0)
+            return;
+        var editType = this.props.editingType;
+        var locationTypes = this.props.locationTypes.slice();
+        if (editType === undefined) {
+            locationTypes.push(new LocationType(name, textSize, textColor, icon, minDrawRadius));
+        }
+        else {
+            editType.name = name;
+            editType.textColor = textColor;
+        }
+        this.props.updateLocationTypes(locationTypes);
+    };
+    LocationTypeEditor.prototype.cancelEdit = function () {
+        this.props.updateLocationTypes(this.props.locationTypes);
+    };
+    LocationTypeEditor.prototype.deleteType = function () {
+        var locationTypes = this.props.locationTypes.slice();
+        if (this.props.editingType !== undefined) {
+            var pos = locationTypes.indexOf(this.props.editingType);
+            locationTypes.splice(pos, 1);
+        }
+        this.props.updateLocationTypes(locationTypes);
+    };
+    return LocationTypeEditor;
+}(React.Component));
+var LocationEditor = (function (_super) {
+    __extends(LocationEditor, _super);
+    function LocationEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    LocationEditor.prototype.componentWillMount = function () {
+        if (this.props.editing === undefined)
+            this.setState({
+                name: '',
+                type: this.props.locationTypes[0],
+            });
+        else
+            this.setState({
+                name: this.props.editing.name,
+                type: this.props.editing.type,
+            });
+    };
+    LocationEditor.prototype.render = function () {
+        var deleteButton = this.props.editing === undefined ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        var that = this;
+        return React.createElement("form", { onSubmit: this.saveLocation.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtName" }, "Name"),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "ddlType" }, "Type"),
+                React.createElement("select", { value: this.props.locationTypes.indexOf(this.state.type).toString(), onChange: this.typeChanged.bind(this) }, this.props.locationTypes.map(function (type, id) {
+                    var selected = that.props.editing !== undefined && that.props.editing.type == type;
+                    return React.createElement("option", { selected: selected, key: id.toString(), value: id.toString() }, type.name);
+                }))),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save type"),
+                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
+                deleteButton));
+    };
+    LocationEditor.prototype.nameChanged = function (e) {
+        this.setState({
+            name: e.target.value,
+            type: this.state.type,
+        });
+    };
+    LocationEditor.prototype.typeChanged = function (e) {
+        this.setState({
+            name: this.state.name,
+            type: this.props.locationTypes[e.target.value],
+        });
+    };
+    LocationEditor.prototype.saveLocation = function (e) {
+        e.preventDefault();
+        var name = this.state.name === undefined ? '' : this.state.name.trim();
+        if (name == '')
+            return;
+        var editType = this.props.editing;
+        var locationTypes = this.props.locations.slice();
+        if (editType === undefined) {
+            locationTypes.push(new MapLocation(this.props.selectedCell, name, this.state.type));
+        }
+        else {
+            editType.name = name;
+            editType.type = this.state.type;
+        }
+        this.props.updateLocations(locationTypes);
+    };
+    LocationEditor.prototype.cancelEdit = function () {
+        this.props.updateLocations(this.props.locations);
+    };
+    LocationEditor.prototype.deleteType = function () {
+        var locationTypes = this.props.locations.slice();
+        if (this.props.editing !== undefined) {
+            var pos = locationTypes.indexOf(this.props.editing);
+            locationTypes.splice(pos, 1);
+        }
+        this.props.updateLocations(locationTypes);
+    };
+    return LocationEditor;
+}(React.Component));
 var LocationsEditor = (function (_super) {
     __extends(LocationsEditor, _super);
     function LocationsEditor(props) {
@@ -1204,8 +1425,65 @@ var LocationsEditor = (function (_super) {
         };
         return _this;
     }
+    LocationsEditor.prototype.componentWillReceiveProps = function (newProps) {
+        if (this.state.selectedType === undefined || newProps.locationTypes.indexOf(this.state.selectedType) == -1)
+            this.setState(function (prevState) {
+                return {
+                    isEditingLocation: prevState.isEditingLocation,
+                    isEditingLocationType: false,
+                    selectedTerrainType: undefined,
+                };
+            });
+    };
     LocationsEditor.prototype.render = function () {
-        return React.createElement("form", null);
+        if (this.state.isEditingLocationType)
+            return React.createElement(LocationTypeEditor, { editingType: this.state.selectedType, locationTypes: this.props.locationTypes, updateLocationTypes: this.locationTypesChanged.bind(this) });
+        if (this.state.isEditingLocation && this.state.selectedCell !== undefined)
+            return React.createElement(LocationEditor, { selectedCell: this.state.selectedCell, locations: this.props.locations, locationTypes: this.props.locationTypes, updateLocations: this.locationChanged.bind(this) });
+        var that = this;
+        return React.createElement("form", null,
+            React.createElement("p", null, "Click on the map to place a new location. Select a location type to edit it."),
+            React.createElement("div", { className: "palleteList" }, this.props.locationTypes.map(function (type, id) {
+                var classes = type == that.state.selectedType ? 'selected' : undefined;
+                return React.createElement("div", { key: id.toString(), className: classes, style: { 'color': type.textColor }, onClick: that.showTypeEditor.bind(that, type) }, type.name);
+            })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("button", { type: "button", onClick: this.showTypeEditor.bind(this, undefined) }, "Add new type")));
+    };
+    LocationsEditor.prototype.showTypeEditor = function (type) {
+        this.setState({
+            isEditingLocationType: true,
+            isEditingLocation: false,
+            selectedType: type,
+        });
+    };
+    LocationsEditor.prototype.locationTypesChanged = function (types) {
+        this.setState({
+            isEditingLocationType: false,
+            isEditingLocation: false,
+            selectedType: undefined,
+        });
+        this.props.typesChanged(types);
+    };
+    LocationsEditor.prototype.locationChanged = function (locations) {
+        this.setState({
+            isEditingLocationType: false,
+            isEditingLocation: false,
+            selectedType: undefined,
+        });
+        this.props.locationsChanged(locations);
+    };
+    LocationsEditor.prototype.mouseDown = function (cell) {
+        this.mouseDownCell = cell;
+    };
+    LocationsEditor.prototype.mouseUp = function (cell) {
+        if (this.mouseDownCell != cell)
+            return;
+        this.setState({
+            isEditingLocationType: false,
+            isEditingLocation: true,
+            selectedCell: cell,
+        });
     };
     return LocationsEditor;
 }(React.Component));
@@ -1279,7 +1557,7 @@ var WorldMap = (function (_super) {
             case 5 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props));
             case 6 /* Locations */:
-                return React.createElement(LocationsEditor, __assign({}, props, { dataChanged: this.locationChanged.bind(this) }));
+                return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 7 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
@@ -1316,7 +1594,7 @@ var WorldMap = (function (_super) {
         this.setState({ map: this.state.map }); // without this, the resize anchor input won't have its "old size" updated
     };
     WorldMap.prototype.updateCellTypes = function (cellTypes) {
-        if (this.state.map === undefined || cellTypes.length == 0)
+        if (cellTypes.length == 0)
             return;
         // if a cell type is removed from the map, replace it with the "empty" type
         for (var _i = 0, _a = this.state.map.cellTypes; _i < _a.length; _i++) {
@@ -1335,7 +1613,20 @@ var WorldMap = (function (_super) {
         else
             this.mapView.redraw();
     };
-    WorldMap.prototype.locationChanged = function () {
+    WorldMap.prototype.updateLocationTypes = function (types) {
+        if (types.length == 0)
+            return;
+        // if a location type is removed from the map, replace it with the "empty" type
+        for (var _i = 0, _a = this.state.map.locationTypes; _i < _a.length; _i++) {
+            var currentType = _a[_i];
+            if (types.indexOf(currentType) == -1)
+                this.state.map.replaceLocationType(currentType, types[0]);
+        }
+        this.state.map.locationTypes = types;
+        this.mapChanged();
+    };
+    WorldMap.prototype.updateLocations = function (locations) {
+        this.state.map.locations = locations;
         this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {

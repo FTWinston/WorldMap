@@ -35,6 +35,8 @@
         "editors/CellTypeEditor.tsx",
         "editors/TerrainEditor.tsx",
         "editors/LinesEditor.tsx",
+        "editors/LocationTypeEditor.tsx",
+        "editors/LocationEditor.tsx",
         "editors/LocationsEditor.tsx",
         "editors/LayersEditor.tsx",
 

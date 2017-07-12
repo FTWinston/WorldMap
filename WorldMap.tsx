@@ -89,7 +89,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Lines:
                 return <LinesEditor {...props} />;
             case EditorType.Locations:
-                return <LocationsEditor {...props} dataChanged={this.locationChanged.bind(this)} />;
+                return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Layers:
                 return <LayersEditor {...props} />;
         }
@@ -130,7 +130,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.setState({ map: this.state.map }); // without this, the resize anchor input won't have its "old size" updated
     }
     private updateCellTypes(cellTypes: CellType[]) {
-        if (this.state.map === undefined || cellTypes.length == 0)
+        if (cellTypes.length == 0)
             return;
         
         // if a cell type is removed from the map, replace it with the "empty" type
@@ -148,7 +148,20 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         else
             this.mapView.redraw();
     }
-    private locationChanged() {
+    private updateLocationTypes(types: LocationType[]) {
+        if (types.length == 0)
+            return;
+        
+        // if a location type is removed from the map, replace it with the "empty" type
+        for (let currentType of this.state.map.locationTypes)
+            if (types.indexOf(currentType) == -1)
+                this.state.map.replaceLocationType(currentType, types[0]);
+
+        this.state.map.locationTypes = types;
+        this.mapChanged();
+    }
+    private updateLocations(locations: MapLocation[]) {
+        this.state.map.locations = locations;
         this.mapChanged();
     }
     private mapChanged() {
