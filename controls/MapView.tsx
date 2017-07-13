@@ -202,6 +202,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             }
     }
     private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+        this.ctx.lineWidth = 1;
+        this.ctx.font = '8pt sans-serif';
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
 
         if (fillContent)
@@ -308,10 +310,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private drawLocation(loc: MapLocation, markerX: number, markerY: number) {
         let ctx = this.ctx;
 
-        ctx.translate(-markerX, -markerY);
+        ctx.translate(markerX, markerY);
         MapLocation.icons[loc.type.icon].draw(ctx);
 
-        let labelOffset = loc.type.textSize * 2;
+        let labelOffset = loc.type.textSize * 1.5;
         ctx.translate(0, -labelOffset);
 
         ctx.fillStyle = loc.type.textColor;
@@ -320,7 +322,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         ctx.font = loc.type.textSize + 'pt serif';
         ctx.fillText(loc.name, 0, 0);
 
-        ctx.translate(markerX, markerY + labelOffset);
+        ctx.translate(-markerX, -markerY + labelOffset);
     }
     
     private resizing: boolean = false;

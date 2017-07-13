@@ -74,15 +74,7 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
         })
         this.props.locationsChanged(locations);
     }
-
-    private mouseDownCell?: MapCell
-    mouseDown(cell: MapCell) {
-        this.mouseDownCell = cell;
-    }
     mouseUp(cell: MapCell) {
-        if (this.mouseDownCell != cell)
-            return;
-
         this.setState({
             isEditingLocationType: false,
             isEditingLocation: true,

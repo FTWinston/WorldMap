@@ -126,8 +126,6 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.state.map.changeSize(width, height, mode);
         this.mapView.updateSize();
         this.mapChanged();
-        
-        this.setState({ map: this.state.map }); // without this, the resize anchor input won't have its "old size" updated
     }
     private updateCellTypes(cellTypes: CellType[]) {
         if (cellTypes.length == 0)
@@ -165,6 +163,9 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapChanged();
     }
     private mapChanged() {
+        this.setState({
+            map: this.state.map
+        });
         this.mapView.redraw();
         this.changes.recordChange(this.state.map);
     }

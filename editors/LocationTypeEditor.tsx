@@ -19,7 +19,7 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
                 name: '',
                 textSize: 18,
                 textColor: '#000000',
-                icon: 'small',
+                icon: 'smBlack',
             });
         else
             this.setState({
@@ -37,7 +37,6 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
             
         }
 
-        let that = this;
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtSize">Text Size</label><input type="number" id="txtSize" value={this.state.textSize === undefined ? '' : this.state.textSize.toString()} onChange={this.textSizeChanged.bind(this)} /></div>
@@ -46,7 +45,7 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
                 <select id="ddlIcon" value={this.state.icon} onChange={this.iconChanged.bind(this)}>
                     {Object.keys(MapLocation.icons).map(function(key) {
                         let icon = MapLocation.icons[key];
-                        return <option selected={that.state.icon == key} value={key}>{icon.name}</option>;
+                        return <option key={key} value={key}>{icon.name}</option>;
                     })}
                 </select>
             </div>
@@ -113,7 +112,10 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
         }
         else {
             editType.name = name;
+            editType.textSize = textSize;
             editType.textColor = textColor;
+            editType.icon = icon;
+            editType.minDrawCellRadius = minDrawRadius;
         }
 
         this.props.updateLocationTypes(locationTypes);
