@@ -1,46 +1,33 @@
 interface ILocationEditorProps {
-    selectedCell: MapCell;
+    selectedLocation: MapLocation;
+    isNew: boolean;
     locationTypes: LocationType[];
     locations: MapLocation[];
     updateLocations: (locations: MapLocation[]) => void;
 }
 
 interface ILocationEditorState {
-    editing?: MapLocation;
     name: string;
     type: LocationType;
 }
 
 class LocationEditor extends React.Component<ILocationEditorProps, ILocationEditorState> {
-    private getLocationByCell(cell: MapCell) {
-        for (let location of this.props.locations)
-            if (location.cell == cell)
-                return location;
-        return undefined;
-    }
-    private setLocationFromCell(cell: MapCell) {
-        let editingLoc = this.getLocationByCell(cell);
-        if (editingLoc === undefined)
-            this.setState({
-                name: '',
-                type: this.props.locationTypes[0],
-                editing: undefined,
-            });
-        else
-            this.setState({
-                name: editingLoc.name,
-                type: editingLoc.type,
-                editing: editingLoc,
-            });
-    }
     componentWillMount() {
-        this.setLocationFromCell(this.props.selectedCell);
+        let loc = this.props.selectedLocation;
+        this.setState({
+            name: loc.name,
+            type: loc.type,
+        });
     }
     componentWillReceiveProps(nextProps: ILocationEditorProps) {
-        this.setLocationFromCell(nextProps.selectedCell);
+        let loc = nextProps.selectedLocation;
+        this.setState({
+            name: loc.name,
+            type: loc.type,
+        });
     }
     render() {
-        let deleteButton = this.state.editing === undefined ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
+        let cancelButton = this.props.isNew ? undefined : <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>;
         let that = this;
 
         return <form onSubmit={this.saveLocation.bind(this)}>
@@ -54,8 +41,8 @@ class LocationEditor extends React.Component<ILocationEditorProps, ILocationEdit
             </div>
             <div role="group">
                 <button type="submit">Save location</button>
-                <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
-                {deleteButton}
+                {cancelButton}
+                <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>
             </div>
         </form>;
     }
@@ -78,17 +65,20 @@ class LocationEditor extends React.Component<ILocationEditorProps, ILocationEdit
         if (name == '')
             return;
         
-        let editLocation = this.state.editing;
-        let locationTypes = this.props.locations.slice();
-        if (editLocation === undefined) {
-            locationTypes.push(new MapLocation(this.props.selectedCell, name, this.state.type));
+        let editLocation = this.props.selectedLocation;
+        editLocation.name = name;
+        editLocation.type = this.state.type;
+        
+        let locations;
+        let pos = this.props.locations.indexOf(editLocation);
+        if (pos == -1) {
+            locations = this.props.locations.slice();
+            locations.push(editLocation);
         }
-        else {
-            editLocation.name = name;
-            editLocation.type = this.state.type;
-        }
+        else
+            locations = this.props.locations;
 
-        this.props.updateLocations(locationTypes);
+        this.props.updateLocations(locations);
     }
     cancelEdit() {
         this.props.updateLocations(this.props.locations);
@@ -96,10 +86,9 @@ class LocationEditor extends React.Component<ILocationEditorProps, ILocationEdit
     deleteType() {
         let locationTypes = this.props.locations.slice();
 
-        if (this.state.editing !== undefined) {
-            let pos = locationTypes.indexOf(this.state.editing);
+        let pos = locationTypes.indexOf(this.props.selectedLocation);
+        if (pos != -1)
             locationTypes.splice(pos, 1);
-        }
         
         this.props.updateLocations(locationTypes);
     }

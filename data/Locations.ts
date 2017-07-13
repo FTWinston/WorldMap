@@ -20,6 +20,13 @@ class MapLocation {
         public type: LocationType,
     ) { }
 
+    static getByCell(cell: MapCell, allLocations: MapLocation[]) {
+        for (let location of allLocations)
+            if (location.cell == cell)
+                return location;
+        return undefined;
+    }
+
     static icons: {[key:string]:IDrawable} = {};
 
     static setDarkColors(ctx: CanvasRenderingContext2D) {

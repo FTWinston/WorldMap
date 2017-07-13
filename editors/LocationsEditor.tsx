@@ -8,8 +8,9 @@ interface ILocationsEditorProps {
 interface ILocationsEditorState {
     isEditingLocationType: boolean;
     isEditingLocation: boolean;
-    selectedCell?: MapCell;
-    selectedType?: LocationType;
+    isNewLocation: boolean;
+    selectedLocation?: MapLocation;
+    selectedLocationType: LocationType;
 }
 
 class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsEditorState> {
@@ -19,31 +20,34 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
         this.state = {
             isEditingLocation: false,
             isEditingLocationType: false,
+            isNewLocation: false,
+            selectedLocationType: props.locationTypes[0],
         };
     }
     componentWillReceiveProps(newProps: ILocationsEditorProps) {
-        if (this.state.selectedType === undefined || newProps.locationTypes.indexOf(this.state.selectedType) == -1)
+        if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
                 return {
                     isEditingLocation: prevState.isEditingLocation,
                     isEditingLocationType: false,
-                    selectedTerrainType: undefined,
+                    isNewLocation: false,
+                    selectedLocationType: newProps.locationTypes[0],
                 }
             });
     }
     render() {
         if (this.state.isEditingLocationType)
-            return <LocationTypeEditor editingType={this.state.selectedType} locationTypes={this.props.locationTypes} updateLocationTypes={this.locationTypesChanged.bind(this)} />;
-        if (this.state.isEditingLocation && this.state.selectedCell !== undefined)
-            return <LocationEditor selectedCell={this.state.selectedCell} locations={this.props.locations} locationTypes={this.props.locationTypes} updateLocations={this.locationChanged.bind(this)} />;
+            return <LocationTypeEditor editingType={this.state.selectedLocationType} locationTypes={this.props.locationTypes} updateLocationTypes={this.locationTypesChanged.bind(this)} />;
+        if (this.state.isEditingLocation && this.state.selectedLocation !== undefined)
+            return <LocationEditor selectedLocation={this.state.selectedLocation} isNew={this.state.isNewLocation} locations={this.props.locations} locationTypes={this.props.locationTypes} updateLocations={this.locationChanged.bind(this)} />;
             
         let that = this;
         return <form>
-            <p>Click on the map to place a new location. Select a location type to edit it.</p>
+            <p>Select a location type to place onto the map. Double click/tap on a terrain type to edit it.</p>
             <div className="palleteList">
                 {this.props.locationTypes.map(function(type, id) {
-                    let classes = type == that.state.selectedType ? 'selected' : undefined;
-                    return <div key={id.toString()} className={classes} style={{'color': type.textColor}} onClick={that.showTypeEditor.bind(that, type)}>{type.name}</div>;
+                    let classes = type == that.state.selectedLocationType ? 'selected' : undefined;
+                    return <div key={id.toString()} className={classes} onClick={that.selectLocationType.bind(that, type)} onDoubleClick={that.showTypeEditor.bind(that, type)}>{type.name}</div>;
                 })}
             </div>
             <div role="group" className="vertical">
@@ -51,18 +55,28 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
             </div>
         </form>;
     }
+    private selectLocationType(type: LocationType) {
+        this.setState({
+            isEditingLocationType: false,
+            isEditingLocation: false,
+            isNewLocation: false,
+            selectedLocationType: type,
+        });
+    }
     private showTypeEditor(type: LocationType) {
         this.setState({
             isEditingLocationType: true,
             isEditingLocation: false,
-            selectedType: type,
+            isNewLocation: false,
+            selectedLocationType: type,
         });
     }
     private locationTypesChanged(types: LocationType[]) {
         this.setState({
             isEditingLocationType: false,
             isEditingLocation: false,
-            selectedType: undefined,
+            isNewLocation: false,
+            selectedLocationType: this.state.selectedLocationType,
         })
         this.props.typesChanged(types);
     }
@@ -70,15 +84,32 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
         this.setState({
             isEditingLocationType: false,
             isEditingLocation: false,
-            selectedType: undefined,
+            isNewLocation: false,
+            selectedLocationType: this.state.selectedLocationType,
         })
         this.props.locationsChanged(locations);
     }
     mouseUp(cell: MapCell) {
+        let locations = this.props.locations;
+
+        let loc = MapLocation.getByCell(cell, locations);
+        let isNew;
+        if (loc === undefined) {
+            loc = new MapLocation(cell, 'New ' + this.state.selectedLocationType.name, this.state.selectedLocationType);
+            isNew = true;
+
+            locations.push(loc);
+            this.props.locationsChanged(locations);
+        }
+        else
+            isNew = false;
+
         this.setState({
             isEditingLocationType: false,
             isEditingLocation: true,
-            selectedCell: cell,
+            isNewLocation: isNew,
+            selectedLocation: loc,
+            selectedLocationType: this.state.selectedLocationType,
         });
     }
 }
