@@ -33,15 +33,21 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
     render() {
         let deleteButton = this.props.editingType === undefined || this.props.locationTypes.length < 2 ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
 
+        for (let id in MapLocation.icons) {
+            
+        }
+
+        let that = this;
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtSize">Text Size</label><input type="number" id="txtSize" value={this.state.textSize === undefined ? '' : this.state.textSize.toString()} onChange={this.textSizeChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="inColor">Color</label><input type="color" id="inColor" value={this.state.textColor} onChange={this.colorChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="ddlIcon">Icon</label>
                 <select id="ddlIcon" value={this.state.icon} onChange={this.iconChanged.bind(this)}>
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large</option>
+                    {Object.keys(MapLocation.icons).map(function(key) {
+                        let icon = MapLocation.icons[key];
+                        return <option selected={that.state.icon == key} value={key}>{icon.name}</option>;
+                    })}
                 </select>
             </div>
             <div role="group"><label htmlFor="minDrawRadius">Threshold</label><input type="number" id="minDrawRadius" value={this.state.minDrawCellRadius === undefined ? '' : this.state.minDrawCellRadius.toString()} onChange={this.minDrawRadiusChanged.bind(this)} /></div>

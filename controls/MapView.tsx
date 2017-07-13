@@ -306,9 +306,21 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
     }
     private drawLocation(loc: MapLocation, markerX: number, markerY: number) {
-        // TODO: draw icon
+        let ctx = this.ctx;
 
-        // TODO: draw name label
+        ctx.translate(-markerX, -markerY);
+        MapLocation.icons[loc.type.icon].draw(ctx);
+
+        let labelOffset = loc.type.textSize * 2;
+        ctx.translate(0, -labelOffset);
+
+        ctx.fillStyle = loc.type.textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = loc.type.textSize + 'pt serif';
+        ctx.fillText(loc.name, 0, 0);
+
+        ctx.translate(markerX, markerY + labelOffset);
     }
     
     private resizing: boolean = false;

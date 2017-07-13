@@ -275,8 +275,8 @@ var LocationType = (function () {
         this.minDrawCellRadius = minDrawCellRadius;
     }
     LocationType.createDefaults = function (types) {
-        types.push(new LocationType('Town', 16, '#000000', 'small', 10));
-        types.push(new LocationType('City', 24, '#000000', 'large'));
+        types.push(new LocationType('Town', 16, '#000000', 'smBlack', 10));
+        types.push(new LocationType('City', 24, '#000000', 'lgBlack'));
     };
     return LocationType;
 }());
@@ -286,8 +286,48 @@ var MapLocation = (function () {
         this.name = name;
         this.type = type;
     }
+    MapLocation.setDarkColors = function (ctx) {
+        ctx.fillStyle = '#000000';
+        ctx.strokeStyle = '#ffffff';
+    };
+    MapLocation.setLightColors = function (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+    };
+    MapLocation.drawDot = function (ctx, radius) {
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fill();
+    };
     return MapLocation;
 }());
+MapLocation.icons = {};
+MapLocation.icons['smBlack'] = {
+    name: 'Small black dot',
+    draw: function (ctx) { MapLocation.setDarkColors(ctx); MapLocation.drawDot(ctx, 4); }
+};
+MapLocation.icons['mdBlack'] = {
+    name: 'Medium black dot',
+    draw: function (ctx) { MapLocation.setDarkColors(ctx); MapLocation.drawDot(ctx, 7); }
+};
+MapLocation.icons['lgBlack'] = {
+    name: 'Large black dot',
+    draw: function (ctx) { MapLocation.setDarkColors(ctx); MapLocation.drawDot(ctx, 10); }
+};
+MapLocation.icons['smWhite'] = {
+    name: 'Small white dot',
+    draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 4); }
+};
+MapLocation.icons['mdWhite'] = {
+    name: 'Medium white dot',
+    draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 7); }
+};
+MapLocation.icons['lgWhite'] = {
+    name: 'Large white dot',
+    draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 10); }
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -740,8 +780,17 @@ var MapView = (function (_super) {
         }
     };
     MapView.prototype.drawLocation = function (loc, markerX, markerY) {
-        // TODO: draw icon
-        // TODO: draw name label
+        var ctx = this.ctx;
+        ctx.translate(-markerX, -markerY);
+        MapLocation.icons[loc.type.icon].draw(ctx);
+        var labelOffset = loc.type.textSize * 2;
+        ctx.translate(0, -labelOffset);
+        ctx.fillStyle = loc.type.textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = loc.type.textSize + 'pt serif';
+        ctx.fillText(loc.name, 0, 0);
+        ctx.translate(markerX, markerY + labelOffset);
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1249,6 +1298,9 @@ var LocationTypeEditor = (function (_super) {
     };
     LocationTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.locationTypes.length < 2 ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        for (var id in MapLocation.icons) {
+        }
+        var that = this;
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -1261,10 +1313,10 @@ var LocationTypeEditor = (function (_super) {
                 React.createElement("input", { type: "color", id: "inColor", value: this.state.textColor, onChange: this.colorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "ddlIcon" }, "Icon"),
-                React.createElement("select", { id: "ddlIcon", value: this.state.icon, onChange: this.iconChanged.bind(this) },
-                    React.createElement("option", { value: "small" }, "Small"),
-                    React.createElement("option", { value: "medium" }, "Medium"),
-                    React.createElement("option", { value: "large" }, "Large"))),
+                React.createElement("select", { id: "ddlIcon", value: this.state.icon, onChange: this.iconChanged.bind(this) }, Object.keys(MapLocation.icons).map(function (key) {
+                    var icon = MapLocation.icons[key];
+                    return React.createElement("option", { selected: that.state.icon == key, value: key }, icon.name);
+                }))),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "minDrawRadius" }, "Threshold"),
                 React.createElement("input", { type: "number", id: "minDrawRadius", value: this.state.minDrawCellRadius === undefined ? '' : this.state.minDrawCellRadius.toString(), onChange: this.minDrawRadiusChanged.bind(this) })),
