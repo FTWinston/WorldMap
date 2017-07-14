@@ -10,11 +10,14 @@ var MapData = (function () {
         this.description = '';
         this.locationTypes = [];
         this.locations = [];
+        this.lineTypes = [];
+        this.lines = [];
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
                 this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
             CellType.createDefaults(this.cellTypes);
             LocationType.createDefaults(this.locationTypes);
+            LineType.createDefaults(this.lineTypes);
             this.positionCells();
         }
     }
@@ -189,6 +192,13 @@ var MapData = (function () {
                 loc.type = replace;
         }
     };
+    MapData.prototype.replaceLineType = function (find, replace) {
+        for (var _i = 0, _a = this.lines; _i < _a.length; _i++) {
+            var loc = _a[_i];
+            if (loc !== null && loc.type === find)
+                loc.type = replace;
+        }
+    };
     MapData.prototype.saveToJSON = function () {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
@@ -336,6 +346,27 @@ MapLocation.icons['lgWhite'] = {
     name: 'Large white dot',
     draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 10); }
 };
+var LineType = (function () {
+    function LineType(name, color, width, startWidth, endWidth) {
+        this.name = name;
+        this.color = color;
+        this.width = width;
+        this.startWidth = startWidth;
+        this.endWidth = endWidth;
+    }
+    LineType.createDefaults = function (types) {
+        types.push(new LineType('River', '#179ce6', 6, 0, 9));
+        types.push(new LineType('Road', '#bbad65', 4, 4, 4));
+    };
+    return LineType;
+}());
+var MapLine = (function () {
+    function MapLine(type) {
+        this.type = type;
+        this.cells = [];
+    }
+    return MapLine;
+}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -1274,13 +1305,186 @@ var TerrainEditor = (function (_super) {
     };
     return TerrainEditor;
 }(React.Component));
-var LinesEditor = (function (_super) {
-    __extends(LinesEditor, _super);
-    function LinesEditor() {
+var LineTypeEditor = (function (_super) {
+    __extends(LineTypeEditor, _super);
+    function LineTypeEditor() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    LineTypeEditor.prototype.componentWillMount = function () {
+        if (this.props.editingType === undefined)
+            this.setState({
+                name: '',
+                color: '#666666',
+                width: 6,
+                startWidth: 6,
+                endWidth: 6,
+            });
+        else
+            this.setState({
+                name: this.props.editingType.name,
+                color: this.props.editingType.color,
+                width: this.props.editingType.width,
+                startWidth: this.props.editingType.startWidth,
+                endWidth: this.props.editingType.endWidth,
+            });
+    };
+    LineTypeEditor.prototype.render = function () {
+        var deleteButton = this.props.editingType === undefined || this.props.lineTypes.length < 2 ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        var width = this.state.width === undefined ? '' : this.state.width;
+        var startWidth = this.state.startWidth === undefined ? '' : this.state.startWidth;
+        var endWidth = this.state.endWidth === undefined ? '' : this.state.endWidth;
+        return React.createElement("form", { onSubmit: this.saveType.bind(this) },
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtName" }, "Name"),
+                React.createElement("input", { type: "text", id: "txtName", value: this.state.name, onChange: this.nameChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "inColor" }, "Color"),
+                React.createElement("input", { type: "color", id: "inColor", value: this.state.color, onChange: this.colorChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtWidth" }, "Width"),
+                React.createElement("input", { type: "number", id: "txtWidth", value: width.toString(), onChange: this.widthChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtStartWidth" }, "Start width"),
+                React.createElement("input", { type: "number", id: "txtStartWidth", value: startWidth.toString(), onChange: this.startWidthChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtEndWidth" }, "End width"),
+                React.createElement("input", { type: "number", id: "txtEndWidth", value: endWidth.toString(), onChange: this.endWidthChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save type"),
+                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
+                deleteButton));
+    };
+    LineTypeEditor.prototype.nameChanged = function (e) {
+        this.setState({
+            name: e.target.value
+        });
+    };
+    LineTypeEditor.prototype.colorChanged = function (e) {
+        this.setState({
+            color: e.target.value
+        });
+    };
+    LineTypeEditor.prototype.widthChanged = function (e) {
+        this.setState({
+            width: e.target.value
+        });
+    };
+    LineTypeEditor.prototype.startWidthChanged = function (e) {
+        this.setState({
+            startWidth: e.target.value
+        });
+    };
+    LineTypeEditor.prototype.endWidthChanged = function (e) {
+        this.setState({
+            endWidth: e.target.value
+        });
+    };
+    LineTypeEditor.prototype.saveType = function (e) {
+        e.preventDefault();
+        var name = this.state.name === undefined ? '' : this.state.name.trim();
+        if (name == '')
+            return;
+        var color = this.state.color === undefined ? '' : this.state.color;
+        if (color == '')
+            return;
+        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined)
+            return;
+        var editType = this.props.editingType;
+        var lineTypes = this.props.lineTypes.slice();
+        if (editType === undefined) {
+            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth));
+        }
+        else {
+            editType.name = name;
+            editType.color = color;
+            editType.width = this.state.width;
+            editType.startWidth = this.state.startWidth;
+            editType.endWidth = this.state.endWidth;
+        }
+        this.props.updateLineTypes(lineTypes);
+    };
+    LineTypeEditor.prototype.cancelEdit = function () {
+        this.props.updateLineTypes(this.props.lineTypes);
+    };
+    LineTypeEditor.prototype.deleteType = function () {
+        var lineTypes = this.props.lineTypes.slice();
+        if (this.props.editingType !== undefined) {
+            var pos = lineTypes.indexOf(this.props.editingType);
+            lineTypes.splice(pos, 1);
+        }
+        this.props.updateLineTypes(lineTypes);
+    };
+    return LineTypeEditor;
+}(React.Component));
+var LinesEditor = (function (_super) {
+    __extends(LinesEditor, _super);
+    function LinesEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            isEditingLineType: false,
+            isDrawingOnMap: false,
+            selectedLineType: props.lineTypes[0],
+            selectedLine: undefined,
+        };
+        return _this;
+    }
+    LinesEditor.prototype.componentWillReceiveProps = function (newProps) {
+        if (this.state.selectedLineType === undefined || newProps.lineTypes.indexOf(this.state.selectedLineType) == -1)
+            this.setState(function (prevState) {
+                return {
+                    isEditingLineType: prevState.isEditingLineType,
+                    isDrawingOnMap: prevState.isDrawingOnMap,
+                    selectedLineType: newProps.lineTypes[0],
+                };
+            });
+    };
     LinesEditor.prototype.render = function () {
-        return React.createElement("form", null);
+        if (this.state.isEditingLineType)
+            return React.createElement(LineTypeEditor, { editingType: this.state.selectedLineType, lineTypes: this.props.lineTypes, updateLineTypes: this.lineTypesChanged.bind(this) });
+        var that = this;
+        return React.createElement("form", null,
+            React.createElement("p", null, "Select a line type to draw onto the map, then click cells to draw it. Double click/tap on a line type to edit it."),
+            React.createElement("div", { className: "palleteList" }, this.props.lineTypes.map(function (type, id) {
+                var classes = type == that.state.selectedLineType ? 'selected' : undefined;
+                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectLineType.bind(that, type), onDoubleClick: that.showLineTypeEdit.bind(that, type) }, type.name);
+            })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("button", { type: "button", onClick: this.showLineTypeEdit.bind(this, undefined) }, "Add new type")));
+    };
+    LinesEditor.prototype.selectLineType = function (type) {
+        this.setState({
+            isEditingLineType: false,
+            isDrawingOnMap: false,
+            selectedLineType: type,
+        });
+    };
+    LinesEditor.prototype.showLineTypeEdit = function (type) {
+        this.setState({
+            isEditingLineType: true,
+            isDrawingOnMap: false,
+            selectedLineType: type,
+        });
+    };
+    LinesEditor.prototype.lineTypesChanged = function (lineTypes) {
+        this.setState({
+            isEditingLineType: false,
+            isDrawingOnMap: false,
+        });
+        this.props.updateLineTypes(lineTypes);
+    };
+    LinesEditor.prototype.mouseUp = function (cell) {
+        /*
+        if (!this.state.isDrawingOnMap)
+            return;
+
+        this.setState(function (prevState) {
+            return {
+                isEditingLineType: prevState.isEditingLineType,
+                isDrawingOnMap: false,
+            }
+        });
+        this.props.hasDrawn(false);
+        */
     };
     return LinesEditor;
 }(React.Component));
@@ -1643,7 +1847,7 @@ var WorldMap = (function (_super) {
             case 4 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 5 /* Lines */:
-                return React.createElement(LinesEditor, __assign({}, props));
+                return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), drawingLine: this.mapView.redraw.bind(this.mapView) }));
             case 6 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 7 /* Layers */:
@@ -1703,7 +1907,7 @@ var WorldMap = (function (_super) {
     WorldMap.prototype.updateLocationTypes = function (types) {
         if (types.length == 0)
             return;
-        // if a location type is removed from the map, replace it with the "empty" type
+        // if a location type is removed from the map, replace it with the first available type
         for (var _i = 0, _a = this.state.map.locationTypes; _i < _a.length; _i++) {
             var currentType = _a[_i];
             if (types.indexOf(currentType) == -1)
@@ -1714,6 +1918,22 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.updateLocations = function (locations) {
         this.state.map.locations = locations;
+        this.mapChanged();
+    };
+    WorldMap.prototype.updateLineTypes = function (types) {
+        if (types.length == 0)
+            return;
+        // if a location type is removed from the map, replace it with the first available type
+        for (var _i = 0, _a = this.state.map.lineTypes; _i < _a.length; _i++) {
+            var currentType = _a[_i];
+            if (types.indexOf(currentType) == -1)
+                this.state.map.replaceLineType(currentType, types[0]);
+        }
+        this.state.map.lineTypes = types;
+        this.mapChanged();
+    };
+    WorldMap.prototype.updateLines = function (lines) {
+        this.state.map.lines = lines;
         this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {

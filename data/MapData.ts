@@ -14,6 +14,8 @@ class MapData {
     maxY: number;
     locationTypes: LocationType[];
     locations: MapLocation[];
+    lineTypes: LineType[];
+    lines: MapLine[];
 
     constructor(width: number, height: number, createCells: boolean = true) {
         this.underlyingWidth = width + Math.floor(height / 2) - 1;
@@ -25,6 +27,8 @@ class MapData {
         this.description = '';
         this.locationTypes = [];
         this.locations = [];
+        this.lineTypes = [];
+        this.lines = [];
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
@@ -32,6 +36,7 @@ class MapData {
 
             CellType.createDefaults(this.cellTypes);
             LocationType.createDefaults(this.locationTypes);
+            LineType.createDefaults(this.lineTypes);
             
             this.positionCells();
         }
@@ -213,6 +218,11 @@ class MapData {
     }
     replaceLocationType(find: LocationType, replace: LocationType) {
         for (let loc of this.locations)
+            if (loc !== null && loc.type === find)
+                loc.type = replace;
+    }
+    replaceLineType(find: LineType, replace: LineType) {
+        for (let loc of this.lines)
             if (loc !== null && loc.type === find)
                 loc.type = replace;
     }

@@ -23,6 +23,7 @@
         "data/MapData.ts",
         "data/Cells.ts",
         "data/Locations.ts",
+        "data/Lines.ts",
 
         "controls/ResizeAnchorInput.tsx",
         "controls/ChangeHistory.tsx",
@@ -35,6 +36,7 @@
         "editors/SizeEditor.tsx",
         "editors/CellTypeEditor.tsx",
         "editors/TerrainEditor.tsx",
+        "editors/LineTypeEditor.tsx",
         "editors/LinesEditor.tsx",
         "editors/LocationTypeEditor.tsx",
         "editors/LocationEditor.tsx",

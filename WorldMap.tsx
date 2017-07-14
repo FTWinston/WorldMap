@@ -87,7 +87,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Terrain:
                 return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
-                return <LinesEditor {...props} />;
+                return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} drawingLine={this.mapView.redraw.bind(this.mapView)} />;
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Layers:
@@ -150,7 +150,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         if (types.length == 0)
             return;
         
-        // if a location type is removed from the map, replace it with the "empty" type
+        // if a location type is removed from the map, replace it with the first available type
         for (let currentType of this.state.map.locationTypes)
             if (types.indexOf(currentType) == -1)
                 this.state.map.replaceLocationType(currentType, types[0]);
@@ -160,6 +160,22 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
     private updateLocations(locations: MapLocation[]) {
         this.state.map.locations = locations;
+        this.mapChanged();
+    }
+    private updateLineTypes(types: LineType[]) {
+        if (types.length == 0)
+            return;
+        
+        // if a location type is removed from the map, replace it with the first available type
+        for (let currentType of this.state.map.lineTypes)
+            if (types.indexOf(currentType) == -1)
+                this.state.map.replaceLineType(currentType, types[0]);
+
+        this.state.map.lineTypes = types;
+        this.mapChanged();
+    }
+    private updateLines(lines: MapLine[]) {
+        this.state.map.lines = lines;
         this.mapChanged();
     }
     private mapChanged() {
