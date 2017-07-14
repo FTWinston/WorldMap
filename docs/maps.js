@@ -210,12 +210,20 @@ var MapData = (function () {
             location_1.typeID = this.locationTypes.indexOf(location_1.type);
             location_1.cellID = this.cells.indexOf(location_1.cell);
         }
+        var that = this;
+        for (var _d = 0, _e = this.lines; _d < _e.length; _d++) {
+            var line = _e[_d];
+            line.typeID = this.lineTypes.indexOf(line.type);
+            line.cellIDs = line.keyCells.map(function (cell, id) {
+                return that.cells.indexOf(cell);
+            });
+        }
         var map = this;
         var json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'type')
+                || key == 'cell' || key == 'keyCells' || key == 'type')
                 return undefined;
             return value;
         });
@@ -226,15 +234,17 @@ var MapData = (function () {
         var map = new MapData(data.width, data.height, false);
         map.name = data.name;
         map.description = data.description;
-        map.cellTypes = data.cellTypes.map(function (type) {
-            return new CellType(type.name, type.color);
-        });
-        map.cells = data.cells.map(function (cell) {
-            if (cell == null)
-                return null;
-            var cellType = map.cellTypes[cell.typeID];
-            return new MapCell(map, cellType);
-        });
+        if (data.cellTypes !== undefined)
+            map.cellTypes = data.cellTypes.map(function (type) {
+                return new CellType(type.name, type.color);
+            });
+        if (data.cells !== undefined)
+            map.cells = data.cells.map(function (cell) {
+                if (cell == null)
+                    return null;
+                var cellType = map.cellTypes[cell.typeID];
+                return new MapCell(map, cellType);
+            });
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
                 return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDrawCellRadius);
@@ -246,6 +256,22 @@ var MapData = (function () {
                 var cell = map.cells[location_2.cellID];
                 if (cell !== null)
                     map.locations.push(new MapLocation(cell, location_2.name, locationType));
+            }
+        if (data.lineTypes !== undefined)
+            map.lineTypes = data.lineTypes.map(function (type) {
+                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth);
+            });
+        if (data.lines !== undefined)
+            for (var _b = 0, _c = data.lines; _b < _c.length; _b++) {
+                var line = _c[_b];
+                var mapLine = new MapLine(map.lineTypes[line.typeID]);
+                for (var _d = 0, _e = line.cellIDs; _d < _e.length; _d++) {
+                    var cellID = _e[_d];
+                    var cell = map.cells[cellID];
+                    if (cell !== null)
+                        mapLine.keyCells.push(cell);
+                }
+                map.lines.push(mapLine);
             }
         map.positionCells();
         return map;
@@ -363,7 +389,7 @@ var LineType = (function () {
 var MapLine = (function () {
     function MapLine(type) {
         this.type = type;
-        this.cells = [];
+        this.keyCells = [];
     }
     return MapLine;
 }());
@@ -712,6 +738,7 @@ var MapView = (function (_super) {
             this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
         this.drawLocations();
+        this.drawLines();
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
         this.redrawing = false;
@@ -832,6 +859,40 @@ var MapView = (function (_super) {
         ctx.font = loc.type.textSize + 'pt serif';
         ctx.fillText(loc.name, 0, 0);
         ctx.translate(-markerX, -markerY + labelOffset);
+    };
+    MapView.prototype.drawLines = function () {
+        var cellRadius = this.state.cellRadius;
+        var drawExtent = this.getDrawExtent(cellRadius);
+        var map = this.props.map;
+        for (var _i = 0, _a = map.lines; _i < _a.length; _i++) {
+            var line = _a[_i];
+            // use min / max X & Y of all keyCells to decide whether to draw or not. Possible that a line will wrap around the screen without cross it, but not worrying about that.
+            var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE, maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+            for (var _b = 0, _c = line.keyCells; _b < _c.length; _b++) {
+                var cell = _c[_b];
+                if (minX > cell.xPos)
+                    minX = cell.xPos;
+                else if (maxX > cell.xPos)
+                    maxX = cell.xPos;
+                if (minY > cell.yPos)
+                    minY = cell.yPos;
+                else if (maxY > cell.yPos)
+                    maxY = cell.yPos;
+            }
+            minX = minX * cellRadius + cellRadius;
+            maxX = maxX * cellRadius + cellRadius;
+            if (maxX < drawExtent.minX || minX > drawExtent.maxX)
+                continue;
+            minY = minY * cellRadius + cellRadius;
+            maxY = maxY * cellRadius + cellRadius;
+            if (maxY < drawExtent.minY || minY > drawExtent.maxY)
+                continue;
+            this.drawLine(line);
+        }
+    };
+    MapView.prototype.drawLine = function (line) {
+        var ctx = this.ctx;
+        // TODO: translate and then actually draw line
     };
     MapView.prototype.resize = function () {
         if (this.resizing)

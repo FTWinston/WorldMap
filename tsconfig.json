@@ -4,6 +4,7 @@
         "module": "none",
         "jsx": "react",
         "sourceMap": true,
+        "sourceRoot": "..",
         "outFile": "docs/maps.js",
         "noImplicitAny": true,
         "strictNullChecks": true,

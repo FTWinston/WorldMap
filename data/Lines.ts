@@ -14,9 +14,9 @@ class LineType {
 }
 
 class MapLine {
-    readonly cells: MapCell[];
+    readonly keyCells: MapCell[];
 
     constructor(public type: LineType) {
-        this.cells = [];
+        this.keyCells = [];
     }
 }

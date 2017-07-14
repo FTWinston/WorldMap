@@ -180,6 +180,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
 
         this.drawLocations();
+        this.drawLines();
 
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
@@ -324,7 +325,46 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         ctx.translate(-markerX, -markerY + labelOffset);
     }
-    
+    private drawLines() {
+        let cellRadius = this.state.cellRadius;
+        let drawExtent = this.getDrawExtent(cellRadius);
+        let map = this.props.map;
+        
+        for (let line of map.lines) {
+            // use min / max X & Y of all keyCells to decide whether to draw or not. Possible that a line will wrap around the screen without cross it, but not worrying about that.
+            let minX = Number.MAX_VALUE, minY = Number.MAX_VALUE, maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+            for (let cell of line.keyCells) {
+                if (minX > cell.xPos)
+                    minX = cell.xPos;
+                else if (maxX > cell.xPos)
+                    maxX = cell.xPos;
+
+                if (minY > cell.yPos)
+                    minY = cell.yPos;
+                else if (maxY > cell.yPos)
+                    maxY = cell.yPos;
+            }
+            minX = minX * cellRadius + cellRadius;
+            maxX = maxX * cellRadius + cellRadius;
+
+            if (maxX < drawExtent.minX || minX > drawExtent.maxX)
+                continue;
+
+            minY = minY * cellRadius + cellRadius;
+            maxY = maxY * cellRadius + cellRadius;
+
+            if (maxY < drawExtent.minY || minY > drawExtent.maxY)
+                continue;
+
+            this.drawLine(line);
+        }
+    }
+    private drawLine(line: MapLine) {
+        let ctx = this.ctx;
+
+        // TODO: translate and then actually draw line
+    }
+
     private resizing: boolean = false;
     private resize() {
         if (this.resizing)

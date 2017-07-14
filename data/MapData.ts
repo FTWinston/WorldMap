@@ -236,12 +236,20 @@ class MapData {
             (location as any).cellID = this.cells.indexOf(location.cell);
         }
 
+        let that = this;
+        for (let line of this.lines) {
+            (line as any).typeID = this.lineTypes.indexOf(line.type);
+            (line as any).cellIDs = line.keyCells.map(function(cell: MapCell, id: number) {
+                return that.cells.indexOf(cell);
+            });
+        }
+
         let map = this;
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'type')
+                || key == 'cell' || key == 'keyCells' || key == 'type')
                 return undefined;
             return value;
         });
@@ -258,23 +266,27 @@ class MapData {
             cells: {typeID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
+            lineTypes: {name: string, color: string, width: number, startWidth: number, endWidth: number}[];
+            lines: {typeID: number, cellIDs: number[]}[];
         } = JSON.parse(json);
 
         let map = new MapData(data.width, data.height, false);
         map.name = data.name;
         map.description = data.description;
 
-        map.cellTypes = data.cellTypes.map(function (type) {
-            return new CellType(type.name, type.color);
-        });
+        if (data.cellTypes !== undefined)
+            map.cellTypes = data.cellTypes.map(function (type) {
+                return new CellType(type.name, type.color);
+            });
 
-        map.cells = data.cells.map(function (cell) {
-            if (cell == null)
-                return null;
+        if (data.cells !== undefined)
+            map.cells = data.cells.map(function (cell) {
+                if (cell == null)
+                    return null;
 
-            let cellType = map.cellTypes[cell.typeID];
-            return new MapCell(map, cellType);
-        });
+                let cellType = map.cellTypes[cell.typeID];
+                return new MapCell(map, cellType);
+            });
 
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
@@ -287,6 +299,23 @@ class MapData {
                 let cell = map.cells[location.cellID];
                 if (cell !== null)
                     map.locations.push(new MapLocation(cell, location.name, locationType));
+            }
+
+        if (data.lineTypes !== undefined)
+            map.lineTypes = data.lineTypes.map(function (type) {
+                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth);
+            });
+
+        if (data.lines !== undefined)
+            for (let line of data.lines) {
+                let mapLine = new MapLine(map.lineTypes[line.typeID])
+                for (let cellID of line.cellIDs) {
+                    let cell = map.cells[cellID];
+                    if (cell !== null)
+                        mapLine.keyCells.push(cell);
+                }
+
+                map.lines.push(mapLine);
             }
 
         map.positionCells();
