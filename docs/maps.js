@@ -737,8 +737,8 @@ var MapView = (function (_super) {
             // outline of next zoom level
             this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
-        this.drawLocations();
         this.drawLines();
+        this.drawLocations();
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
         this.redrawing = false;
@@ -872,11 +872,11 @@ var MapView = (function (_super) {
                 var cell = _c[_b];
                 if (minX > cell.xPos)
                     minX = cell.xPos;
-                else if (maxX > cell.xPos)
+                else if (maxX < cell.xPos)
                     maxX = cell.xPos;
                 if (minY > cell.yPos)
                     minY = cell.yPos;
-                else if (maxY > cell.yPos)
+                else if (maxY < cell.yPos)
                     maxY = cell.yPos;
             }
             minX = minX * cellRadius + cellRadius;
@@ -887,12 +887,48 @@ var MapView = (function (_super) {
             maxY = maxY * cellRadius + cellRadius;
             if (maxY < drawExtent.minY || minY > drawExtent.maxY)
                 continue;
-            this.drawLine(line);
+            this.drawLine(line, cellRadius);
         }
     };
-    MapView.prototype.drawLine = function (line) {
+    MapView.prototype.drawLine = function (line, cellRadius) {
         var ctx = this.ctx;
-        // TODO: translate and then actually draw line
+        var type = line.type;
+        var cells = line.keyCells;
+        if (cells.length == 1) {
+            var cell_1 = cells[0];
+            var x = cell_1.xPos * cellRadius + cellRadius;
+            var y = cell_1.yPos * cellRadius + cellRadius;
+            ctx.fillStyle = type.color;
+            ctx.beginPath();
+            ctx.arc(x, y, type.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        ctx.strokeStyle = type.color;
+        ctx.lineWidth = type.width;
+        // TODO: use startWidth and endWidth and somehow scale between them, idk.
+        ctx.beginPath();
+        var prevX = cells[0].xPos * cellRadius + cellRadius;
+        var prevY = cells[0].yPos * cellRadius + cellRadius;
+        ctx.moveTo(prevX, prevY);
+        if (cells.length > 2) {
+            prevX = cells[1].xPos * cellRadius + cellRadius;
+            prevY = cells[1].yPos * cellRadius + cellRadius;
+        }
+        var cell;
+        for (var i = 2; i < cells.length - 1; i++) {
+            cell = cells[i];
+            var x = cell.xPos * cellRadius + cellRadius;
+            var y = cell.yPos * cellRadius + cellRadius;
+            var cx = (x + prevX) / 2;
+            var cy = (y + prevY) / 2;
+            ctx.quadraticCurveTo(prevX, prevY, cx, cy);
+            prevX = x;
+            prevY = y;
+        }
+        cell = cells[cells.length - 1];
+        ctx.quadraticCurveTo(prevX, prevY, cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius);
+        ctx.stroke();
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1534,6 +1570,28 @@ var LinesEditor = (function (_super) {
         this.props.updateLineTypes(lineTypes);
     };
     LinesEditor.prototype.mouseUp = function (cell) {
+        if (this.drawingLine === undefined) {
+            if (this.state.selectedLineType === undefined)
+                return;
+            // create new line, currently with only one point
+            this.drawingLine = new MapLine(this.state.selectedLineType);
+            this.drawingLine.keyCells.push(cell);
+            var lines = this.props.lines.slice();
+            lines.push(this.drawingLine);
+            this.props.updateLines(lines);
+        }
+        else {
+            if (cell == this.lastClicked) {
+                // end the line
+                this.drawingLine = undefined;
+                this.props.drawingLine(true);
+            }
+            else {
+                // add control point to existing line
+                this.drawingLine.keyCells.push(cell);
+                this.props.drawingLine(false);
+            }
+        }
         /*
         if (!this.state.isDrawingOnMap)
             return;
@@ -1546,6 +1604,7 @@ var LinesEditor = (function (_super) {
         });
         this.props.hasDrawn(false);
         */
+        this.lastClicked = cell;
     };
     return LinesEditor;
 }(React.Component));
@@ -1908,7 +1967,7 @@ var WorldMap = (function (_super) {
             case 4 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 5 /* Lines */:
-                return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), drawingLine: this.mapView.redraw.bind(this.mapView) }));
+                return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), drawingLine: this.lineDrawn.bind(this) }));
             case 6 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 7 /* Layers */:
@@ -1995,7 +2054,13 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.updateLines = function (lines) {
         this.state.map.lines = lines;
-        this.mapChanged();
+        this.mapView.redraw(); // as this is adding a line that isn't yet finished, don't add to undo history
+    };
+    WorldMap.prototype.lineDrawn = function (finished) {
+        if (finished)
+            this.mapChanged(); // don't add to undo history til line is finished
+        else
+            this.mapView.redraw();
     };
     WorldMap.prototype.mapChanged = function () {
         this.setState({

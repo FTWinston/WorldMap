@@ -3,7 +3,7 @@ interface ILinesEditorProps {
     lines: MapLine[];
     updateLineTypes: (lineTypes: LineType[]) => void;
     updateLines: (lines: MapLine[]) => void;
-    drawingLine: () => void;
+    drawingLine: (finished: boolean) => void;
 }
 
 interface ILinesEditorState {
@@ -73,7 +73,36 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         })
         this.props.updateLineTypes(lineTypes);
     }
+    lastClicked?: MapCell;
+    drawingLine?: MapLine;
     mouseUp(cell: MapCell) {
+        if (this.drawingLine === undefined)
+        {
+            if (this.state.selectedLineType === undefined)
+                return;
+
+            // create new line, currently with only one point
+            this.drawingLine = new MapLine(this.state.selectedLineType);
+            this.drawingLine.keyCells.push(cell);
+
+            let lines = this.props.lines.slice();
+            lines.push(this.drawingLine);
+
+            this.props.updateLines(lines);
+        }
+        else {
+            if (cell == this.lastClicked) {
+                // end the line
+                this.drawingLine = undefined;
+                this.props.drawingLine(true);
+            }
+            else {
+                // add control point to existing line
+                this.drawingLine.keyCells.push(cell);
+                this.props.drawingLine(false);
+            }
+        }
+
         /*
         if (!this.state.isDrawingOnMap)
             return;
@@ -86,5 +115,7 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         });
         this.props.hasDrawn(false);
         */
+
+        this.lastClicked = cell;
     }
 }

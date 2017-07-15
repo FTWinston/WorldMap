@@ -87,7 +87,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Terrain:
                 return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
-                return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} drawingLine={this.mapView.redraw.bind(this.mapView)} />;
+                return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} drawingLine={this.lineDrawn.bind(this)} />;
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Layers:
@@ -176,7 +176,13 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
     private updateLines(lines: MapLine[]) {
         this.state.map.lines = lines;
-        this.mapChanged();
+        this.mapView.redraw(); // as this is adding a line that isn't yet finished, don't add to undo history
+    }
+    private lineDrawn(finished: boolean) {
+        if (finished)
+            this.mapChanged(); // don't add to undo history til line is finished
+        else
+            this.mapView.redraw();
     }
     private mapChanged() {
         this.setState({

@@ -179,8 +179,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
         }
 
-        this.drawLocations();
         this.drawLines();
+        this.drawLocations();
 
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
@@ -333,15 +333,16 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         for (let line of map.lines) {
             // use min / max X & Y of all keyCells to decide whether to draw or not. Possible that a line will wrap around the screen without cross it, but not worrying about that.
             let minX = Number.MAX_VALUE, minY = Number.MAX_VALUE, maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+            
             for (let cell of line.keyCells) {
                 if (minX > cell.xPos)
                     minX = cell.xPos;
-                else if (maxX > cell.xPos)
+                else if (maxX < cell.xPos)
                     maxX = cell.xPos;
 
                 if (minY > cell.yPos)
                     minY = cell.yPos;
-                else if (maxY > cell.yPos)
+                else if (maxY < cell.yPos)
                     maxY = cell.yPos;
             }
             minX = minX * cellRadius + cellRadius;
@@ -356,13 +357,62 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             if (maxY < drawExtent.minY || minY > drawExtent.maxY)
                 continue;
 
-            this.drawLine(line);
+            this.drawLine(line, cellRadius);
         }
     }
-    private drawLine(line: MapLine) {
+    private drawLine(line: MapLine, cellRadius: number) {
         let ctx = this.ctx;
+        let type = line.type;
+        
+        let cells = line.keyCells;
+        if (cells.length == 1) {
+            let cell = cells[0];
+            let x = cell.xPos * cellRadius + cellRadius;
+            let y = cell.yPos * cellRadius + cellRadius;
 
-        // TODO: translate and then actually draw line
+            ctx.fillStyle = type.color;
+            ctx.beginPath();
+            ctx.arc(x, y, type.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        
+        ctx.strokeStyle = type.color;
+        ctx.lineWidth = type.width;
+        // TODO: use startWidth and endWidth and somehow scale between them, idk.
+
+        ctx.beginPath();
+
+        let prevX = cells[0].xPos * cellRadius + cellRadius;
+        let prevY = cells[0].yPos * cellRadius + cellRadius;
+        ctx.moveTo(prevX, prevY);
+
+        if (cells.length > 2) {
+            prevX = cells[1].xPos * cellRadius + cellRadius;
+            prevY = cells[1].yPos * cellRadius + cellRadius;
+        }
+
+        let cell: MapCell;
+
+        for (let i=2; i<cells.length - 1; i++) {
+            cell = cells[i];
+
+            let x = cell.xPos * cellRadius + cellRadius;
+            let y = cell.yPos * cellRadius + cellRadius;
+
+            let cx = (x + prevX) / 2;
+            let cy = (y + prevY) / 2;
+
+            ctx.quadraticCurveTo(prevX, prevY, cx, cy);
+
+            prevX = x;
+            prevY = y;
+        }
+
+        cell = cells[cells.length - 1];
+        ctx.quadraticCurveTo(prevX, prevY, cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius);
+
+        ctx.stroke();
     }
 
     private resizing: boolean = false;
