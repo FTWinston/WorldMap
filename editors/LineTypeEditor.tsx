@@ -1,7 +1,7 @@
 interface ILineTypeEditorProps {
     editingType?: LineType;
     lineTypes: LineType[];
-    updateLineTypes: (lineTypes: LineType[]) => void;
+    updateLineTypes: (lineTypes: LineType[], recalculateType?: LineType) => void;
 }
 
 interface ILineTypeEditorState {
@@ -10,6 +10,7 @@ interface ILineTypeEditorState {
     width?: number;
     startWidth?: number;
     endWidth?: number;
+    curviture?: number;
 }
 
 class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEditorState> {
@@ -21,6 +22,7 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
                 width: 6,
                 startWidth: 6,
                 endWidth: 6,
+                curviture: 0.5,
             });
         else
             this.setState({
@@ -29,6 +31,7 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
                 width: this.props.editingType.width,
                 startWidth: this.props.editingType.startWidth,
                 endWidth: this.props.editingType.endWidth,
+                curviture: this.props.editingType.curviture,
             });
     }
     render() {
@@ -37,6 +40,7 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
         let width = this.state.width === undefined ? '' : this.state.width;
         let startWidth = this.state.startWidth === undefined ? '' : this.state.startWidth;
         let endWidth = this.state.endWidth === undefined ? '' : this.state.endWidth;
+        let curviture = this.state.curviture === undefined ? '' : this.state.curviture;
 
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
@@ -44,6 +48,14 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
             <div role="group"><label htmlFor="txtWidth">Width</label><input type="number" id="txtWidth" value={width.toString()} onChange={this.widthChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtStartWidth">Start width</label><input type="number" id="txtStartWidth" value={startWidth.toString()} onChange={this.startWidthChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtEndWidth">End width</label><input type="number" id="txtEndWidth" value={endWidth.toString()} onChange={this.endWidthChanged.bind(this)} /></div>
+            <div role="group"><label htmlFor="selCurviture">Curviture</label>
+                <select id="selCurviture" value={curviture.toString()} onChange={this.curvitureChanged.bind(this)}>
+                    <option value="1">High</option>
+                    <option value="0.5">Medium</option>
+                    <option value="0.2">Low</option>
+                    <option value="0">None</option>
+                </select>
+            </div>
             <div role="group">
                 <button type="submit">Save type</button>
                 <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
@@ -76,6 +88,11 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
             endWidth: e.target.value
         });
     }
+    private curvitureChanged(e: any) {
+        this.setState({
+            curviture: e.target.value.toString()
+        });
+    }
     private saveType(e: Event) {
         e.preventDefault();
 
@@ -87,23 +104,27 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
         if (color == '')
             return;
 
-        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined)
+        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined || this.state.curviture === undefined)
             return;
 
+        let changedCurviture: LineType|undefined = undefined;
         let editType = this.props.editingType;
         let lineTypes = this.props.lineTypes.slice();
         if (editType === undefined) {
-            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth));
+            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture));
         }
         else {
+            if (editType.curviture != this.state.curviture)
+                changedCurviture = editType;
             editType.name = name;
             editType.color = color;
             editType.width = this.state.width;
             editType.startWidth = this.state.startWidth;
             editType.endWidth = this.state.endWidth;
+            editType.curviture = this.state.curviture;
         }
 
-        this.props.updateLineTypes(lineTypes);
+        this.props.updateLineTypes(lineTypes, changedCurviture);
     }
     cancelEdit() {
         this.props.updateLineTypes(this.props.lineTypes);

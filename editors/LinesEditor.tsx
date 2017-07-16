@@ -66,7 +66,13 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             selectedLineType: type,
         });
     }
-    private lineTypesChanged(lineTypes: LineType[]) {
+    private lineTypesChanged(lineTypes: LineType[], recalculateType?: LineType) {
+        // if a type's curviture has changed, recalculate all lines of that type
+        if (recalculateType !== undefined)
+            for (let line of this.props.lines)
+                if (line.type == recalculateType)
+                    line.updateRenderPoints();
+
         this.setState({
             isEditingLineType: false,
             isDrawingOnMap: false,
@@ -99,6 +105,7 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             else {
                 // add control point to existing line
                 this.drawingLine.keyCells.push(cell);
+                this.drawingLine.updateRenderPoints();
                 this.props.drawingLine(false);
             }
         }

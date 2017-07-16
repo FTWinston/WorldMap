@@ -249,7 +249,7 @@ class MapData {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'keyCells' || key == 'type')
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints')
                 return undefined;
             return value;
         });
@@ -266,7 +266,7 @@ class MapData {
             cells: {typeID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
-            lineTypes: {name: string, color: string, width: number, startWidth: number, endWidth: number}[];
+            lineTypes: {name: string, color: string, width: number, startWidth: number, endWidth: number, curviture: number}[];
             lines: {typeID: number, cellIDs: number[]}[];
         } = JSON.parse(json);
 
@@ -303,8 +303,10 @@ class MapData {
 
         if (data.lineTypes !== undefined)
             map.lineTypes = data.lineTypes.map(function (type) {
-                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth);
+                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
             });
+
+        map.positionCells();
 
         if (data.lines !== undefined)
             for (let line of data.lines) {
@@ -315,10 +317,9 @@ class MapData {
                         mapLine.keyCells.push(cell);
                 }
 
+                mapLine.updateRenderPoints();
                 map.lines.push(mapLine);
             }
-
-        map.positionCells();
 
         return map;
     }

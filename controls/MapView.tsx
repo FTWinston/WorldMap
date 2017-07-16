@@ -332,7 +332,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         
         for (let line of map.lines) {
             // use min / max X & Y of all keyCells to decide whether to draw or not. Possible that a line will wrap around the screen without cross it, but not worrying about that.
-            let minX = Number.MAX_VALUE, minY = Number.MAX_VALUE, maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+            let firstCell = line.keyCells[0];
+            let minX = firstCell.xPos, minY = firstCell.yPos, maxX = firstCell.xPos, maxY = firstCell.yPos;
             
             for (let cell of line.keyCells) {
                 if (minX > cell.xPos)
@@ -364,9 +365,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let ctx = this.ctx;
         let type = line.type;
         
-        let cells = line.keyCells;
-        if (cells.length == 1) {
-            let cell = cells[0];
+        if (line.keyCells.length == 1) {
+            let cell = line.keyCells[0];
             let x = cell.xPos * cellRadius + cellRadius;
             let y = cell.yPos * cellRadius + cellRadius;
 
@@ -377,41 +377,25 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             return;
         }
         
+        let points = line.renderPoints;
         ctx.strokeStyle = type.color;
         ctx.lineWidth = type.width;
-        // TODO: use startWidth and endWidth and somehow scale between them, idk.
 
         ctx.beginPath();
+        let x = points[0] * cellRadius + cellRadius;
+        let y = points[1] * cellRadius + cellRadius;
+        ctx.moveTo(x, y);
 
-        let prevX = cells[0].xPos * cellRadius + cellRadius;
-        let prevY = cells[0].yPos * cellRadius + cellRadius;
-        ctx.moveTo(prevX, prevY);
+        for (let i=2; i<points.length - 1; i+=2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
 
-        if (cells.length > 2) {
-            prevX = cells[1].xPos * cellRadius + cellRadius;
-            prevY = cells[1].yPos * cellRadius + cellRadius;
+            // TODO: if point < 16, interpolate lineWidth from startWidth to width
+            // TODO: if point > length - 16, interpolate lineWidth from width to endWidth
+            // if line only has 2 key cells ... do 8 steps instead?
+
+            ctx.lineTo(x, y);
         }
-
-        let cell: MapCell;
-
-        for (let i=2; i<cells.length - 1; i++) {
-            cell = cells[i];
-
-            let x = cell.xPos * cellRadius + cellRadius;
-            let y = cell.yPos * cellRadius + cellRadius;
-
-            let cx = (x + prevX) / 2;
-            let cy = (y + prevY) / 2;
-
-            ctx.quadraticCurveTo(prevX, prevY, cx, cy);
-
-            prevX = x;
-            prevY = y;
-        }
-
-        cell = cells[cells.length - 1];
-        ctx.quadraticCurveTo(prevX, prevY, cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius);
-
         ctx.stroke();
     }
 

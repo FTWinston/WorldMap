@@ -223,7 +223,7 @@ var MapData = (function () {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'keyCells' || key == 'type')
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints')
                 return undefined;
             return value;
         });
@@ -259,8 +259,9 @@ var MapData = (function () {
             }
         if (data.lineTypes !== undefined)
             map.lineTypes = data.lineTypes.map(function (type) {
-                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth);
+                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
             });
+        map.positionCells();
         if (data.lines !== undefined)
             for (var _b = 0, _c = data.lines; _b < _c.length; _b++) {
                 var line = _c[_b];
@@ -271,9 +272,9 @@ var MapData = (function () {
                     if (cell !== null)
                         mapLine.keyCells.push(cell);
                 }
+                mapLine.updateRenderPoints();
                 map.lines.push(mapLine);
             }
-        map.positionCells();
         return map;
     };
     return MapData;
@@ -373,16 +374,17 @@ MapLocation.icons['lgWhite'] = {
     draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 10); }
 };
 var LineType = (function () {
-    function LineType(name, color, width, startWidth, endWidth) {
+    function LineType(name, color, width, startWidth, endWidth, curviture) {
         this.name = name;
         this.color = color;
         this.width = width;
         this.startWidth = startWidth;
         this.endWidth = endWidth;
+        this.curviture = curviture;
     }
     LineType.createDefaults = function (types) {
-        types.push(new LineType('River', '#179ce6', 6, 0, 9));
-        types.push(new LineType('Road', '#bbad65', 4, 4, 4));
+        types.push(new LineType('River', '#179ce6', 6, 0, 9, 1));
+        types.push(new LineType('Road', '#bbad65', 4, 4, 4, 0.5));
     };
     return LineType;
 }());
@@ -391,8 +393,67 @@ var MapLine = (function () {
         this.type = type;
         this.keyCells = [];
     }
+    MapLine.prototype.updateRenderPoints = function () {
+        this.renderPoints = [];
+        if (this.keyCells.length < 2)
+            return;
+        var tension = this.type.curviture;
+        var pts = [], x, y, t1x, t2x, t1y, t2y, c1, c2, c3, c4, fraction, step, iPt;
+        var firstCell = this.keyCells[0];
+        var lastCell = this.keyCells[this.keyCells.length - 1];
+        // decide if it's a closed loop, which needs the ends of the array set up differently
+        var closedLoop;
+        var lastCellIndex;
+        if (firstCell == lastCell) {
+            closedLoop = true;
+            lastCellIndex = this.keyCells.length - 2; // don't copy the last cell, its the same as the first
+            lastCell = this.keyCells[lastCellIndex];
+        }
+        else {
+            closedLoop = false;
+            lastCellIndex = this.keyCells.length - 1;
+        }
+        for (var iCell = 0; iCell <= lastCellIndex; iCell++) {
+            var cell = this.keyCells[iCell];
+            pts.push(cell.xPos, cell.yPos);
+        }
+        if (closedLoop) {
+            // copy last cell onto start, and first cells onto end
+            var secondCell = this.keyCells[1];
+            pts.push(firstCell.xPos, firstCell.yPos);
+            pts.push(secondCell.xPos, secondCell.yPos);
+            pts.unshift(lastCell.xPos, lastCell.yPos);
+        }
+        else {
+            // copy first cell onto start, and last cell onto end
+            pts.unshift(firstCell.xPos, firstCell.yPos);
+            pts.push(lastCell.xPos, lastCell.yPos);
+        }
+        // loop through key points. Use each set of 4 points p0 p1 p2 p3 to draw segment p1-p2.
+        for (iPt = 2; iPt < (pts.length - 4); iPt += 2) {
+            for (step = 0; step <= MapLine.stepsPerSegment; step++) {
+                // tension vectors
+                t1x = (pts[iPt + 2] - pts[iPt - 2]) * tension;
+                t2x = (pts[iPt + 4] - pts[iPt]) * tension;
+                t1y = (pts[iPt + 3] - pts[iPt - 1]) * tension;
+                t2y = (pts[iPt + 5] - pts[iPt + 1]) * tension;
+                fraction = step / MapLine.stepsPerSegment;
+                // cardinals
+                c1 = 2 * Math.pow(fraction, 3) - 3 * Math.pow(fraction, 2) + 1;
+                c2 = -(2 * Math.pow(fraction, 3)) + 3 * Math.pow(fraction, 2);
+                c3 = Math.pow(fraction, 3) - 2 * Math.pow(fraction, 2) + fraction;
+                c4 = Math.pow(fraction, 3) - Math.pow(fraction, 2);
+                //x and y coordinates
+                x = c1 * pts[iPt] + c2 * pts[iPt + 2] + c3 * t1x + c4 * t2x;
+                y = c1 * pts[iPt + 1] + c2 * pts[iPt + 3] + c3 * t1y + c4 * t2y;
+                this.renderPoints.push(x);
+                this.renderPoints.push(y);
+            }
+        }
+    };
     return MapLine;
 }());
+MapLine.stepsPerSegment = 16;
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -867,7 +928,8 @@ var MapView = (function (_super) {
         for (var _i = 0, _a = map.lines; _i < _a.length; _i++) {
             var line = _a[_i];
             // use min / max X & Y of all keyCells to decide whether to draw or not. Possible that a line will wrap around the screen without cross it, but not worrying about that.
-            var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE, maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
+            var firstCell = line.keyCells[0];
+            var minX = firstCell.xPos, minY = firstCell.yPos, maxX = firstCell.xPos, maxY = firstCell.yPos;
             for (var _b = 0, _c = line.keyCells; _b < _c.length; _b++) {
                 var cell = _c[_b];
                 if (minX > cell.xPos)
@@ -893,41 +955,31 @@ var MapView = (function (_super) {
     MapView.prototype.drawLine = function (line, cellRadius) {
         var ctx = this.ctx;
         var type = line.type;
-        var cells = line.keyCells;
-        if (cells.length == 1) {
-            var cell_1 = cells[0];
-            var x = cell_1.xPos * cellRadius + cellRadius;
-            var y = cell_1.yPos * cellRadius + cellRadius;
+        if (line.keyCells.length == 1) {
+            var cell = line.keyCells[0];
+            var x_1 = cell.xPos * cellRadius + cellRadius;
+            var y_1 = cell.yPos * cellRadius + cellRadius;
             ctx.fillStyle = type.color;
             ctx.beginPath();
-            ctx.arc(x, y, type.width / 2, 0, Math.PI * 2);
+            ctx.arc(x_1, y_1, type.width / 2, 0, Math.PI * 2);
             ctx.fill();
             return;
         }
+        var points = line.renderPoints;
         ctx.strokeStyle = type.color;
         ctx.lineWidth = type.width;
-        // TODO: use startWidth and endWidth and somehow scale between them, idk.
         ctx.beginPath();
-        var prevX = cells[0].xPos * cellRadius + cellRadius;
-        var prevY = cells[0].yPos * cellRadius + cellRadius;
-        ctx.moveTo(prevX, prevY);
-        if (cells.length > 2) {
-            prevX = cells[1].xPos * cellRadius + cellRadius;
-            prevY = cells[1].yPos * cellRadius + cellRadius;
+        var x = points[0] * cellRadius + cellRadius;
+        var y = points[1] * cellRadius + cellRadius;
+        ctx.moveTo(x, y);
+        for (var i = 2; i < points.length - 1; i += 2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
+            // TODO: if point < 16, interpolate lineWidth from startWidth to width
+            // TODO: if point > length - 16, interpolate lineWidth from width to endWidth
+            // if line only has 2 key cells ... do 8 steps instead?
+            ctx.lineTo(x, y);
         }
-        var cell;
-        for (var i = 2; i < cells.length - 1; i++) {
-            cell = cells[i];
-            var x = cell.xPos * cellRadius + cellRadius;
-            var y = cell.yPos * cellRadius + cellRadius;
-            var cx = (x + prevX) / 2;
-            var cy = (y + prevY) / 2;
-            ctx.quadraticCurveTo(prevX, prevY, cx, cy);
-            prevX = x;
-            prevY = y;
-        }
-        cell = cells[cells.length - 1];
-        ctx.quadraticCurveTo(prevX, prevY, cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius);
         ctx.stroke();
     };
     MapView.prototype.resize = function () {
@@ -1415,6 +1467,7 @@ var LineTypeEditor = (function (_super) {
                 width: 6,
                 startWidth: 6,
                 endWidth: 6,
+                curviture: 0.5,
             });
         else
             this.setState({
@@ -1423,6 +1476,7 @@ var LineTypeEditor = (function (_super) {
                 width: this.props.editingType.width,
                 startWidth: this.props.editingType.startWidth,
                 endWidth: this.props.editingType.endWidth,
+                curviture: this.props.editingType.curviture,
             });
     };
     LineTypeEditor.prototype.render = function () {
@@ -1430,6 +1484,7 @@ var LineTypeEditor = (function (_super) {
         var width = this.state.width === undefined ? '' : this.state.width;
         var startWidth = this.state.startWidth === undefined ? '' : this.state.startWidth;
         var endWidth = this.state.endWidth === undefined ? '' : this.state.endWidth;
+        var curviture = this.state.curviture === undefined ? '' : this.state.curviture;
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -1446,6 +1501,13 @@ var LineTypeEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtEndWidth" }, "End width"),
                 React.createElement("input", { type: "number", id: "txtEndWidth", value: endWidth.toString(), onChange: this.endWidthChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "selCurviture" }, "Curviture"),
+                React.createElement("select", { id: "selCurviture", value: curviture.toString(), onChange: this.curvitureChanged.bind(this) },
+                    React.createElement("option", { value: "1" }, "High"),
+                    React.createElement("option", { value: "0.5" }, "Medium"),
+                    React.createElement("option", { value: "0.2" }, "Low"),
+                    React.createElement("option", { value: "0" }, "None"))),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -1476,6 +1538,11 @@ var LineTypeEditor = (function (_super) {
             endWidth: e.target.value
         });
     };
+    LineTypeEditor.prototype.curvitureChanged = function (e) {
+        this.setState({
+            curviture: e.target.value.toString()
+        });
+    };
     LineTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
         var name = this.state.name === undefined ? '' : this.state.name.trim();
@@ -1484,21 +1551,25 @@ var LineTypeEditor = (function (_super) {
         var color = this.state.color === undefined ? '' : this.state.color;
         if (color == '')
             return;
-        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined)
+        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined || this.state.curviture === undefined)
             return;
+        var changedCurviture = undefined;
         var editType = this.props.editingType;
         var lineTypes = this.props.lineTypes.slice();
         if (editType === undefined) {
-            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth));
+            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture));
         }
         else {
+            if (editType.curviture != this.state.curviture)
+                changedCurviture = editType;
             editType.name = name;
             editType.color = color;
             editType.width = this.state.width;
             editType.startWidth = this.state.startWidth;
             editType.endWidth = this.state.endWidth;
+            editType.curviture = this.state.curviture;
         }
-        this.props.updateLineTypes(lineTypes);
+        this.props.updateLineTypes(lineTypes, changedCurviture);
     };
     LineTypeEditor.prototype.cancelEdit = function () {
         this.props.updateLineTypes(this.props.lineTypes);
@@ -1562,7 +1633,14 @@ var LinesEditor = (function (_super) {
             selectedLineType: type,
         });
     };
-    LinesEditor.prototype.lineTypesChanged = function (lineTypes) {
+    LinesEditor.prototype.lineTypesChanged = function (lineTypes, recalculateType) {
+        // if a type's curviture has changed, recalculate all lines of that type
+        if (recalculateType !== undefined)
+            for (var _i = 0, _a = this.props.lines; _i < _a.length; _i++) {
+                var line = _a[_i];
+                if (line.type == recalculateType)
+                    line.updateRenderPoints();
+            }
         this.setState({
             isEditingLineType: false,
             isDrawingOnMap: false,
@@ -1589,6 +1667,7 @@ var LinesEditor = (function (_super) {
             else {
                 // add control point to existing line
                 this.drawingLine.keyCells.push(cell);
+                this.drawingLine.updateRenderPoints();
                 this.props.drawingLine(false);
             }
         }
