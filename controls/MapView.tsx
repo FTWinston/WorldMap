@@ -379,24 +379,59 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         
         let points = line.renderPoints;
         ctx.strokeStyle = type.color;
-        ctx.lineWidth = type.width;
 
-        ctx.beginPath();
+        let mainWidthStart = line.isLoop || type.width == type.startWidth ? 2 : 16;
+        let mainWidthEnd = line.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
         let x = points[0] * cellRadius + cellRadius;
         let y = points[1] * cellRadius + cellRadius;
+        
+        ctx.beginPath();
         ctx.moveTo(x, y);
+        
+        // for the initial line segments, line width changes from startWidth to width
+        for (let i=2; i<mainWidthStart; i+=2) {
+            ctx.lineCap = 'round';
+            let fraction = i / mainWidthStart;
+            ctx.lineWidth = type.startWidth * (1-fraction) + type.width * fraction;
 
-        for (let i=2; i<points.length - 1; i+=2) {
             x = points[i] * cellRadius + cellRadius;
             y = points[i+1] * cellRadius + cellRadius;
 
-            // TODO: if point < 16, interpolate lineWidth from startWidth to width
-            // TODO: if point > length - 16, interpolate lineWidth from width to endWidth
-            // if line only has 2 key cells ... do 8 steps instead?
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
 
+        ctx.lineCap = line.isLoop ? 'butt' : 'round';
+
+        // for the main segment, its always just width, so can draw them all in a single stroke
+        ctx.lineWidth = type.width;
+        for (let i = mainWidthStart; i<mainWidthEnd; i+=2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
             ctx.lineTo(x, y);
         }
         ctx.stroke();
+
+        // for the end line segment, line width changes from width to endWidth
+        for (let i=mainWidthEnd; i < points.length - 1; i+=2) {
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            let fraction = (points.length - i - 2)  / (points.length - mainWidthEnd);
+            ctx.lineWidth = type.endWidth * (1-fraction) + type.width * fraction;
+            
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        ctx.lineCap = 'butt';
     }
 
     private resizing: boolean = false;

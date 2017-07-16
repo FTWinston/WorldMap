@@ -17,9 +17,11 @@ class LineType {
 class MapLine {
     readonly keyCells: MapCell[];
     renderPoints: number[];
+    isLoop: boolean;
 
     constructor(public type: LineType) {
         this.keyCells = [];
+        this.isLoop = false;
     }
 
     static readonly stepsPerSegment = 16;
@@ -41,15 +43,14 @@ class MapLine {
         let lastCell = this.keyCells[this.keyCells.length - 1];
 
         // decide if it's a closed loop, which needs the ends of the array set up differently
-        let closedLoop: boolean;
         let lastCellIndex: number;
         if (firstCell == lastCell) {
-            closedLoop = true;
+            this.isLoop = true;
             lastCellIndex = this.keyCells.length - 2; // don't copy the last cell, its the same as the first
             lastCell = this.keyCells[lastCellIndex];
         }
         else {
-            closedLoop = false;
+            this.isLoop = false;
             lastCellIndex = this.keyCells.length - 1;
         }
         
@@ -58,7 +59,7 @@ class MapLine {
             pts.push(cell.xPos, cell.yPos);
         }
         
-        if (closedLoop) {
+        if (this.isLoop) {
             // copy last cell onto start, and first cells onto end
             let secondCell = this.keyCells[1];
             pts.push(firstCell.xPos, firstCell.yPos);

@@ -249,7 +249,8 @@ class MapData {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints')
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints'
+                || key == 'isLoop')
                 return undefined;
             return value;
         });

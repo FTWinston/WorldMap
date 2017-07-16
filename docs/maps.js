@@ -223,7 +223,8 @@ var MapData = (function () {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
                 || key == 'map' || key == 'cellType' || key == 'selected' || key == 'underlyingWidth'
-                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints')
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints'
+                || key == 'isLoop')
                 return undefined;
             return value;
         });
@@ -392,6 +393,7 @@ var MapLine = (function () {
     function MapLine(type) {
         this.type = type;
         this.keyCells = [];
+        this.isLoop = false;
     }
     MapLine.prototype.updateRenderPoints = function () {
         this.renderPoints = [];
@@ -402,22 +404,21 @@ var MapLine = (function () {
         var firstCell = this.keyCells[0];
         var lastCell = this.keyCells[this.keyCells.length - 1];
         // decide if it's a closed loop, which needs the ends of the array set up differently
-        var closedLoop;
         var lastCellIndex;
         if (firstCell == lastCell) {
-            closedLoop = true;
+            this.isLoop = true;
             lastCellIndex = this.keyCells.length - 2; // don't copy the last cell, its the same as the first
             lastCell = this.keyCells[lastCellIndex];
         }
         else {
-            closedLoop = false;
+            this.isLoop = false;
             lastCellIndex = this.keyCells.length - 1;
         }
         for (var iCell = 0; iCell <= lastCellIndex; iCell++) {
             var cell = this.keyCells[iCell];
             pts.push(cell.xPos, cell.yPos);
         }
-        if (closedLoop) {
+        if (this.isLoop) {
             // copy last cell onto start, and first cells onto end
             var secondCell = this.keyCells[1];
             pts.push(firstCell.xPos, firstCell.yPos);
@@ -967,20 +968,46 @@ var MapView = (function (_super) {
         }
         var points = line.renderPoints;
         ctx.strokeStyle = type.color;
-        ctx.lineWidth = type.width;
-        ctx.beginPath();
+        var mainWidthStart = line.isLoop || type.width == type.startWidth ? 2 : 16;
+        var mainWidthEnd = line.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
         var x = points[0] * cellRadius + cellRadius;
         var y = points[1] * cellRadius + cellRadius;
+        ctx.beginPath();
         ctx.moveTo(x, y);
-        for (var i = 2; i < points.length - 1; i += 2) {
+        // for the initial line segments, line width changes from startWidth to width
+        for (var i = 2; i < mainWidthStart; i += 2) {
+            ctx.lineCap = 'round';
+            var fraction = i / mainWidthStart;
+            ctx.lineWidth = type.startWidth * (1 - fraction) + type.width * fraction;
             x = points[i] * cellRadius + cellRadius;
             y = points[i + 1] * cellRadius + cellRadius;
-            // TODO: if point < 16, interpolate lineWidth from startWidth to width
-            // TODO: if point > length - 16, interpolate lineWidth from width to endWidth
-            // if line only has 2 key cells ... do 8 steps instead?
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        ctx.lineCap = line.isLoop ? 'butt' : 'round';
+        // for the main segment, its always just width, so can draw them all in a single stroke
+        ctx.lineWidth = type.width;
+        for (var i = mainWidthStart; i < mainWidthEnd; i += 2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
             ctx.lineTo(x, y);
         }
         ctx.stroke();
+        // for the end line segment, line width changes from width to endWidth
+        for (var i = mainWidthEnd; i < points.length - 1; i += 2) {
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            var fraction = (points.length - i - 2) / (points.length - mainWidthEnd);
+            ctx.lineWidth = type.endWidth * (1 - fraction) + type.width * fraction;
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        ctx.lineCap = 'butt';
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
