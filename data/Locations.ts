@@ -1,3 +1,8 @@
+interface ILocationIcon {
+    name: string;
+    draw: (ctx: CanvasRenderingContext2D) => void;
+}
+
 class LocationType {
     constructor(
         public name: string,
@@ -27,7 +32,7 @@ class MapLocation {
         return undefined;
     }
 
-    static icons: {[key:string]:IDrawable} = {};
+    static icons: {[key:string]:ILocationIcon} = {};
 
     static setDarkColors(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = '#000000';

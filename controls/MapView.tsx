@@ -172,11 +172,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let outline = this.props.renderGrid && !twoLevels;
         let writeCoords = this.props.scrollUI && !twoLevels;
 
-        this.drawCells(drawInterval, outline, true, !twoLevels, writeCoords);
+        this.drawCells(drawInterval, outline, true, writeCoords);
 
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, true, this.props.scrollUI);
+            this.drawCells(drawInterval * 2, true, false, this.props.scrollUI);
         }
 
         this.drawLines();
@@ -202,7 +202,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 maxY: Number.MAX_VALUE,
             }
     }
-    private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+    private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
         this.ctx.lineWidth = 1;
         this.ctx.font = '8pt sans-serif';
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -239,18 +239,20 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
 
-            this.drawCell(cell, centerX, centerY, drawCellRadius, outline, fillContent, showSelection, writeCoords);
+            this.ctx.translate(centerX, centerY);
+            this.drawCell(cell, drawCellRadius, outline, fillContent, writeCoords);
+            this.ctx.translate(-centerX, -centerY);
         }
     }
-    private drawCell(cell: MapCell, centerX: number, centerY: number, radius: number, outline: boolean, fillContent: boolean, showSelection: boolean, writeCoords: boolean) {
+    private drawCell(cell: MapCell, radius: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
         let ctx = this.ctx;
         ctx.beginPath();
 
         let angle, x, y;
         for (let point = 0; point < 6; point++) {
             angle = 2 * Math.PI / 6 * (point + 0.5);
-            x = centerX + radius * Math.cos(angle);
-            y = centerY + radius * Math.sin(angle);
+            x = radius * Math.cos(angle);
+            y = radius * Math.sin(angle);
 
             if (point === 0)
                 ctx.moveTo(x, y);
@@ -263,15 +265,25 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             ctx.stroke();
         }
 
-        if (fillContent || (cell.selected && showSelection)) {
-            if (cell.selected)
-                ctx.fillStyle = '#fcc';
-            else if (cell.cellType == null)
+        if (fillContent) {
+            if (cell.cellType == null)
                 ctx.fillStyle = '#666';
             else
                 ctx.fillStyle = cell.cellType.color;
 
             ctx.fill();
+
+            if (cell.cellType.pattern !== undefined && cell.cellType.patternColor !== undefined) {
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = cell.cellType.patternColor;
+                
+                let scale = radius / 12;
+                ctx.scale(scale, scale);
+
+                MapCell.patterns[cell.cellType.pattern].draw(ctx, new Object());
+                
+                ctx.scale(1/scale, 1/scale);
+            }
         }
 
         if (writeCoords) {
@@ -279,7 +291,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), centerX, centerY);
+            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), 0, 0);
         }
     }
     private getCellDisplayX(cell: MapCell) {
