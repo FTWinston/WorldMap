@@ -701,6 +701,7 @@ var MapView = (function (_super) {
         var ctx = this.canvas.getContext('2d');
         if (ctx !== null)
             this.ctx = ctx;
+        this.createPatterns();
         if (this.props.scrollUI)
             this.setupTouch();
         this.resize();
@@ -721,6 +722,12 @@ var MapView = (function (_super) {
                 scrollbarWidth: this.state.scrollbarWidth,
                 scrollbarHeight: this.state.scrollbarHeight,
             });
+    };
+    MapView.prototype.createPatterns = function () {
+        var _this = this;
+        var img = new Image();
+        img.src = 'speckled.png';
+        img.onload = function () { return _this.terrainPattern = _this.ctx.createPattern(img, 'repeat'); };
     };
     MapView.prototype.setupTouch = function () {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -877,6 +884,8 @@ var MapView = (function (_super) {
                 ctx.fillStyle = '#666';
             else
                 ctx.fillStyle = cell.cellType.color;
+            ctx.fill();
+            ctx.fillStyle = this.terrainPattern;
             ctx.fill();
         }
         if (writeCoords) {

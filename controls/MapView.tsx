@@ -50,6 +50,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         if (ctx !== null)
             this.ctx = ctx;
 
+        this.createPatterns();
+
         if (this.props.scrollUI)
             this.setupTouch();
         this.resize();
@@ -71,6 +73,12 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 scrollbarWidth: this.state.scrollbarWidth,
                 scrollbarHeight: this.state.scrollbarHeight,
             });
+    }
+    terrainPattern: CanvasPattern;
+    private createPatterns() {
+        var img = new Image();
+        img.src = 'speckled.png';
+        img.onload = () => this.terrainPattern = this.ctx.createPattern(img, 'repeat');
     }
     private setupTouch() {
         this.hammer = new Hammer.Manager(this.scrollPane);
@@ -271,6 +279,9 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             else
                 ctx.fillStyle = cell.cellType.color;
 
+            ctx.fill();
+
+            ctx.fillStyle = this.terrainPattern;
             ctx.fill();
         }
 
