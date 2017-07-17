@@ -19,12 +19,11 @@ class SaveEditor extends React.Component<ISaveEditorProps, {}> {
     }
     private updateDetails(e: React.FormEvent) {
         e.preventDefault();
-        window.localStorage.setItem(SaveEditor.localStorageName, this.props.map.saveToJSON());
+        SaveLoad.saveData(this.props.map.saveToJSON(), (success: boolean) => console.log('save succeeded'));
         this.forceUpdate();
     }
     private clearSavedData() {
-        window.localStorage.removeItem(SaveEditor.localStorageName);
+        SaveLoad.clearSaved();
         location.reload();
     }
-    public static readonly localStorageName = 'savedMap';
 }

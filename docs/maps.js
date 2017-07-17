@@ -1216,16 +1216,15 @@ var SaveEditor = (function (_super) {
     };
     SaveEditor.prototype.updateDetails = function (e) {
         e.preventDefault();
-        window.localStorage.setItem(SaveEditor.localStorageName, this.props.map.saveToJSON());
+        SaveLoad.saveData(this.props.map.saveToJSON(), function (success) { return console.log('save succeeded'); });
         this.forceUpdate();
     };
     SaveEditor.prototype.clearSavedData = function () {
-        window.localStorage.removeItem(SaveEditor.localStorageName);
+        SaveLoad.clearSaved();
         location.reload();
     };
     return SaveEditor;
 }(React.Component));
-SaveEditor.localStorageName = 'savedMap';
 var DownloadEditor = (function (_super) {
     __extends(DownloadEditor, _super);
     function DownloadEditor(props) {
@@ -2073,6 +2072,77 @@ var LayersEditor = (function (_super) {
     };
     return LayersEditor;
 }(React.Component));
+var SaveLoad = (function () {
+    function SaveLoad() {
+    }
+    SaveLoad.loadData = function (callback) {
+        var identifier = SaveLoad.getQueryParam('id');
+        if (identifier === undefined) {
+            callback(null);
+            return;
+        }
+        var url = SaveLoad.apiRoot + identifier;
+        SaveLoad.getAjax(url, callback);
+        // local storage of single map file
+        //callback(window.localStorage.getItem(SaveLoad.localStorageName));
+    };
+    SaveLoad.saveData = function (dataJson, callback) {
+        var identifier = SaveLoad.getQueryParam('id');
+        var url = identifier === undefined ? SaveLoad.apiRoot + 'new' : SaveLoad.apiRoot + 'update/' + identifier;
+        var dataObj = { snippet: dataJson };
+        SaveLoad.postAjax(url, JSON.stringify(dataObj), function (data) {
+            if (identifier === undefined) {
+                identifier = JSON.parse(data).id;
+                url = window.location.href.split('?')[0] + '?id=' + identifier;
+                window.history.pushState(identifier, document.title, url);
+            }
+            callback(true);
+        });
+        // local storage of single map file
+        //window.localStorage.setItem(SaveLoad.localStorageName, dataJson);
+    };
+    SaveLoad.clearSaved = function () {
+        window.localStorage.removeItem(SaveLoad.localStorageName);
+    };
+    SaveLoad.getQueryParam = function (name) {
+        if (SaveLoad.queryParams === undefined) {
+            SaveLoad.queryParams = {};
+            var vars = window.location.search.substring(1).split('&');
+            for (var i = 0; i < vars.length; i++) {
+                var pair = vars[i].split('=');
+                SaveLoad.queryParams[pair[0]] = pair[1];
+            }
+        }
+        return SaveLoad.queryParams[name];
+    };
+    SaveLoad.getAjax = function (url, success) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState > 3 && xhr.status == 200)
+                success(xhr.responseText);
+        };
+        xhr.send();
+        return xhr;
+    };
+    SaveLoad.postAjax = function (url, data, success) {
+        var params = typeof data == 'string' ? data : Object.keys(data).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }).join('&');
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState > 3 && xhr.status == 200) {
+                success(xhr.responseText);
+            }
+        };
+        xhr.setRequestHeader('Content-Type', 'application/json'); //'application/x-www-form-urlencoded');
+        xhr.send(params);
+        return xhr;
+    };
+    return SaveLoad;
+}());
+SaveLoad.localStorageName = 'savedMap';
+SaveLoad.apiRoot = 'https://jsonbin.io/b/';
+SaveLoad.queryParams = undefined;
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
         s = arguments[i];
@@ -2085,16 +2155,23 @@ var WorldMap = (function (_super) {
     __extends(WorldMap, _super);
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
-        var dataJson = window.localStorage.getItem(SaveEditor.localStorageName);
-        var map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
         _this.state = {
-            map: map,
+            map: props.map,
             activeEditor: props.editable ? 2 /* Overview */ : undefined,
         };
         return _this;
     }
+    WorldMap.init = function () {
+        SaveLoad.loadData(WorldMap.display);
+    };
+    WorldMap.display = function (dataJson) {
+        var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
+        var editable = SaveLoad.getQueryParam('readonly') === undefined;
+        var worldMap = ReactDOM.render(React.createElement(WorldMap, { editable: editable, map: map }), document.getElementById('uiRoot'));
+    };
     WorldMap.prototype.componentDidMount = function () {
-        this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+        if (this.changes !== undefined)
+            this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
     };
     WorldMap.prototype.render = function () {
         var _this = this;
@@ -2244,6 +2321,5 @@ var WorldMap = (function (_super) {
     };
     return WorldMap;
 }(React.Component));
-var editable = document.location.search != '?readonly';
-var worldMap = ReactDOM.render(React.createElement(WorldMap, { editable: editable }), document.getElementById('uiRoot'));
+WorldMap.init();
 //# sourceMappingURL=maps.js.map

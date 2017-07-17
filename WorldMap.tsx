@@ -18,6 +18,7 @@ interface IMapEditor {
 
 interface IWorldMapProps {
     editable: boolean;
+    map: MapData;
 }
 
 interface IWorldMapState {
@@ -27,21 +28,32 @@ interface IWorldMapState {
 }
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
+    static init() {
+        SaveLoad.loadData(WorldMap.display);
+    }
+
+    static display(dataJson: string|null) {
+        let map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
+        let editable = SaveLoad.getQueryParam('readonly') === undefined;
+        let worldMap = ReactDOM.render(
+            <WorldMap editable={editable} map={map} />,
+            document.getElementById('uiRoot') as HTMLElement
+        ) as WorldMap;
+    }
+
     constructor(props: IWorldMapProps) {
         super(props);
 
-        let dataJson = window.localStorage.getItem(SaveEditor.localStorageName);
-        let map = dataJson === null ? new MapData(50, 50) : MapData.loadFromJSON(dataJson);
-
         this.state = {
-            map: map,
+            map: props.map,
             activeEditor: props.editable ? EditorType.Overview : undefined,
         }
     }
     private changes: ChangeHistory;
     private mapView: MapView;
     componentDidMount() {
-        this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+        if (this.changes !== undefined)
+            this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
     }
     render() {
         if (this.state.map === undefined)
@@ -202,8 +214,4 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
 }
 
-let editable = document.location.search != '?readonly';
-let worldMap = ReactDOM.render(
-    <WorldMap editable={editable} />,
-    document.getElementById('uiRoot') as HTMLElement
-) as WorldMap;
+WorldMap.init();

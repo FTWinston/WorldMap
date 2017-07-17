@@ -44,6 +44,7 @@
         "editors/LocationsEditor.tsx",
         "editors/LayersEditor.tsx",
 
+        "SaveLoad.ts",
         "WorldMap.tsx"
     ]
 }
