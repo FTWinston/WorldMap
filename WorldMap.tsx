@@ -1,5 +1,4 @@
 const enum EditorType {
-    Save,
     Download,
     Overview,
     Size,
@@ -94,8 +93,6 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         };
         
         switch(editor) {
-            case EditorType.Save:
-                return <SaveEditor {...props} map={this.state.map} />;
             case EditorType.Download:
                 return <DownloadEditor {...props} map={this.state.map} />;
             case EditorType.Overview:

@@ -592,17 +592,37 @@ var ChangeHistory = (function (_super) {
         _this.maxUndoSteps = 10;
         _this.state = {
             lastAppliedChangeIndex: -1,
+            lastSavedChangedIndex: 0,
+            saveInProgress: false,
         };
         return _this;
     }
     ChangeHistory.prototype.render = function () {
         var undoClasses = this.canUndo() ? 'roundLeft' : 'roundLeft disabled';
         var redoClasses = this.canRedo() ? 'roundRight' : 'roundRight disabled';
+        var saveClasses = this.state.lastSavedChangedIndex == this.state.lastAppliedChangeIndex ? 'disabled' : undefined;
+        var saveButton = this.state.saveInProgress
+            ? React.createElement("button", { className: "spinner", title: "Saving..." },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                    React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "6" }),
+                    React.createElement("line", { x1: "12", y1: "18", x2: "12", y2: "22" }),
+                    React.createElement("line", { x1: "4.93", y1: "4.93", x2: "7.76", y2: "7.76" }),
+                    React.createElement("line", { x1: "16.24", y1: "16.24", x2: "19.07", y2: "19.07" }),
+                    React.createElement("line", { x1: "2", y1: "12", x2: "6", y2: "12" }),
+                    React.createElement("line", { x1: "18", y1: "12", x2: "22", y2: "12" }),
+                    React.createElement("line", { x1: "4.93", y1: "19.07", x2: "7.76", y2: "16.24" }),
+                    React.createElement("line", { x1: "16.24", y1: "7.76", x2: "19.07", y2: "4.93" })))
+            : React.createElement("button", { className: saveClasses, title: "Save the map", onClick: this.save.bind(this) },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
+                    React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
+                    React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
+                    React.createElement("polyline", { points: "7 3 7 8 15 8" })));
         return React.createElement("div", { id: "undoRedo" },
             React.createElement("button", { className: undoClasses, title: "Undo the last change", onClick: this.undo.bind(this) },
                 React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                     React.createElement("polygon", { points: "19 20 9 12 19 4 19 20" }),
                     React.createElement("line", { x1: "5", y1: "19", x2: "5", y2: "5" }))),
+            saveButton,
             React.createElement("button", { className: redoClasses, title: "Redo the next change", onClick: this.redo.bind(this) },
                 React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                     React.createElement("polygon", { points: "5 4 15 12 5 20 5 4" }),
@@ -613,12 +633,22 @@ var ChangeHistory = (function (_super) {
         if (this.changes.length > this.state.lastAppliedChangeIndex - 1)
             this.changes.splice(this.state.lastAppliedChangeIndex + 1, this.changes.length);
         // if the queue is full, remove the first item. otherwise, note that we've moved up one.
-        if (this.changes.length > this.maxUndoSteps)
+        var diff;
+        if (this.changes.length > this.maxUndoSteps) {
             this.changes.shift();
+            this.setState(function (prevState) {
+                return {
+                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
+                    lastSavedChangedIndex: prevState.lastAppliedChangeIndex - 1,
+                    saveInProgress: prevState.saveInProgress,
+                };
+            });
+        }
         else
             this.setState(function (prevState) {
                 return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1
+                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
+                    saveInProgress: prevState.saveInProgress,
                 };
             });
         this.changes.push(map.saveToJSON());
@@ -629,7 +659,8 @@ var ChangeHistory = (function (_super) {
         this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex - 1]));
         this.setState(function (prevState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1,
+                saveInProgress: prevState.saveInProgress,
             };
         });
     };
@@ -639,7 +670,8 @@ var ChangeHistory = (function (_super) {
         this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex + 1]));
         this.setState(function (prevState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
+                saveInProgress: prevState.saveInProgress,
             };
         });
     };
@@ -648,6 +680,25 @@ var ChangeHistory = (function (_super) {
     };
     ChangeHistory.prototype.canRedo = function () {
         return this.state.lastAppliedChangeIndex < this.changes.length - 1;
+    };
+    ChangeHistory.prototype.save = function () {
+        var currentData = this.changes[this.state.lastAppliedChangeIndex];
+        SaveLoad.saveData(currentData, function (success) {
+            this.setState(function (prevState) {
+                return {
+                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
+                    lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
+                    saveInProgress: false,
+                };
+            });
+        }.bind(this));
+        this.setState(function (prevState) {
+            return {
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
+                lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
+                saveInProgress: true,
+            };
+        });
     };
     return ChangeHistory;
 }(React.Component));
@@ -658,22 +709,17 @@ var EditorControls = (function (_super) {
     }
     EditorControls.prototype.render = function () {
         return React.createElement("div", { id: "editorControls" },
-            this.renderButton(0 /* Save */, 'Save Map', // save
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("path", { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }),
-                React.createElement("polyline", { points: "17 21 17 13 7 13 7 21" }),
-                React.createElement("polyline", { points: "7 3 7 8 15 8" }))),
-            this.renderButton(1 /* Download */, 'Download', // download
+            this.renderButton(0 /* Download */, 'Download', // download
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" }),
                 React.createElement("polyline", { points: "8 12 12 16 16 12" }),
                 React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "16" }))),
-            this.renderButton(2 /* Overview */, 'Overview', // info
+            this.renderButton(1 /* Overview */, 'Overview', // info
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
                 React.createElement("line", { x1: "12", y1: "16", x2: "12", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "8", x2: "12", y2: "8" }))),
-            this.renderButton(3 /* Size */, 'Size', // move
+            this.renderButton(2 /* Size */, 'Size', // move
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polyline", { points: "5 9 2 12 5 15" }),
                 React.createElement("polyline", { points: "9 5 12 2 15 5" }),
@@ -681,20 +727,20 @@ var EditorControls = (function (_super) {
                 React.createElement("polyline", { points: "19 9 22 12 19 15" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("line", { x1: "12", y1: "2", x2: "12", y2: "22" }))),
-            this.renderButton(4 /* Terrain */, 'Terrain', // globe
+            this.renderButton(3 /* Terrain */, 'Terrain', // globe
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
                 React.createElement("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
                 React.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }))),
-            this.renderButton(5 /* Lines */, 'Lines', // edit-3
+            this.renderButton(4 /* Lines */, 'Lines', // edit-3
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polyline", { points: "23 18 13.5 8.5 8.5 13.5 1 6" }),
                 React.createElement("polyline", { points: "17 18 23 18 23 12" }))),
-            this.renderButton(6 /* Locations */, 'Locations', // map-pin
+            this.renderButton(5 /* Locations */, 'Locations', // map-pin
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
                 React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(7 /* Layers */, 'Layers', // layers
+            this.renderButton(6 /* Layers */, 'Layers', // layers
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
                 React.createElement("polyline", { points: "2 17 12 22 22 17" }),
@@ -706,7 +752,8 @@ var EditorControls = (function (_super) {
         return React.createElement("button", { className: classes, title: text, onClick: this.selectEditor.bind(this, editor, text) }, image);
     };
     EditorControls.prototype.selectEditor = function (editor, name) {
-        this.props.editorSelected(this.props.activeEditor === editor ? undefined : editor, name);
+        if (this.props.activeEditor != editor)
+            this.props.editorSelected(editor, name);
     };
     return EditorControls;
 }(React.Component));
@@ -995,6 +1042,16 @@ var MapView = (function (_super) {
     MapView.prototype.drawLine = function (line, cellRadius) {
         var ctx = this.ctx;
         var type = line.type;
+        if (this.props.editor == 4 /* Lines */) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (var _i = 0, _a = line.keyCells; _i < _a.length; _i++) {
+                var cell = _a[_i];
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
         if (line.keyCells.length == 1) {
             var cell = line.keyCells[0];
             var x_1 = cell.xPos * cellRadius + cellRadius;
@@ -1047,16 +1104,6 @@ var MapView = (function (_super) {
             ctx.stroke();
         }
         ctx.lineCap = 'butt';
-        if (this.props.editor == 5 /* Lines */) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2;
-            for (var _i = 0, _a = line.keyCells; _i < _a.length; _i++) {
-                var cell = _a[_i];
-                ctx.beginPath();
-                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1219,32 +1266,6 @@ var MapView = (function (_super) {
         }.bind(this));
     };
     return MapView;
-}(React.Component));
-var SaveEditor = (function (_super) {
-    __extends(SaveEditor, _super);
-    function SaveEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    SaveEditor.prototype.render = function () {
-        var clearButton = window.localStorage.length == 0 ? undefined : React.createElement("div", { role: "group", className: "vertical" },
-            React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
-            React.createElement("button", { type: "button", onClick: this.clearSavedData.bind(this) }, "Clear saved map"));
-        return React.createElement("form", { onSubmit: this.updateDetails.bind(this) },
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("p", null, "Saving the map will overwrite any existing map saved in your browser."),
-                React.createElement("button", { type: "submit" }, "Save map")),
-            clearButton);
-    };
-    SaveEditor.prototype.updateDetails = function (e) {
-        e.preventDefault();
-        SaveLoad.saveData(this.props.map.saveToJSON(), function (success) { return console.log('save succeeded'); });
-        this.forceUpdate();
-    };
-    SaveEditor.prototype.clearSavedData = function () {
-        SaveLoad.clearSaved();
-        location.reload();
-    };
-    return SaveEditor;
 }(React.Component));
 var DownloadEditor = (function (_super) {
     __extends(DownloadEditor, _super);
@@ -2230,7 +2251,7 @@ var WorldMap = (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             map: props.map,
-            activeEditor: props.editable ? 2 /* Overview */ : undefined,
+            activeEditor: props.editable ? 1 /* Overview */ : undefined,
         };
         return _this;
     }
@@ -2274,21 +2295,19 @@ var WorldMap = (function (_super) {
             ref: function (c) { return _this.activeEditor = c; }
         };
         switch (editor) {
-            case 0 /* Save */:
-                return React.createElement(SaveEditor, __assign({}, props, { map: this.state.map }));
-            case 1 /* Download */:
+            case 0 /* Download */:
                 return React.createElement(DownloadEditor, __assign({}, props, { map: this.state.map }));
-            case 2 /* Overview */:
+            case 1 /* Overview */:
                 return React.createElement(OverviewEditor, __assign({}, props, { name: this.state.map.name, description: this.state.map.description, saveChanges: this.updateDetails.bind(this) }));
-            case 3 /* Size */:
+            case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
-            case 4 /* Terrain */:
+            case 3 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
-            case 5 /* Lines */:
+            case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this) }));
-            case 6 /* Locations */:
+            case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
-            case 7 /* Layers */:
+            case 6 /* Layers */:
                 return React.createElement(LayersEditor, __assign({}, props));
         }
     };

@@ -31,7 +31,6 @@
         "controls/EditorTabs.tsx",
         "controls/MapView.tsx",
 
-        "editors/SaveEditor.tsx",
         "editors/DownloadEditor.tsx",
         "editors/OverviewEditor.tsx",
         "editors/SizeEditor.tsx",

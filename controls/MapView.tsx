@@ -378,7 +378,18 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private drawLine(line: MapLine, cellRadius: number) {
         let ctx = this.ctx;
         let type = line.type;
-        
+
+        if (this.props.editor == EditorType.Lines) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+
+            for (let cell of line.keyCells) {
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
         if (line.keyCells.length == 1) {
             let cell = line.keyCells[0];
             let x = cell.xPos * cellRadius + cellRadius;
@@ -446,16 +457,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
 
         ctx.lineCap = 'butt';
-
-        if (this.props.editor == EditorType.Lines) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2;
-            for (let cell of line.keyCells) {
-                ctx.beginPath();
-                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
     }
 
     private resizing: boolean = false;
