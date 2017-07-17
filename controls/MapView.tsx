@@ -174,12 +174,13 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         this.drawCells(drawInterval, outline, true, writeCoords);
 
+        this.drawLines();
+        
         if (twoLevels) {
             // outline of next zoom level
             this.drawCells(drawInterval * 2, true, false, this.props.scrollUI);
         }
 
-        this.drawLines();
         this.drawLocations();
 
         if (this.props.scrollUI)

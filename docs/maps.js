@@ -815,11 +815,11 @@ var MapView = (function (_super) {
         var outline = this.props.renderGrid && !twoLevels;
         var writeCoords = this.props.scrollUI && !twoLevels;
         this.drawCells(drawInterval, outline, true, writeCoords);
+        this.drawLines();
         if (twoLevels) {
             // outline of next zoom level
             this.drawCells(drawInterval * 2, true, false, this.props.scrollUI);
         }
-        this.drawLines();
         this.drawLocations();
         if (this.props.scrollUI)
             this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
