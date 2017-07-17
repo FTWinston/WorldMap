@@ -24,6 +24,15 @@ class MapLine {
         this.isLoop = false;
     }
 
+    static getByCell(cell: MapCell, lines: MapLine[]) {
+        for (let line of lines)
+            for (let testCell of line.keyCells)
+                if (testCell == cell)
+                    return line;
+
+        return undefined;
+    }
+
     static readonly stepsPerSegment = 16;
 
     updateRenderPoints() {

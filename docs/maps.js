@@ -415,6 +415,17 @@ var MapLine = (function () {
         this.keyCells = [];
         this.isLoop = false;
     }
+    MapLine.getByCell = function (cell, lines) {
+        for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
+            var line = lines_1[_i];
+            for (var _a = 0, _b = line.keyCells; _a < _b.length; _a++) {
+                var testCell = _b[_a];
+                if (testCell == cell)
+                    return line;
+            }
+        }
+        return undefined;
+    };
     MapLine.prototype.updateRenderPoints = function () {
         this.renderPoints = [];
         if (this.keyCells.length < 2)
@@ -1036,6 +1047,16 @@ var MapView = (function (_super) {
             ctx.stroke();
         }
         ctx.lineCap = 'butt';
+        if (this.props.editor == 5 /* Lines */) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (var _i = 0, _a = line.keyCells; _i < _a.length; _i++) {
+                var cell = _a[_i];
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1668,13 +1689,57 @@ var LineTypeEditor = (function (_super) {
     };
     return LineTypeEditor;
 }(React.Component));
+var LineEditor = (function (_super) {
+    __extends(LineEditor, _super);
+    function LineEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    LineEditor.prototype.componentWillMount = function () {
+        this.setState({
+            type: this.props.editingLine.type,
+        });
+    };
+    LineEditor.prototype.render = function () {
+        var deleteButton = React.createElement("button", { type: "button", onClick: this.deleteLine.bind(this) }, "Delete");
+        return React.createElement("form", { onSubmit: this.saveType.bind(this) },
+            React.createElement("p", null, "Click the map to add points to the current line."),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "ddlType" }, "Line Type"),
+                React.createElement("select", { value: this.props.lineTypes.indexOf(this.state.type).toString(), onChange: this.typeChanged.bind(this) }, this.props.lineTypes.map(function (type, id) {
+                    return React.createElement("option", { key: id.toString(), value: id.toString() }, type.name);
+                }))),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Save line"),
+                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
+                deleteButton));
+    };
+    LineEditor.prototype.typeChanged = function (e) {
+        this.setState({
+            type: this.props.lineTypes[e.target.value],
+        });
+    };
+    LineEditor.prototype.saveType = function (e) {
+        e.preventDefault();
+        this.props.editingLine.type = this.state.type;
+        this.props.updateLines(this.props.lines);
+    };
+    LineEditor.prototype.cancelEdit = function () {
+        this.props.updateLines(this.props.lines);
+    };
+    LineEditor.prototype.deleteLine = function () {
+        var lines = this.props.lines.slice();
+        var pos = lines.indexOf(this.props.editingLine);
+        lines.splice(pos, 1);
+        this.props.updateLines(lines);
+    };
+    return LineEditor;
+}(React.Component));
 var LinesEditor = (function (_super) {
     __extends(LinesEditor, _super);
     function LinesEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             isEditingLineType: false,
-            isDrawingOnMap: false,
             selectedLineType: props.lineTypes[0],
             selectedLine: undefined,
         };
@@ -1685,7 +1750,6 @@ var LinesEditor = (function (_super) {
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,
-                    isDrawingOnMap: prevState.isDrawingOnMap,
                     selectedLineType: newProps.lineTypes[0],
                 };
             });
@@ -1693,6 +1757,8 @@ var LinesEditor = (function (_super) {
     LinesEditor.prototype.render = function () {
         if (this.state.isEditingLineType)
             return React.createElement(LineTypeEditor, { editingType: this.state.selectedLineType, lineTypes: this.props.lineTypes, updateLineTypes: this.lineTypesChanged.bind(this) });
+        else if (this.state.selectedLine !== undefined)
+            return React.createElement(LineEditor, { editingLine: this.state.selectedLine, lines: this.props.lines, lineTypes: this.props.lineTypes, updateLines: this.linesUpdated.bind(this) });
         var that = this;
         return React.createElement("form", null,
             React.createElement("p", null, "Select a line type to draw onto the map, then click cells to draw it. Double click/tap on a line type to edit it."),
@@ -1706,14 +1772,12 @@ var LinesEditor = (function (_super) {
     LinesEditor.prototype.selectLineType = function (type) {
         this.setState({
             isEditingLineType: false,
-            isDrawingOnMap: false,
             selectedLineType: type,
         });
     };
     LinesEditor.prototype.showLineTypeEdit = function (type) {
         this.setState({
             isEditingLineType: true,
-            isDrawingOnMap: false,
             selectedLineType: type,
         });
     };
@@ -1727,46 +1791,55 @@ var LinesEditor = (function (_super) {
             }
         this.setState({
             isEditingLineType: false,
-            isDrawingOnMap: false,
         });
         this.props.updateLineTypes(lineTypes);
     };
+    LinesEditor.prototype.linesUpdated = function (lines) {
+        this.props.updateLines(lines);
+        this.setState({
+            selectedLine: undefined,
+            isEditingLineType: false,
+        });
+    };
     LinesEditor.prototype.mouseUp = function (cell) {
-        if (this.drawingLine === undefined) {
+        if (this.state.isEditingLineType)
+            return;
+        var lines = this.props.lines.slice();
+        if (this.state.selectedLine === undefined) {
+            var line = MapLine.getByCell(cell, this.props.lines);
+            if (line !== undefined) {
+                this.setState({
+                    selectedLine: line,
+                    isEditingLineType: false,
+                });
+                return;
+            }
             if (this.state.selectedLineType === undefined)
                 return;
             // create new line, currently with only one point
-            this.drawingLine = new MapLine(this.state.selectedLineType);
-            this.drawingLine.keyCells.push(cell);
-            var lines = this.props.lines.slice();
-            lines.push(this.drawingLine);
-            this.props.updateLines(lines);
+            line = new MapLine(this.state.selectedLineType);
+            line.keyCells.push(cell);
+            lines.push(line);
+            this.setState({
+                selectedLine: line,
+                isEditingLineType: false,
+            });
         }
         else {
             if (cell == this.lastClicked) {
                 // end the line
-                this.drawingLine = undefined;
-                this.props.drawingLine(true);
+                this.setState({
+                    selectedLine: undefined,
+                    isEditingLineType: false,
+                });
             }
             else {
                 // add control point to existing line
-                this.drawingLine.keyCells.push(cell);
-                this.drawingLine.updateRenderPoints();
-                this.props.drawingLine(false);
+                this.state.selectedLine.keyCells.push(cell);
+                this.state.selectedLine.updateRenderPoints();
             }
         }
-        /*
-        if (!this.state.isDrawingOnMap)
-            return;
-
-        this.setState(function (prevState) {
-            return {
-                isEditingLineType: prevState.isEditingLineType,
-                isDrawingOnMap: false,
-            }
-        });
-        this.props.hasDrawn(false);
-        */
+        this.props.updateLines(lines);
         this.lastClicked = cell;
     };
     return LinesEditor;
@@ -2167,17 +2240,21 @@ var WorldMap = (function (_super) {
     WorldMap.display = function (dataJson) {
         var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
         var editable = SaveLoad.getQueryParam('readonly') === undefined;
-        var worldMap = ReactDOM.render(React.createElement(WorldMap, { editable: editable, map: map }), document.getElementById('uiRoot'));
+        WorldMap.instance = ReactDOM.render(React.createElement(WorldMap, { editable: editable, map: map }), document.getElementById('uiRoot'));
     };
     WorldMap.prototype.componentDidMount = function () {
         if (this.changes !== undefined)
             this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
     };
+    WorldMap.prototype.componentDidUpdate = function (prevProps, prevState) {
+        if (prevState.activeEditor != this.state.activeEditor)
+            this.mapView.redraw();
+    };
     WorldMap.prototype.render = function () {
         var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
-        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { return _this.mapView = c; }, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
+        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { return _this.mapView = c; }, editor: this.state.activeEditor, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
         if (!this.props.editable)
             return React.createElement("div", { id: "worldRoot" }, map);
         var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
@@ -2208,7 +2285,7 @@ var WorldMap = (function (_super) {
             case 4 /* Terrain */:
                 return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 5 /* Lines */:
-                return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), drawingLine: this.lineDrawn.bind(this) }));
+                return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this) }));
             case 6 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 7 /* Layers */:
@@ -2295,13 +2372,7 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.updateLines = function (lines) {
         this.state.map.lines = lines;
-        this.mapView.redraw(); // as this is adding a line that isn't yet finished, don't add to undo history
-    };
-    WorldMap.prototype.lineDrawn = function (finished) {
-        if (finished)
-            this.mapChanged(); // don't add to undo history til line is finished
-        else
-            this.mapView.redraw();
+        this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {
         this.setState({

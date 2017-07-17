@@ -3,6 +3,7 @@ interface IMapViewProps {
     scrollUI: boolean;
     renderGrid: boolean;
     fixedCellRadius?: number;
+    editor?: EditorType;
     cellMouseDown?: (cell: MapCell) => void;
     cellMouseUp?: (cell: MapCell) => void;
     cellMouseEnter?: (cell: MapCell) => void;
@@ -445,6 +446,16 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
 
         ctx.lineCap = 'butt';
+
+        if (this.props.editor == EditorType.Lines) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (let cell of line.keyCells) {
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
     }
 
     private resizing: boolean = false;

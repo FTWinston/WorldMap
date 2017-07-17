@@ -3,12 +3,10 @@ interface ILinesEditorProps {
     lines: MapLine[];
     updateLineTypes: (lineTypes: LineType[]) => void;
     updateLines: (lines: MapLine[]) => void;
-    drawingLine: (finished: boolean) => void;
 }
 
 interface ILinesEditorState {
     isEditingLineType: boolean;
-    isDrawingOnMap: boolean;
     selectedLineType?: LineType;
     selectedLine?: MapLine;
 }
@@ -19,7 +17,6 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
 
         this.state = {
             isEditingLineType: false,
-            isDrawingOnMap: false,
             selectedLineType: props.lineTypes[0],
             selectedLine: undefined,
         };
@@ -29,7 +26,6 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,
-                    isDrawingOnMap: prevState.isDrawingOnMap,
                     selectedLineType: newProps.lineTypes[0],
                 }
             });
@@ -37,6 +33,8 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
     render() {
         if (this.state.isEditingLineType)
             return <LineTypeEditor editingType={this.state.selectedLineType} lineTypes={this.props.lineTypes} updateLineTypes={this.lineTypesChanged.bind(this)} />;
+        else if (this.state.selectedLine !== undefined)
+            return <LineEditor editingLine={this.state.selectedLine} lines={this.props.lines} lineTypes={this.props.lineTypes} updateLines={this.linesUpdated.bind(this)} />
 
         let that = this;
         return <form>
@@ -55,14 +53,12 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
     private selectLineType(type: LineType) {
         this.setState({
             isEditingLineType: false,
-            isDrawingOnMap: false,
             selectedLineType: type,
         });
     }
     private showLineTypeEdit(type?: LineType) {
         this.setState({
             isEditingLineType: true,
-            isDrawingOnMap: false,
             selectedLineType: type,
         });
     }
@@ -75,54 +71,64 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
 
         this.setState({
             isEditingLineType: false,
-            isDrawingOnMap: false,
-        })
+        });
         this.props.updateLineTypes(lineTypes);
     }
+    private linesUpdated(lines: MapLine[]) {
+        this.props.updateLines(lines);
+        this.setState({
+            selectedLine: undefined,
+            isEditingLineType: false,
+        });
+    }
+
     lastClicked?: MapCell;
-    drawingLine?: MapLine;
     mouseUp(cell: MapCell) {
-        if (this.drawingLine === undefined)
+        if (this.state.isEditingLineType)
+            return;
+        
+        let lines = this.props.lines.slice();
+
+        if (this.state.selectedLine === undefined)
         {
+            let line = MapLine.getByCell(cell, this.props.lines);
+            if (line !== undefined) {
+                this.setState({
+                    selectedLine: line,
+                    isEditingLineType: false,
+                });
+                return;
+            }
+
             if (this.state.selectedLineType === undefined)
                 return;
 
             // create new line, currently with only one point
-            this.drawingLine = new MapLine(this.state.selectedLineType);
-            this.drawingLine.keyCells.push(cell);
+            line = new MapLine(this.state.selectedLineType);
+            line.keyCells.push(cell);
+            lines.push(line);
 
-            let lines = this.props.lines.slice();
-            lines.push(this.drawingLine);
-
-            this.props.updateLines(lines);
+            this.setState({
+                selectedLine: line,
+                isEditingLineType: false,
+            });
         }
         else {
             if (cell == this.lastClicked) {
                 // end the line
-                this.drawingLine = undefined;
-                this.props.drawingLine(true);
+                this.setState({
+                    selectedLine: undefined,
+                    isEditingLineType: false,
+                });
             }
             else {
                 // add control point to existing line
-                this.drawingLine.keyCells.push(cell);
-                this.drawingLine.updateRenderPoints();
-                this.props.drawingLine(false);
+                this.state.selectedLine.keyCells.push(cell);
+                this.state.selectedLine.updateRenderPoints();
             }
         }
-
-        /*
-        if (!this.state.isDrawingOnMap)
-            return;
-
-        this.setState(function (prevState) {
-            return {
-                isEditingLineType: prevState.isEditingLineType,
-                isDrawingOnMap: false,
-            }
-        });
-        this.props.hasDrawn(false);
-        */
-
+        
+        this.props.updateLines(lines);
         this.lastClicked = cell;
     }
 }
