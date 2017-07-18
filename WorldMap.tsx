@@ -18,7 +18,6 @@ interface IMapEditor {
 
 interface IWorldMapProps {
     editable: boolean;
-    map: MapData;
 }
 
 interface IWorldMapState {
@@ -30,33 +29,41 @@ interface IWorldMapState {
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     static init() {
-        SaveLoad.loadData(WorldMap.display);
-    }
-
-    static instance: WorldMap;
-    static display(dataJson: string|null) {
-        let map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
         let editable = SaveLoad.getQueryParam('readonly') === undefined;
         WorldMap.instance = ReactDOM.render(
-            <WorldMap editable={editable} map={map} />,
+            <WorldMap editable={editable} />,
             document.getElementById('uiRoot') as HTMLElement
         ) as WorldMap;
     }
-
+    static instance: WorldMap;
+    
     constructor(props: IWorldMapProps) {
         super(props);
-
         this.state = {
-            map: props.map,
-            activeEditor: props.editable ? EditorType.Overview : undefined,
-        }
+            map: new MapData(0, 0),
+        };
     }
+
     private changes: ChangeHistory;
     private mapView: MapView;
     componentDidMount() {
-        if (this.changes !== undefined)
-            this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+        SaveLoad.loadData(this.initializeMap.bind(this));
     }
+    initializeMap(dataJson: string) {
+        let map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);    
+        this.setState({
+            map: map,
+            activeEditor: this.props.editable ? EditorType.Overview : undefined,
+        });
+        
+        if (this.changes !== undefined) {
+            if (dataJson !== null)
+                this.changes.recordChangeData(dataJson);
+            else
+                this.changes.recordMapChange(map);
+        }
+    }
+
     componentDidUpdate(prevProps: IWorldMapProps, prevState: IWorldMapState) {
         if (prevState.activeEditor != this.state.activeEditor)
             this.mapView.redraw();
@@ -207,7 +214,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             map: this.state.map
         });
         this.mapView.redraw();
-        this.changes.recordChange(this.state.map);
+        this.changes.recordMapChange(this.state.map);
     }
     private replaceMap(map: MapData){
         // don't hold onto a line from the "old" map; find the equivalent

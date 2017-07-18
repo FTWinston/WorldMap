@@ -628,7 +628,10 @@ var ChangeHistory = (function (_super) {
                     React.createElement("polygon", { points: "5 4 15 12 5 20 5 4" }),
                     React.createElement("line", { x1: "19", y1: "5", x2: "19", y2: "19" }))));
     };
-    ChangeHistory.prototype.recordChange = function (map) {
+    ChangeHistory.prototype.recordMapChange = function (map) {
+        this.recordChangeData(map.saveToJSON());
+    };
+    ChangeHistory.prototype.recordChangeData = function (data) {
         // if changes have been undone, clear the queue after this point, as they can't now be redone
         if (this.changes.length > this.state.lastAppliedChangeIndex - 1)
             this.changes.splice(this.state.lastAppliedChangeIndex + 1, this.changes.length);
@@ -651,7 +654,7 @@ var ChangeHistory = (function (_super) {
                     saveInProgress: prevState.saveInProgress,
                 };
             });
-        this.changes.push(map.saveToJSON());
+        this.changes.push(data);
     };
     ChangeHistory.prototype.undo = function () {
         if (!this.canUndo())
@@ -2308,22 +2311,29 @@ var WorldMap = (function (_super) {
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            map: props.map,
-            activeEditor: props.editable ? 1 /* Overview */ : undefined,
+            map: new MapData(0, 0),
         };
         return _this;
     }
     WorldMap.init = function () {
-        SaveLoad.loadData(WorldMap.display);
-    };
-    WorldMap.display = function (dataJson) {
-        var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
         var editable = SaveLoad.getQueryParam('readonly') === undefined;
-        WorldMap.instance = ReactDOM.render(React.createElement(WorldMap, { editable: editable, map: map }), document.getElementById('uiRoot'));
+        WorldMap.instance = ReactDOM.render(React.createElement(WorldMap, { editable: editable }), document.getElementById('uiRoot'));
     };
     WorldMap.prototype.componentDidMount = function () {
-        if (this.changes !== undefined)
-            this.changes.recordChange(this.state.map); // TODO: this is an inefficient way of populating initial map state when loading a saved map. Avoid re-serializing, as that just came from text
+        SaveLoad.loadData(this.initializeMap.bind(this));
+    };
+    WorldMap.prototype.initializeMap = function (dataJson) {
+        var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
+        this.setState({
+            map: map,
+            activeEditor: this.props.editable ? 1 /* Overview */ : undefined,
+        });
+        if (this.changes !== undefined) {
+            if (dataJson !== null)
+                this.changes.recordChangeData(dataJson);
+            else
+                this.changes.recordMapChange(map);
+        }
     };
     WorldMap.prototype.componentDidUpdate = function (prevProps, prevState) {
         if (prevState.activeEditor != this.state.activeEditor)
@@ -2463,7 +2473,7 @@ var WorldMap = (function (_super) {
             map: this.state.map
         });
         this.mapView.redraw();
-        this.changes.recordChange(this.state.map);
+        this.changes.recordMapChange(this.state.map);
     };
     WorldMap.prototype.replaceMap = function (map) {
         // don't hold onto a line from the "old" map; find the equivalent

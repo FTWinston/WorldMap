@@ -63,7 +63,11 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         </div>;
     }
 
-    recordChange(map: MapData) {
+    recordMapChange(map: MapData) {
+        this.recordChangeData(map.saveToJSON());
+    }
+
+    recordChangeData(data: string) {
         // if changes have been undone, clear the queue after this point, as they can't now be redone
         if (this.changes.length > this.state.lastAppliedChangeIndex - 1)
             this.changes.splice(this.state.lastAppliedChangeIndex + 1, this.changes.length);
@@ -89,7 +93,7 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
                 }
             });
 
-        this.changes.push(map.saveToJSON());
+        this.changes.push(data);
     }
     undo() {
         if (!this.canUndo())
