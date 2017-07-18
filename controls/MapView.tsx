@@ -220,18 +220,16 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         let map = this.props.map;
         let cellRadius = this.state.cellRadius;
-        var halfInterval = Math.ceil(cellDrawInterval / 2);
-        let xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
+        let halfInterval = Math.ceil(cellDrawInterval / 2), doubleInterval = cellDrawInterval * 2;
 
         for (let cell of map.cells) {
-            if (cell == null)
+            if (cell.row % cellDrawInterval != 0)
                 continue;
 
-            if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
-                continue;
+            let isOddDrawRow = cell.row % doubleInterval != 0;
 
-            var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
-            if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
+            var alternateRowOffset = isOddDrawRow == map.offsetEvenRows ? halfInterval : 0;
+            if ((cell.col + alternateRowOffset) % cellDrawInterval != 0)
                 continue;
 
             let centerX = cell.xPos * cellRadius + cellRadius;
@@ -294,14 +292,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), 0, 0);
+            ctx.fillText((cell.col + 1) + ', ' + (cell.row + 1), 0, 0);
         }
-    }
-    private getCellDisplayX(cell: MapCell) {
-        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
-    }
-    private getCellDisplayY(cell: MapCell) {
-        return cell.row + 1;
     }
     private drawLocations() {
         let cellRadius = this.state.cellRadius;
@@ -477,8 +469,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     private getOverallSize() {
         return {
-            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
-            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+            width: (this.props.map.width - 0.3) * this.state.cellRadius * 2,
+            height: (this.props.map.height + 5) * this.state.cellRadius * 2 / MapData.packedHeightRatio + this.state.cellRadius * 2,
         };
     }
     private updateScrollSize() {
@@ -592,8 +584,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.mouseDownCell = null;
     }
     private getCellIndexAtPoint(screenX: number, screenY: number) {
-        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
-        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop;
+
+        console.log('clicked ' + mapX + ',' + mapY);
+
         let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
         let fRow = mapY * 2 / 3 / this.state.cellRadius;
         let fThirdCoord = - fCol - fRow;
@@ -612,8 +607,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = - rCol - rThird;
-
-        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
 
         return this.props.map.getCellIndex(rRow, rCol);
     }

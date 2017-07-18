@@ -1,10 +1,9 @@
 var MapData = (function () {
     function MapData(width, height, createCells) {
         if (createCells === void 0) { createCells = true; }
-        this.underlyingWidth = width + Math.floor(height / 2) - 1;
         this.width = width;
         this.height = height;
-        this.cells = new Array(this.underlyingWidth * this.height);
+        this.cells = new Array(this.width * this.height);
         this.cellTypes = [CellType.empty];
         this.name = '';
         this.description = '';
@@ -14,57 +13,51 @@ var MapData = (function () {
         this.lines = [];
         if (createCells !== false) {
             for (var i = 0; i < this.cells.length; i++)
-                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
+                this.cells[i] = new MapCell(this, CellType.empty);
             CellType.createDefaults(this.cellTypes);
             LocationType.createDefaults(this.locationTypes);
             LineType.createDefaults(this.lineTypes);
+            this.offsetEvenRows = true;
             this.positionCells();
         }
     }
     MapData.prototype.positionCells = function () {
-        var packedWidthRatio = 1.7320508075688772, packedHeightRatio = 1.5;
-        var minX = Number.MAX_VALUE, minY = Number.MAX_VALUE;
-        var maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
         for (var i = 0; i < this.cells.length; i++) {
             var cell = this.cells[i];
-            if (cell == null)
-                continue;
-            cell.row = Math.floor(i / this.underlyingWidth);
-            cell.col = i % this.underlyingWidth;
-            cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
-            cell.yPos = packedHeightRatio * cell.row;
-            if (cell.xPos < minX)
-                minX = cell.xPos;
-            else if (cell.xPos > maxX)
-                maxX = cell.xPos;
-            if (cell.yPos < minY)
-                minY = cell.yPos;
-            else if (cell.yPos > maxY)
-                maxY = cell.yPos;
+            cell.row = Math.floor(i / this.width);
+            cell.col = i % this.width;
+            var offset = (cell.row % 2 == 1) == this.offsetEvenRows ? 0.5 : 0;
+            cell.xPos = MapData.packedWidthRatio * (cell.col + offset);
+            cell.yPos = MapData.packedHeightRatio * cell.row;
         }
-        this.minX = minX - 1;
-        this.minY = minY - 1;
-        this.maxX = maxX + 1;
-        this.maxY = maxY + 1;
-        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell == null)
-                continue;
-            cell.xPos -= minX;
-            cell.yPos -= minY;
+        for (var _i = 0, _a = this.lines; _i < _a.length; _i++) {
+            var line = _a[_i];
+            line.updateRenderPoints();
         }
-    };
-    MapData.prototype.shouldIndexHaveCell = function (index) {
-        var row = Math.floor(index / this.underlyingWidth);
-        var col = index % this.underlyingWidth;
-        if (2 * col + row < this.height - 2)
-            return false; // chop left to get square edge
-        if (row + 2 * col > 2 * this.underlyingWidth - 1)
-            return false; // chop right to get square edge
-        return true;
     };
     MapData.prototype.getCellIndex = function (row, col) {
-        return col + row * this.underlyingWidth;
+        return col + row * this.width;
+    };
+    MapData.prototype.convertToCube = function (row, col) {
+        var x;
+        if (this.offsetEvenRows)
+            x = col - (row + (row & 1)) / 2;
+        else
+            x = col - (row - (row & 1)) / 2;
+        return {
+            x: x,
+            y: -x - row,
+            z: row,
+        };
+    };
+    MapData.prototype.convertFromCube = function (cubeX, cubeY, cubeZ) {
+        var row, col;
+        if (this.offsetEvenRows)
+            col = cubeX + (cubeZ + (cubeZ & 1)) / 2;
+        else
+            col = cubeX + (cubeZ - (cubeZ & 1)) / 2;
+        row = cubeZ;
+        return this.getCellIndex(row, col);
     };
     MapData.prototype.changeSize = function (newWidth, newHeight, mode) {
         var deltaWidth = newWidth - this.width;
@@ -131,13 +124,13 @@ var MapData = (function () {
             for (var row = 0; row < this.height; row++) {
                 var rowInsertIndex = void 0; // this is complicated on account of the "chopping" we did to get square edges
                 if (leftEdgeFixed)
-                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
+                    rowInsertIndex = this.width - Math.floor(row / 2);
                 else
                     rowInsertIndex = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.underlyingWidth;
+                var rowStart = row * this.width;
                 var insertPos = rowStart + rowInsertIndex + overallDelta;
                 for (var i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, new MapCell(this, CellType.empty));
                 overallDelta += delta;
             }
         }
@@ -146,34 +139,33 @@ var MapData = (function () {
                 var rowChopPos = void 0;
                 if (forHeightChange) {
                     if (leftEdgeFixed)
-                        rowChopPos = this.underlyingWidth + delta;
+                        rowChopPos = this.width + delta;
                     else
                         rowChopPos = 0;
                 }
                 else if (leftEdgeFixed)
-                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
+                    rowChopPos = this.width - Math.floor(row / 2) + delta;
                 else
                     rowChopPos = Math.floor((this.height - row - 1) / 2);
-                var rowStart = row * this.underlyingWidth;
+                var rowStart = row * this.width;
                 var chopPos = rowStart + rowChopPos + overallDelta;
                 this.cells.splice(chopPos, -delta);
                 overallDelta += delta;
             }
         }
-        this.underlyingWidth += delta;
+        this.width += delta;
     };
     MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
         if (delta > 0) {
-            var diff = delta * this.underlyingWidth;
+            var diff = delta * this.width;
             for (var i = 0; i < diff; i++) {
-                if (this.cells.length + 1 > this.underlyingWidth * this.height)
+                if (this.cells.length + 1 > this.width * this.height)
                     this.height++;
-                var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, new MapCell(this, CellType.empty));
             }
         }
         else if (delta < 0) {
-            var diff = -delta * this.underlyingWidth;
+            var diff = -delta * this.width;
             this.height += delta;
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
@@ -222,8 +214,8 @@ var MapData = (function () {
         var json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop')
+                || key == 'map' || key == 'cellType' || key == 'cell' || key == 'keyCells'
+                || key == 'type' || key == 'renderPoints' || key == 'isLoop')
                 return undefined;
             return value;
         });
@@ -240,8 +232,6 @@ var MapData = (function () {
             });
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
-                if (cell == null)
-                    return null;
                 var cellType = map.cellTypes[cell.typeID];
                 return new MapCell(map, cellType);
             });
@@ -261,7 +251,6 @@ var MapData = (function () {
             map.lineTypes = data.lineTypes.map(function (type) {
                 return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
             });
-        map.positionCells();
         if (data.lines !== undefined)
             for (var _b = 0, _c = data.lines; _b < _c.length; _b++) {
                 var line = _c[_b];
@@ -272,13 +261,15 @@ var MapData = (function () {
                     if (cell !== null)
                         mapLine.keyCells.push(cell);
                 }
-                mapLine.updateRenderPoints();
                 map.lines.push(mapLine);
             }
+        map.positionCells();
         return map;
     };
     return MapData;
 }());
+MapData.packedWidthRatio = 1.7320508075688772;
+MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
     function CellType(name, color, pattern, patternColor) {
         this.name = name;
@@ -914,16 +905,14 @@ var MapView = (function (_super) {
         var drawExtent = this.getDrawExtent(drawCellRadius);
         var map = this.props.map;
         var cellRadius = this.state.cellRadius;
-        var halfInterval = Math.ceil(cellDrawInterval / 2);
-        var xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
+        var halfInterval = Math.ceil(cellDrawInterval / 2), doubleInterval = cellDrawInterval * 2;
         for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
-            if (cell == null)
+            if (cell.row % cellDrawInterval != 0)
                 continue;
-            if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
-                continue;
-            var alternateRowOffset = this.getCellDisplayY(cell) % (2 * cellDrawInterval) == 0 ? halfInterval : 0;
-            if ((this.getCellDisplayX(cell) + alternateRowOffset + xOffset) % cellDrawInterval != 0)
+            var isOddDrawRow = cell.row % doubleInterval != 0;
+            var alternateRowOffset = isOddDrawRow == map.offsetEvenRows ? halfInterval : 0;
+            if ((cell.col + alternateRowOffset) % cellDrawInterval != 0)
                 continue;
             var centerX = cell.xPos * cellRadius + cellRadius;
             if (centerX < drawExtent.minX || centerX > drawExtent.maxX)
@@ -972,14 +961,8 @@ var MapView = (function (_super) {
             ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), 0, 0);
+            ctx.fillText((cell.col + 1) + ', ' + (cell.row + 1), 0, 0);
         }
-    };
-    MapView.prototype.getCellDisplayX = function (cell) {
-        return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
-    };
-    MapView.prototype.getCellDisplayY = function (cell) {
-        return cell.row + 1;
     };
     MapView.prototype.drawLocations = function () {
         var cellRadius = this.state.cellRadius;
@@ -1121,8 +1104,8 @@ var MapView = (function (_super) {
     };
     MapView.prototype.getOverallSize = function () {
         return {
-            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
-            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+            width: (this.props.map.width - 0.3) * this.state.cellRadius * 2,
+            height: (this.props.map.height + 5) * this.state.cellRadius * 2 / MapData.packedHeightRatio + this.state.cellRadius * 2,
         };
     };
     MapView.prototype.updateScrollSize = function () {
@@ -1220,8 +1203,9 @@ var MapView = (function (_super) {
         this.mouseDownCell = null;
     };
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
-        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft;
+        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop;
+        console.log('clicked ' + mapX + ',' + mapY);
         var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
         var fRow = mapY * 2 / 3 / this.state.cellRadius;
         var fThirdCoord = -fCol - fRow;
@@ -1237,7 +1221,6 @@ var MapView = (function (_super) {
         }
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = -rCol - rThird;
-        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
         return this.props.map.getCellIndex(rRow, rCol);
     };
     MapView.prototype.getScrollbarSize = function () {

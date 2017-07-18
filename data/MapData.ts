@@ -1,27 +1,28 @@
 type PossibleMapCell = MapCell | null;
 
+interface ICubeCoord {
+    x: number,
+    y: number,
+    z: number,
+}
+
 class MapData {
     name: string;
     description: string;
-    private underlyingWidth: number;
     width: number;
     height: number;
     cellTypes: CellType[];
-    cells: PossibleMapCell[];
-    minX: number;
-    maxX: number;
-    minY: number;
-    maxY: number;
+    cells: MapCell[];
+    offsetEvenRows: boolean;
     locationTypes: LocationType[];
     locations: MapLocation[];
     lineTypes: LineType[];
     lines: MapLine[];
 
     constructor(width: number, height: number, createCells: boolean = true) {
-        this.underlyingWidth = width + Math.floor(height / 2) - 1;
         this.width = width;
         this.height = height;
-        this.cells = new Array<MapCell>(this.underlyingWidth * this.height);
+        this.cells = new Array<MapCell>(this.width * this.height);
         this.cellTypes = [CellType.empty];
         this.name = '';
         this.description = '';
@@ -32,63 +33,59 @@ class MapData {
 
         if (createCells !== false) {
             for (let i = 0; i < this.cells.length; i++)
-                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
+                this.cells[i] = new MapCell(this, CellType.empty);
 
             CellType.createDefaults(this.cellTypes);
             LocationType.createDefaults(this.locationTypes);
             LineType.createDefaults(this.lineTypes);
             
+            this.offsetEvenRows = true;
             this.positionCells();
         }
     }
+    static readonly packedWidthRatio = 1.7320508075688772;
+    static readonly packedHeightRatio = 1.5;
     private positionCells() {
-        let packedWidthRatio = 1.7320508075688772, packedHeightRatio = 1.5;
-        let minX = Number.MAX_VALUE, minY = Number.MAX_VALUE;
-        let maxX = Number.MIN_VALUE, maxY = Number.MIN_VALUE;
-
         for (let i = 0; i < this.cells.length; i++) {
             let cell = this.cells[i];
-            if (cell == null)
-                continue;
 
-            cell.row = Math.floor(i / this.underlyingWidth);
-            cell.col = i % this.underlyingWidth;
-            cell.xPos = packedWidthRatio * (cell.col + cell.row / 2);
-            cell.yPos = packedHeightRatio * cell.row;
+            cell.row = Math.floor(i / this.width);
+            cell.col = i % this.width;
+            let offset = (cell.row % 2 == 1) == this.offsetEvenRows ? 0.5 : 0;
 
-            if (cell.xPos < minX)
-                minX = cell.xPos;
-            else if (cell.xPos > maxX)
-                maxX = cell.xPos;
-
-            if (cell.yPos < minY)
-                minY = cell.yPos;
-            else if (cell.yPos > maxY)
-                maxY = cell.yPos;
+            cell.xPos = MapData.packedWidthRatio * (cell.col + offset);
+            cell.yPos = MapData.packedHeightRatio * cell.row;
         }
 
-        this.minX = minX - 1; this.minY = minY - 1;
-        this.maxX = maxX + 1; this.maxY = maxY + 1;
-
-        for (let cell of this.cells) {
-            if (cell == null)
-                continue;
-
-            cell.xPos -= minX;
-            cell.yPos -= minY;
-        }
-    }
-    private shouldIndexHaveCell(index: number) {
-        let row = Math.floor(index / this.underlyingWidth);
-        let col = index % this.underlyingWidth;
-        if (2 * col + row < this.height - 2)
-            return false; // chop left to get square edge
-        if (row + 2 * col > 2 * this.underlyingWidth - 1)
-            return false; // chop right to get square edge
-        return true;
+        for (let line of this.lines)
+            line.updateRenderPoints();
     }
     getCellIndex(row: number, col: number) {
-        return col + row * this.underlyingWidth;
+        return col + row * this.width;
+    }
+    convertToCube(row: number, col: number) {
+        let x: number;
+        if (this.offsetEvenRows)
+            x = col - (row + (row&1)) / 2;
+        else
+            x = col - (row - (row&1)) / 2;
+
+        return {
+            x: x,
+            y: -x-row,
+            z: row,
+        }
+    }
+    convertFromCube(cubeX: number, cubeY: number, cubeZ: number) {
+        let row: number, col: number;
+
+        if (this.offsetEvenRows)
+            col = cubeX + (cubeZ + (cubeZ&1)) / 2;
+        else
+            col = cubeX + (cubeZ - (cubeZ&1)) / 2;
+        row = cubeZ;
+
+        return this.getCellIndex(row, col);
     }
     changeSize(newWidth: number, newHeight: number, mode: ResizeAnchorMode) {
         let deltaWidth = newWidth - this.width;
@@ -158,15 +155,15 @@ class MapData {
             for (let row = 0; row < this.height; row++) {
                 let rowInsertIndex: number; // this is complicated on account of the "chopping" we did to get square edges
                 if (leftEdgeFixed)
-                    rowInsertIndex = this.underlyingWidth - Math.floor(row / 2);
+                    rowInsertIndex = this.width - Math.floor(row / 2);
                 else
                     rowInsertIndex = Math.floor((this.height - row - 1) / 2);
 
-                let rowStart = row * this.underlyingWidth;
+                let rowStart = row * this.width;
                 let insertPos = rowStart + rowInsertIndex + overallDelta;
 
                 for (let i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, new MapCell(this, CellType.empty));
 
                 overallDelta += delta;
             }
@@ -176,37 +173,36 @@ class MapData {
                 let rowChopPos;
                 if (forHeightChange) {
                     if (leftEdgeFixed)
-                        rowChopPos = this.underlyingWidth + delta;
+                        rowChopPos = this.width + delta;
                     else
                         rowChopPos = 0;
                 }
                 else if (leftEdgeFixed)
-                    rowChopPos = this.underlyingWidth - Math.floor(row / 2) + delta;
+                    rowChopPos = this.width - Math.floor(row / 2) + delta;
                 else
                     rowChopPos = Math.floor((this.height - row - 1) / 2);
 
-                let rowStart = row * this.underlyingWidth;
+                let rowStart = row * this.width;
                 let chopPos = rowStart + rowChopPos + overallDelta;
                 this.cells.splice(chopPos, -delta);
                 overallDelta += delta;
             }
         }
 
-        this.underlyingWidth += delta;
+        this.width += delta;
     }
     private performHeightChange(delta: number, topEdgeFixed: boolean) {
         if (delta > 0) {
-            let diff = delta * this.underlyingWidth;
+            let diff = delta * this.width;
             for (let i = 0; i < diff; i++) {
-                if (this.cells.length + 1 > this.underlyingWidth * this.height)
+                if (this.cells.length + 1 > this.width * this.height)
                     this.height++;
 
-                let globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, new MapCell(this, CellType.empty));
             }
         }
         else if (delta < 0) {
-            let diff = -delta * this.underlyingWidth;
+            let diff = -delta * this.width;
             this.height += delta;
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
@@ -248,8 +244,8 @@ class MapData {
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'minX' || key == 'maxX' || key == 'minY' || key == 'maxY'
-                || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop')
+                || key == 'map' || key == 'cellType' || key == 'cell' || key == 'keyCells'
+                || key == 'type' || key == 'renderPoints' || key == 'isLoop')
                 return undefined;
             return value;
         });
@@ -281,9 +277,6 @@ class MapData {
 
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
-                if (cell == null)
-                    return null;
-
                 let cellType = map.cellTypes[cell.typeID];
                 return new MapCell(map, cellType);
             });
@@ -306,8 +299,6 @@ class MapData {
                 return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
             });
 
-        map.positionCells();
-
         if (data.lines !== undefined)
             for (let line of data.lines) {
                 let mapLine = new MapLine(map.lineTypes[line.typeID])
@@ -317,10 +308,10 @@ class MapData {
                         mapLine.keyCells.push(cell);
                 }
 
-                mapLine.updateRenderPoints();
                 map.lines.push(mapLine);
             }
 
+        map.positionCells();
         return map;
     }
 }
