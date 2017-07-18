@@ -168,33 +168,23 @@
       cursor: not-allowed; }
       #undoRedo button.disabled svg {
         stroke: grey !important; }
+    #undoRedo button.spinner > svg {
+      -webkit-animation: spin 3s linear infinite;
+      -moz-animation: spin 3s linear infinite;
+      animation: spin 3s linear infinite; }
+
+@-moz-keyframes spin {
+  100% {
+    -moz-transform: rotate(360deg); } }
+
+@-webkit-keyframes spin {
+  100% {
+    -webkit-transform: rotate(360deg); } }
+
+@keyframes spin {
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg); } }
 
 #setupDownload canvas {
   display: none; }
-
-/*
-#brushList .brush {
-  cursor: pointer;
-  display: inline-block;
-  margin: 0.25em;
-  padding: 0 0.1em;
-  min-width: 5em;
-  border: solid 1px grey;
-  text-align: center;
-  color: black;
-  text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white;
-
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-
-  &.selected {
-    color: white;
-    text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 5px black;
-  }
-  &:hover {
-    text-decoration: underline;
-  }
-}
-*/
