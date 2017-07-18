@@ -24,6 +24,7 @@ interface IWorldMapState {
     map: MapData;
     activeEditor?: EditorType;
     editorHeading?: string;
+    selectedLine?: MapLine;
 }
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
@@ -64,7 +65,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             return <div id="worldRoot" />;
 
         let map = <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => this.mapView = c}
-                    editor={this.state.activeEditor}
+                    editor={this.state.activeEditor} selectedLine={this.state.selectedLine}
                     cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)}
                     cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />;
 
@@ -102,7 +103,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Terrain:
                 return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
-                return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} />;
+                return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} selectedLine={this.state.selectedLine} lineSelected={this.lineSelected.bind(this)} />;
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Layers:
@@ -189,6 +190,13 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.state.map.lineTypes = types;
         this.mapChanged();
     }
+    private lineSelected(line?: MapLine) {
+        this.setState({
+            selectedLine: line,
+            map: this.state.map
+        });
+        this.mapView.redraw();
+    }
     private updateLines(lines: MapLine[]) {
         this.state.map.lines = lines;
         this.mapChanged();
@@ -200,9 +208,17 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapView.redraw();
         this.changes.recordChange(this.state.map);
     }
-    private replaceMap(map: MapData){ 
+    private replaceMap(map: MapData){
+        // don't hold onto a line from the "old" map; find the equivalent
+        let selectedLine = this.state.selectedLine;
+        if (selectedLine !== undefined) {
+            let index = this.state.map.lines.indexOf(selectedLine);
+            selectedLine = map.lines[index];
+        }
+
         this.setState({
-            map: map
+            map: map,
+            selectedLine: selectedLine,
         });
         this.mapView.redraw();
     }

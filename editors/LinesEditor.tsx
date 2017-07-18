@@ -1,14 +1,15 @@
 interface ILinesEditorProps {
     lineTypes: LineType[];
     lines: MapLine[];
+    selectedLine?: MapLine;
     updateLineTypes: (lineTypes: LineType[]) => void;
     updateLines: (lines: MapLine[]) => void;
+    lineSelected: (line?: MapLine) => void;
 }
 
 interface ILinesEditorState {
     isEditingLineType: boolean;
     selectedLineType?: LineType;
-    selectedLine?: MapLine;
 }
 
 class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> {
@@ -18,7 +19,6 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         this.state = {
             isEditingLineType: false,
             selectedLineType: props.lineTypes[0],
-            selectedLine: undefined,
         };
     }
     componentWillReceiveProps(newProps: ILinesEditorProps) {
@@ -33,8 +33,8 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
     render() {
         if (this.state.isEditingLineType)
             return <LineTypeEditor editingType={this.state.selectedLineType} lineTypes={this.props.lineTypes} updateLineTypes={this.lineTypesChanged.bind(this)} />;
-        else if (this.state.selectedLine !== undefined)
-            return <LineEditor editingLine={this.state.selectedLine} lines={this.props.lines} lineTypes={this.props.lineTypes} updateLines={this.linesUpdated.bind(this)} />
+        else if (this.props.selectedLine !== undefined)
+            return <LineEditor editingLine={this.props.selectedLine} lines={this.props.lines} lineTypes={this.props.lineTypes} updateLines={this.linesUpdated.bind(this)} />
 
         let that = this;
         return <form>
@@ -76,10 +76,7 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
     }
     private linesUpdated(lines: MapLine[]) {
         this.props.updateLines(lines);
-        this.setState({
-            selectedLine: undefined,
-            isEditingLineType: false,
-        });
+        this.props.lineSelected(undefined);
     }
 
     lastClicked?: MapCell;
@@ -89,14 +86,11 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         
         let lines = this.props.lines.slice();
 
-        if (this.state.selectedLine === undefined)
+        if (this.props.selectedLine === undefined)
         {
             let line = MapLine.getByCell(cell, this.props.lines);
             if (line !== undefined) {
-                this.setState({
-                    selectedLine: line,
-                    isEditingLineType: false,
-                });
+                this.props.lineSelected(line);
                 return;
             }
 
@@ -107,24 +101,17 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             line = new MapLine(this.state.selectedLineType);
             line.keyCells.push(cell);
             lines.push(line);
-
-            this.setState({
-                selectedLine: line,
-                isEditingLineType: false,
-            });
+            
+            this.props.lineSelected(line);
         }
         else {
             if (cell == this.lastClicked) {
-                // end the line
-                this.setState({
-                    selectedLine: undefined,
-                    isEditingLineType: false,
-                });
+                this.props.lineSelected(undefined);
             }
             else {
                 // add control point to existing line
-                this.state.selectedLine.keyCells.push(cell);
-                this.state.selectedLine.updateRenderPoints();
+                this.props.selectedLine.keyCells.push(cell);
+                this.props.selectedLine.updateRenderPoints();
             }
         }
         
