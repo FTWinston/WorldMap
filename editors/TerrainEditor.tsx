@@ -20,19 +20,20 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             selectedTerrainType: props.cellTypes[0],
         };
     }
-    componentWillReceiveProps(newProps: ITerrainEditorProps) {
-        if (this.state.selectedTerrainType === undefined || newProps.cellTypes.indexOf(this.state.selectedTerrainType) == -1)
-            this.setState(function (prevState) {
-                return {
-                    isEditingTerrainType: prevState.isEditingTerrainType,
-                    isDrawingOnMap: prevState.isDrawingOnMap,
-                    selectedTerrainType: newProps.cellTypes[0],
-                }
-            });
-    }
     componentWillUpdate(nextProps: ITerrainEditorProps, nextState: ITerrainEditorState) {
         if (this.state.isDrawingOnMap && !nextState.isDrawingOnMap)
             this.props.hasDrawn(true);
+    }
+    componentDidUpdate(prevProps: ITerrainEditorProps, prevState: ITerrainEditorState) {
+        if (this.state.selectedTerrainType === undefined || this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+            this.setState(function (prevState) {
+                return {
+                    isEditingTerrainType: false,
+                    isDrawingOnMap: false,
+                    selectedTerrainType: this.props.cellTypes[0],
+                }
+            });
+        }
     }
     render() {
         if (this.state.isEditingTerrainType)
@@ -76,9 +77,11 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
     mouseDown(cell: MapCell) {
         if (this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
+        
         this.setState(function (prevState) {
             return {
                 isEditingTerrainType: prevState.isEditingTerrainType,
+                selectedTerrainType: prevState.selectedTerrainType,
                 isDrawingOnMap: true,
             }
         });
@@ -92,6 +95,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         this.setState(function (prevState) {
             return {
                 isEditingTerrainType: prevState.isEditingTerrainType,
+                selectedTerrainType: prevState.selectedTerrainType,
                 isDrawingOnMap: false,
             }
         });
@@ -102,5 +106,25 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
 
         cell.cellType = this.state.selectedTerrainType;
         this.props.hasDrawn(false);
+    }
+
+    replacingMap(map: MapData) {
+        let cellType: CellType | undefined;
+        let editingType = this.state.isEditingTerrainType;
+
+        if (this.state.selectedTerrainType !== undefined) {
+            let index = this.props.cellTypes.indexOf(this.state.selectedTerrainType);
+            cellType = map.cellTypes[index];
+        }
+        if (cellType === undefined) {
+            cellType = map.cellTypes[0];
+            editingType = false;
+        }
+
+        this.setState({
+           isEditingTerrainType: editingType,
+            selectedTerrainType: cellType,
+            isDrawingOnMap: false, 
+        });
     }
 }

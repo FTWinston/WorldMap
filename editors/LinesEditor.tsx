@@ -21,14 +21,15 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             selectedLineType: props.lineTypes[0],
         };
     }
-    componentWillReceiveProps(newProps: ILinesEditorProps) {
-        if (this.state.selectedLineType === undefined || newProps.lineTypes.indexOf(this.state.selectedLineType) == -1)
+    componentDidUpdate(prevProps: ILinesEditorProps, prevState: ILinesEditorState) {
+        if (this.state.selectedLineType === undefined || this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,
-                    selectedLineType: newProps.lineTypes[0],
+                    selectedLineType: this.props.lineTypes[0],
                 }
             });
+        }
     }
     render() {
         if (this.state.isEditingLineType)
@@ -117,5 +118,16 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         
         this.props.updateLines(lines);
         this.lastClicked = cell;
+    }
+
+    replacingMap(map: MapData) {
+        if (this.state.selectedLineType !== undefined) {
+            let index = this.props.lineTypes.indexOf(this.state.selectedLineType);
+            let lineType = map.lineTypes[index];
+            this.setState({
+                isEditingLineType: this.state.isEditingLineType && lineType !== undefined,
+                selectedLineType: lineType,
+            });
+        }
     }
 }

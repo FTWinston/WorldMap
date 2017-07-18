@@ -24,6 +24,18 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
             selectedLocationType: props.locationTypes[0],
         };
     }
+    componentDidUpdate(prevProps: ILocationsEditorProps, prevState: ILocationsEditorState) {
+        if (this.state.selectedLocationType === undefined || this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
+            this.setState(function (prevState) {
+                return {
+                    isEditingLocation: prevState.isEditingLocation,
+                    isEditingLocationType: false,
+                    isNewLocation: false,
+                    selectedLocationType: this.props.locationTypes[0],
+                }
+            });
+        }
+    }
     componentWillReceiveProps(newProps: ILocationsEditorProps) {
         if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
@@ -110,6 +122,37 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
             isNewLocation: isNew,
             selectedLocation: loc,
             selectedLocationType: this.state.selectedLocationType,
+        });
+    }
+
+    replacingMap(map: MapData) {
+        let locationType: LocationType | undefined;
+        let editingType = this.state.isEditingLocationType;
+
+        if (this.state.selectedLocationType !== undefined) {
+            let index = this.props.locationTypes.indexOf(this.state.selectedLocationType);
+            locationType = map.locationTypes[index];
+        }
+        if (locationType === undefined) {
+            locationType = map.locationTypes[0];
+            editingType = false;
+        }
+
+        let location: MapLocation | undefined;
+        let editingLocation = this.state.isEditingLocation;
+        
+        if (this.state.selectedLocation !== undefined) {
+            let index = this.props.locations.indexOf(this.state.selectedLocation);
+            location = map.locations[index];
+        }
+        if (location === undefined)
+            editingLocation = false;
+
+        this.setState({
+            isEditingLocationType: editingType,
+            isEditingLocation: editingLocation,
+            isNewLocation: this.state.isNewLocation,
+            selectedLocationType: locationType,
         });
     }
 }

@@ -1505,19 +1505,20 @@ var TerrainEditor = (function (_super) {
         };
         return _this;
     }
-    TerrainEditor.prototype.componentWillReceiveProps = function (newProps) {
-        if (this.state.selectedTerrainType === undefined || newProps.cellTypes.indexOf(this.state.selectedTerrainType) == -1)
-            this.setState(function (prevState) {
-                return {
-                    isEditingTerrainType: prevState.isEditingTerrainType,
-                    isDrawingOnMap: prevState.isDrawingOnMap,
-                    selectedTerrainType: newProps.cellTypes[0],
-                };
-            });
-    };
     TerrainEditor.prototype.componentWillUpdate = function (nextProps, nextState) {
         if (this.state.isDrawingOnMap && !nextState.isDrawingOnMap)
             this.props.hasDrawn(true);
+    };
+    TerrainEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
+        if (this.state.selectedTerrainType === undefined || this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+            this.setState(function (prevState) {
+                return {
+                    isEditingTerrainType: false,
+                    isDrawingOnMap: false,
+                    selectedTerrainType: this.props.cellTypes[0],
+                };
+            });
+        }
     };
     TerrainEditor.prototype.render = function () {
         if (this.state.isEditingTerrainType)
@@ -1559,6 +1560,7 @@ var TerrainEditor = (function (_super) {
         this.setState(function (prevState) {
             return {
                 isEditingTerrainType: prevState.isEditingTerrainType,
+                selectedTerrainType: prevState.selectedTerrainType,
                 isDrawingOnMap: true,
             };
         });
@@ -1571,6 +1573,7 @@ var TerrainEditor = (function (_super) {
         this.setState(function (prevState) {
             return {
                 isEditingTerrainType: prevState.isEditingTerrainType,
+                selectedTerrainType: prevState.selectedTerrainType,
                 isDrawingOnMap: false,
             };
         });
@@ -1580,6 +1583,23 @@ var TerrainEditor = (function (_super) {
             return;
         cell.cellType = this.state.selectedTerrainType;
         this.props.hasDrawn(false);
+    };
+    TerrainEditor.prototype.replacingMap = function (map) {
+        var cellType;
+        var editingType = this.state.isEditingTerrainType;
+        if (this.state.selectedTerrainType !== undefined) {
+            var index = this.props.cellTypes.indexOf(this.state.selectedTerrainType);
+            cellType = map.cellTypes[index];
+        }
+        if (cellType === undefined) {
+            cellType = map.cellTypes[0];
+            editingType = false;
+        }
+        this.setState({
+            isEditingTerrainType: editingType,
+            selectedTerrainType: cellType,
+            isDrawingOnMap: false,
+        });
     };
     return TerrainEditor;
 }(React.Component));
@@ -1768,14 +1788,15 @@ var LinesEditor = (function (_super) {
         };
         return _this;
     }
-    LinesEditor.prototype.componentWillReceiveProps = function (newProps) {
-        if (this.state.selectedLineType === undefined || newProps.lineTypes.indexOf(this.state.selectedLineType) == -1)
+    LinesEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
+        if (this.state.selectedLineType === undefined || this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,
-                    selectedLineType: newProps.lineTypes[0],
+                    selectedLineType: this.props.lineTypes[0],
                 };
             });
+        }
     };
     LinesEditor.prototype.render = function () {
         if (this.state.isEditingLineType)
@@ -1851,6 +1872,16 @@ var LinesEditor = (function (_super) {
         }
         this.props.updateLines(lines);
         this.lastClicked = cell;
+    };
+    LinesEditor.prototype.replacingMap = function (map) {
+        if (this.state.selectedLineType !== undefined) {
+            var index = this.props.lineTypes.indexOf(this.state.selectedLineType);
+            var lineType = map.lineTypes[index];
+            this.setState({
+                isEditingLineType: this.state.isEditingLineType && lineType !== undefined,
+                selectedLineType: lineType,
+            });
+        }
     };
     return LinesEditor;
 }(React.Component));
@@ -2063,6 +2094,18 @@ var LocationsEditor = (function (_super) {
         };
         return _this;
     }
+    LocationsEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
+        if (this.state.selectedLocationType === undefined || this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
+            this.setState(function (prevState) {
+                return {
+                    isEditingLocation: prevState.isEditingLocation,
+                    isEditingLocationType: false,
+                    isNewLocation: false,
+                    selectedLocationType: this.props.locationTypes[0],
+                };
+            });
+        }
+    };
     LocationsEditor.prototype.componentWillReceiveProps = function (newProps) {
         if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
@@ -2141,6 +2184,32 @@ var LocationsEditor = (function (_super) {
             isNewLocation: isNew,
             selectedLocation: loc,
             selectedLocationType: this.state.selectedLocationType,
+        });
+    };
+    LocationsEditor.prototype.replacingMap = function (map) {
+        var locationType;
+        var editingType = this.state.isEditingLocationType;
+        if (this.state.selectedLocationType !== undefined) {
+            var index = this.props.locationTypes.indexOf(this.state.selectedLocationType);
+            locationType = map.locationTypes[index];
+        }
+        if (locationType === undefined) {
+            locationType = map.locationTypes[0];
+            editingType = false;
+        }
+        var location;
+        var editingLocation = this.state.isEditingLocation;
+        if (this.state.selectedLocation !== undefined) {
+            var index = this.props.locations.indexOf(this.state.selectedLocation);
+            location = map.locations[index];
+        }
+        if (location === undefined)
+            editingLocation = false;
+        this.setState({
+            isEditingLocationType: editingType,
+            isEditingLocation: editingLocation,
+            isNewLocation: this.state.isNewLocation,
+            selectedLocationType: locationType,
         });
     };
     return LocationsEditor;
@@ -2403,6 +2472,9 @@ var WorldMap = (function (_super) {
             var index = this.state.map.lines.indexOf(selectedLine);
             selectedLine = map.lines[index];
         }
+        // similarly, allow editors to update their selected values to come from the new map
+        if (this.activeEditor !== undefined && this.activeEditor.replacingMap !== undefined)
+            this.activeEditor.replacingMap(map);
         this.setState({
             map: map,
             selectedLine: selectedLine,

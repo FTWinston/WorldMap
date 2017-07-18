@@ -13,6 +13,7 @@ interface IMapEditor {
     mouseUp?: (cell: MapCell) => void;
     mouseEnter?: (cell: MapCell) => void;
     mouseLeave?: (cell: MapCell) => void;
+    replacingMap?: (map: MapData) => void;
 }
 
 interface IWorldMapProps {
@@ -215,6 +216,10 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             let index = this.state.map.lines.indexOf(selectedLine);
             selectedLine = map.lines[index];
         }
+
+        // similarly, allow editors to update their selected values to come from the new map
+        if (this.activeEditor !== undefined && this.activeEditor.replacingMap !== undefined)
+            this.activeEditor.replacingMap(map);
 
         this.setState({
             map: map,
