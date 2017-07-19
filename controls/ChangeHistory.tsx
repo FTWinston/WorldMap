@@ -115,11 +115,11 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex + 1]));
 
         this.setState(function (prevState) {
-                return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
-                    saveInProgress: prevState.saveInProgress,
-                }
-            });
+            return {
+                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
+                saveInProgress: prevState.saveInProgress,
+            }
+        });
     }
     canUndo() {
         return this.state.lastAppliedChangeIndex > 0;

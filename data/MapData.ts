@@ -40,12 +40,10 @@ class MapData {
 
     static readonly packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
     static readonly packedHeightRatio = 1.5;
-    readonly edgePadding = 0.3;
 
     minX: number;
-    readonly minY = -this.edgePadding;
     private positionCells() {
-        this.minX = MapData.packedWidthRatio * (this.height/2 - 1) - this.edgePadding;
+        this.minX = MapData.packedWidthRatio * (this.height/2 - 1);
 
         for (let i = 0; i < this.cells.length; i++) {
             let cell = this.cells[i];
@@ -55,7 +53,7 @@ class MapData {
             cell.row = Math.floor(i / this.underlyingWidth);
             cell.col = i % this.underlyingWidth;
             cell.xPos = MapData.packedWidthRatio * (cell.col + cell.row / 2) - this.minX;
-            cell.yPos = MapData.packedHeightRatio * cell.row - this.minY;
+            cell.yPos = MapData.packedHeightRatio * cell.row;
         }
     }
     private shouldIndexHaveCell(index: number) {

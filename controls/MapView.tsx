@@ -14,18 +14,23 @@ interface IMapViewProps {
 interface IMapViewState {
     cellRadius: number;
     cellDrawInterval: number;
-    scrollbarWidth: number;
-    scrollbarHeight: number;
+
+    viewWidth?: number;
+    viewHeight?: number;
+    mapWidth?: number;
+    mapHeight?: number;
+    scrollbarWidth?: number;
+    scrollbarHeight?: number;
 }
 
 declare function saveAs(blob: Blob, name: string): void;
 
 class MapView extends React.Component<IMapViewProps, IMapViewState> { 
-    private root: HTMLElement;
+    private root?: HTMLElement;
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
-    private scrollPane: HTMLElement;
-    private scrollSize: HTMLElement;
+    private scrollPane?: HTMLElement;
+    private scrollSize?: HTMLElement;
 
     private readonly backgroundColor: string = '#ccc';
     private mouseX?: number;
@@ -70,11 +75,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.setState({
                 cellRadius: nextProps.fixedCellRadius,
                 cellDrawInterval: this.state.cellDrawInterval,
-                scrollbarWidth: this.state.scrollbarWidth,
-                scrollbarHeight: this.state.scrollbarHeight,
             });
     }
     private setupTouch() {
+        if (this.scrollPane === undefined)
+            return;
         this.hammer = new Hammer.Manager(this.scrollPane);
 
         let zoom = new Hammer.Pinch({ event: 'zoom', threshold: 0.1 });
@@ -136,24 +141,38 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     render() {
         if (!this.props.scrollUI) {
-            let size = this.getOverallSize();
-            return <canvas ref={(c) => this.canvas = c} width={size.width} height={size.height}></canvas>;
+            return <canvas ref={(c) => this.canvas = c} width={this.state.mapWidth} height={this.state.mapHeight}></canvas>;
         }
-        
+
+        let canvasWidth = this.state.viewWidth !== undefined ? this.state.viewWidth : 0;
+        if (this.state.scrollbarWidth !== undefined)
+            canvasWidth -= this.state.scrollbarWidth;
+
+        let canvasHeight = this.state.viewHeight !== undefined ? this.state.viewHeight : 0;
+        if (this.state.scrollbarHeight !== undefined)
+            canvasHeight -= this.state.scrollbarHeight
+
         return <div id="mapRoot" ref={(c) => this.root = c}>
-            <canvas ref={(c) => this.canvas = c}></canvas>
-            <div ref={(c) => this.scrollPane = c} className="scrollPane"
+            <canvas ref={(c) => this.canvas = c} width={canvasWidth} height={canvasHeight}></canvas>
+            <div ref={(c) => this.scrollPane = c} className="scrollPane" style={{
+                    width: this.state.viewWidth,
+                    height: this.state.viewHeight,
+                }}
                 onScroll={this.redraw.bind(this)}
                 onWheel={this.mouseScroll.bind(this)}
                 onMouseMove={this.mouseMove.bind(this)}
                 onMouseEnter={this.mouseMove.bind(this)}
                 onMouseDown={this.mouseDown.bind(this)}
                 onMouseUp={this.mouseUp.bind(this)}>
-                    <div ref={(c) => this.scrollSize = c} className="scrollSize" />
+                    <div ref={(c) => this.scrollSize = c} className="scrollSize" style={{
+                        width: this.state.mapWidth + 'px',
+                        height: this.state.mapHeight + 'px'
+                    }} />
             </div>
         </div>;
     }
 
+    private edgePadding = 20; // pixels, regardless of zoom
     private redrawing: boolean = false;
     public redraw() {
         if (this.redrawing)
@@ -166,8 +185,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.ctx.fillStyle = this.backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
 
-        if (this.props.scrollUI)
-            this.ctx.translate(-this.scrollPane.scrollLeft, -this.scrollPane.scrollTop);
+        if (this.scrollPane !== undefined)
+            this.ctx.translate(-this.scrollPane.scrollLeft + this.edgePadding, -this.scrollPane.scrollTop + this.edgePadding);
 
         let twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         let drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
@@ -185,17 +204,17 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         this.drawLocations();
 
-        if (this.props.scrollUI)
-            this.ctx.translate(this.scrollPane.scrollLeft, this.scrollPane.scrollTop);
+        if (this.scrollPane !== undefined)
+            this.ctx.translate(this.scrollPane.scrollLeft - this.edgePadding, this.scrollPane.scrollTop - this.edgePadding);
         this.redrawing = false;
     }
     private getDrawExtent(drawCellRadius: number) {
-        if (this.props.scrollUI)
+        if (this.scrollPane !== undefined && this.root !== undefined)
             return {
-                minX: this.scrollPane.scrollLeft - drawCellRadius,
-                minY: this.scrollPane.scrollTop - drawCellRadius,
-                maxX: this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius,
-                maxY: this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius,
+                minX: this.scrollPane.scrollLeft - drawCellRadius - this.edgePadding,
+                minY: this.scrollPane.scrollTop - drawCellRadius - this.edgePadding,
+                maxX: this.scrollPane.scrollLeft + this.root.offsetWidth + drawCellRadius - this.edgePadding,
+                maxY: this.scrollPane.scrollTop + this.root.offsetHeight + drawCellRadius - this.edgePadding,
             }
         else
             return {
@@ -470,26 +489,41 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private resize() {
         if (this.resizing)
             return;
-        if (this.props.scrollUI)
-            requestAnimationFrame(this.updateSize.bind(this));
+        
+        requestAnimationFrame(this.updateSize.bind(this));
         this.redraw();
         this.resizing = true;
     }
-    private getOverallSize() {
-        let map = this.props.map;
-        
-        let widthInCells = map.width % 2 == 0
-            ? MapData.packedWidthRatio * map.width - MapData.packedWidthRatio / 2 - 1
-            : MapData.packedWidthRatio * map.width - MapData.packedWidthRatio - 1
+    updateSize() {
+        let viewWidth: number, viewHeight: number;
+        if (this.root === undefined) {
+            viewWidth = viewHeight = 0;
+        }
+        else {
+            viewWidth = this.root.offsetWidth;
+            viewHeight = this.root.offsetHeight;
+        }
 
-        let heightInCells = 1.5 * map.height - 2.5;
+        let widthInCells = this.props.map.width % 2 == 0
+            ? MapData.packedWidthRatio * this.props.map.width + 2 - MapData.packedWidthRatio / 2
+            : MapData.packedWidthRatio * this.props.map.width + 2 - MapData.packedWidthRatio
 
-        return { 
-            width: (widthInCells + map.edgePadding + map.edgePadding) * this.state.cellRadius,
-            height: (heightInCells + map.edgePadding + map.edgePadding) * this.state.cellRadius,
-        };
-    }
-    private updateScrollSize() {
+        let heightInCells = 1.5 * this.props.map.height + 0.5;
+
+        let mapWidth = widthInCells * this.state.cellRadius + this.edgePadding + this.edgePadding;
+        let mapHeight = heightInCells * this.state.cellRadius + this.edgePadding + this.edgePadding;
+
+        this.setState(function (prevState: IMapViewState) {
+            return {
+                viewWidth: viewWidth,
+                viewHeight: viewHeight,
+                mapWidth: mapWidth,
+                mapHeight: mapHeight,
+                cellRadius: prevState.cellRadius,
+                cellDrawInterval: prevState.cellDrawInterval,
+            }
+        }.bind(this));
+
         let screenFocusX: number, screenFocusY: number;
 
         if (this.mouseX !== undefined && this.mouseY !== undefined) {
@@ -501,28 +535,15 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             screenFocusY = this.canvas.height / 2;
         }
 
-        let scrollBounds = this.scrollSize.getBoundingClientRect();
-        let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
-        let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
-        this.scrollPane.style.width = this.root.offsetWidth + 'px';
-        this.scrollPane.style.height = this.root.offsetHeight + 'px';
+        if (this.scrollSize !== undefined && this.scrollPane !== undefined) {
+            let scrollBounds = this.scrollSize.getBoundingClientRect();
+            let scrollFractionX = scrollBounds.width == 0 ? 0 : (this.scrollPane.scrollLeft + screenFocusX) / scrollBounds.width;
+            let scrollFractionY = scrollBounds.height == 0 ? 0 : (this.scrollPane.scrollTop + screenFocusY) / scrollBounds.height;
 
-        let overallSize = this.getOverallSize();
+            this.scrollPane.scrollLeft = scrollFractionX * mapWidth - screenFocusX;
+            this.scrollPane.scrollTop = scrollFractionY * mapHeight - screenFocusY;
+        }
 
-        this.scrollSize.style.width = overallSize.width + 'px';
-        this.scrollSize.style.height = overallSize.height + 'px';
-
-        this.scrollPane.scrollLeft = scrollFractionX * overallSize.width - screenFocusX;
-        this.scrollPane.scrollTop = scrollFractionY * overallSize.height - screenFocusY;
-    }
-    updateSize() {
-        let viewWidth = this.root.offsetWidth - this.state.scrollbarWidth;
-        let viewHeight = this.root.offsetHeight - this.state.scrollbarHeight;
-
-        this.canvas.setAttribute('width', viewWidth.toString());
-        this.canvas.setAttribute('height', viewHeight.toString());
-
-        this.updateScrollSize();
         this.resizing = false;
     }
     private mouseScroll(e: MouseWheelEvent) {
@@ -534,8 +555,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     zoom(scale: number) {
         this.setCellRadius(Math.min(200, Math.ceil(this.state.cellRadius * scale)));
-        this.updateScrollSize();
-        this.redraw();
     }
     private setCellRadius(radius: number) {
         let displayRadius = radius;
@@ -547,7 +566,13 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             cellDrawInterval *= 2;
         }
         
-        this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval, scrollbarWidth: this.state.scrollbarWidth, scrollbarHeight: this.state.scrollbarHeight});
+        this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval});
+    }
+    componentDidUpdate(prevProps: IMapViewProps, prevState: IMapViewState) {
+        if (prevState.cellRadius != this.state.cellRadius) {
+            this.updateSize();
+            this.redraw();
+        }
     }
     private mouseDownCell: PossibleMapCell;
     private mouseMove(e: MouseEvent) {
@@ -600,8 +625,15 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.mouseDownCell = null;
     }
     private getCellIndexAtPoint(screenX: number, screenY: number) {
-        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius;
-        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop + this.props.map.minY * this.state.cellRadius;
+        if (this.scrollPane === undefined)
+            return -1;
+
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.edgePadding;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.edgePadding;
+
+        console.log('screen: ' + screenX + ', ' + screenY);
+        console.log('map:    ' + mapX + ', ' + mapY);
+
         let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
         let fRow = mapY * 2 / 3 / this.state.cellRadius;
         let fThirdCoord = - fCol - fRow;
@@ -620,8 +652,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
         else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
             rRow = - rCol - rThird;
-
-        // TODO: account for cellCombinationScale to get the VISIBLE cell closest to this
 
         return this.props.map.getCellIndex(rRow, rCol);
     }
