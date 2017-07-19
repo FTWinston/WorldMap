@@ -476,9 +476,17 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.resizing = true;
     }
     private getOverallSize() {
-        return {
-            width: (this.props.map.maxX - this.props.map.minX) * this.state.cellRadius,
-            height: (this.props.map.maxY - this.props.map.minY) * this.state.cellRadius
+        let map = this.props.map;
+        
+        let widthInCells = map.width % 2 == 0
+            ? MapData.packedWidthRatio * map.width - MapData.packedWidthRatio / 2 - 1
+            : MapData.packedWidthRatio * map.width - MapData.packedWidthRatio - 1
+
+        let heightInCells = 1.5 * map.height - 2.5;
+
+        return { 
+            width: (widthInCells + map.edgePadding + map.edgePadding) * this.state.cellRadius,
+            height: (heightInCells + map.edgePadding + map.edgePadding) * this.state.cellRadius,
         };
     }
     private updateScrollSize() {
