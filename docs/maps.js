@@ -1225,10 +1225,8 @@ var MapView = (function (_super) {
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
         if (this.scrollPane === undefined)
             return -1;
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.edgePadding;
-        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.edgePadding;
-        console.log('screen: ' + screenX + ', ' + screenY);
-        console.log('map:    ' + mapX + ', ' + mapY);
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.state.cellRadius - this.edgePadding;
+        var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.state.cellRadius - this.edgePadding;
         var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
         var fRow = mapY * 2 / 3 / this.state.cellRadius;
         var fThirdCoord = -fCol - fRow;

@@ -628,11 +628,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         if (this.scrollPane === undefined)
             return -1;
 
-        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.edgePadding;
-        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.edgePadding;
-
-        console.log('screen: ' + screenX + ', ' + screenY);
-        console.log('map:    ' + mapX + ', ' + mapY);
+        let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.state.cellRadius - this.edgePadding;
+        let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.state.cellRadius - this.edgePadding;
 
         let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
         let fRow = mapY * 2 / 3 / this.state.cellRadius;
