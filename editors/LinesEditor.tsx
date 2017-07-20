@@ -31,11 +31,12 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             });
         }
     }
+    lineEditor: LineEditor | null = null;
     render() {
         if (this.state.isEditingLineType)
             return <LineTypeEditor editingType={this.state.selectedLineType} lineTypes={this.props.lineTypes} updateLineTypes={this.lineTypesChanged.bind(this)} />;
         else if (this.props.selectedLine !== undefined)
-            return <LineEditor editingLine={this.props.selectedLine} lines={this.props.lines} lineTypes={this.props.lineTypes} updateLines={this.linesUpdated.bind(this)} />
+            return <LineEditor line={this.props.selectedLine} lineTypes={this.props.lineTypes} lineEdited={this.lineEdited.bind(this)} deleteLine={this.deleteLine.bind(this)} close={this.closeLineEditor.bind(this)} ref={(c) => this.lineEditor = c} />
 
         let that = this;
         return <form>
@@ -51,6 +52,7 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
             </div>
         </form>;
     }
+
     private selectLineType(type: LineType) {
         this.setState({
             isEditingLineType: false,
@@ -75,49 +77,62 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         });
         this.props.updateLineTypes(lineTypes);
     }
-    private linesUpdated(lines: MapLine[]) {
-        this.props.updateLines(lines);
+
+    private closeLineEditor() {
         this.props.lineSelected(undefined);
     }
-
-    lastClicked?: MapCell;
-    mouseUp(cell: MapCell) {
-        if (this.state.isEditingLineType)
+    private lineEdited() {
+        this.props.updateLines(this.props.lines);
+    }
+    private deleteLine() {
+        if (this.props.selectedLine === undefined)
             return;
         
         let lines = this.props.lines.slice();
 
-        if (this.props.selectedLine === undefined)
-        {
-            let line = MapLine.getByCell(cell, this.props.lines);
-            if (line !== undefined) {
-                this.props.lineSelected(line);
-                return;
-            }
-
-            if (this.state.selectedLineType === undefined)
-                return;
-
-            // create new line, currently with only one point
-            line = new MapLine(this.state.selectedLineType);
-            line.keyCells.push(cell);
-            lines.push(line);
-            
-            this.props.lineSelected(line);
-        }
-        else {
-            if (cell == this.lastClicked) {
-                this.props.lineSelected(undefined);
-            }
-            else {
-                // add control point to existing line
-                this.props.selectedLine.keyCells.push(cell);
-                this.props.selectedLine.updateRenderPoints();
-            }
-        }
+        let pos = lines.indexOf(this.props.selectedLine);
+        lines.splice(pos, 1);
         
         this.props.updateLines(lines);
-        this.lastClicked = cell;
+        this.closeLineEditor();
+    }
+    private createNewLine(cell: MapCell) {
+        if (this.state.isEditingLineType)
+            return;
+
+        let line = MapLine.getByCell(cell, this.props.lines);
+        if (line !== undefined) {
+            this.props.lineSelected(line);
+            return;
+        }
+
+        if (this.state.selectedLineType === undefined)
+            return;
+
+        let lines = this.props.lines.slice();
+
+        // create new line, currently with only one point
+        line = new MapLine(this.state.selectedLineType);
+        line.keyCells.push(cell);
+        lines.push(line);
+        
+        this.props.lineSelected(line);        
+        this.props.updateLines(lines);
+    }
+
+    mouseDown(cell: MapCell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseDown(cell);
+    }
+    mouseUp(cell: MapCell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseUp(cell);
+        else
+            this.createNewLine(cell);
+    }
+    mouseMove(cell: MapCell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseMove(cell);
     }
 
     replacingMap(map: MapData) {

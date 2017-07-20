@@ -399,12 +399,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let ctx = this.ctx;
         let type = line.type;
 
-        if (this.props.editor == EditorType.Lines) {
+        if (this.props.editor == EditorType.Lines && (this.props.selectedLine === undefined || this.props.selectedLine == line)) {
             ctx.strokeStyle = '#ff0000';
-            
-            if (this.props.selectedLine !== undefined && this.props.selectedLine !== line)
-                ctx.globalAlpha = 0.3;
-                
             ctx.lineWidth = 2;
 
             for (let cell of line.keyCells) {
@@ -412,8 +408,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
                 ctx.stroke();
             }
-
-            ctx.globalAlpha = 1;
         }
 
         if (line.keyCells.length == 1) {

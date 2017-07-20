@@ -1,8 +1,9 @@
 interface ILineEditorProps {
-    editingLine: MapLine;
-    lines: MapLine[];
+    line: MapLine;
     lineTypes: LineType[];
-    updateLines: (lines: MapLine[]) => void;
+    close: () => void;
+    lineEdited: () => void;
+    deleteLine: () => void;
 }
 
 interface ILineEditorState {
@@ -12,7 +13,7 @@ interface ILineEditorState {
 class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
     componentWillMount() {
         this.setState({
-            type: this.props.editingLine.type,
+            type: this.props.line.type,
         });
     }
     render() {
@@ -29,7 +30,6 @@ class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
             </div>
             <div role="group">
                 <button type="submit">Save line</button>
-                <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
                 {deleteButton}
             </div>
         </form>;
@@ -42,18 +42,31 @@ class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
     private saveType(e: Event) {
         e.preventDefault();
 
-        this.props.editingLine.type = this.state.type;
-        this.props.updateLines(this.props.lines);
-    }
-    cancelEdit() {
-        this.props.updateLines(this.props.lines);
+        this.props.line.type = this.state.type;
+        this.props.lineEdited();
+
+        this.props.close();
     }
     deleteLine() {
-        let lines = this.props.lines.slice();
+        this.props.deleteLine();
+    }
 
-        let pos = lines.indexOf(this.props.editingLine);
-        lines.splice(pos, 1);
-        
-        this.props.updateLines(lines);
+    lastClicked?: MapCell;
+    mouseUp(cell: MapCell) {
+        if (cell == this.lastClicked) {
+            this.props.close(); // TODO: no longer click last cell to close. Want to allow dragging etc.
+        }
+        else {
+            // add control point to existing line
+            this.props.line.keyCells.push(cell);
+            this.props.line.updateRenderPoints();
+            this.props.lineEdited();
+        }
+    }
+    mouseDown(cell: MapCell) {
+
+    }
+    mouseMove(cell: MapCell) {
+
     }
 }

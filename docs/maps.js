@@ -1037,10 +1037,8 @@ var MapView = (function (_super) {
     MapView.prototype.drawLine = function (line, cellRadius) {
         var ctx = this.ctx;
         var type = line.type;
-        if (this.props.editor == 4 /* Lines */) {
+        if (this.props.editor == 4 /* Lines */ && (this.props.selectedLine === undefined || this.props.selectedLine == line)) {
             ctx.strokeStyle = '#ff0000';
-            if (this.props.selectedLine !== undefined && this.props.selectedLine !== line)
-                ctx.globalAlpha = 0.3;
             ctx.lineWidth = 2;
             for (var _i = 0, _a = line.keyCells; _i < _a.length; _i++) {
                 var cell = _a[_i];
@@ -1048,7 +1046,6 @@ var MapView = (function (_super) {
                 ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
                 ctx.stroke();
             }
-            ctx.globalAlpha = 1;
         }
         if (line.keyCells.length == 1) {
             var cell = line.keyCells[0];
@@ -1747,7 +1744,7 @@ var LineEditor = (function (_super) {
     }
     LineEditor.prototype.componentWillMount = function () {
         this.setState({
-            type: this.props.editingLine.type,
+            type: this.props.line.type,
         });
     };
     LineEditor.prototype.render = function () {
@@ -1761,7 +1758,6 @@ var LineEditor = (function (_super) {
                 }))),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save line"),
-                React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
                 deleteButton));
     };
     LineEditor.prototype.typeChanged = function (e) {
@@ -1771,17 +1767,27 @@ var LineEditor = (function (_super) {
     };
     LineEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        this.props.editingLine.type = this.state.type;
-        this.props.updateLines(this.props.lines);
-    };
-    LineEditor.prototype.cancelEdit = function () {
-        this.props.updateLines(this.props.lines);
+        this.props.line.type = this.state.type;
+        this.props.lineEdited();
+        this.props.close();
     };
     LineEditor.prototype.deleteLine = function () {
-        var lines = this.props.lines.slice();
-        var pos = lines.indexOf(this.props.editingLine);
-        lines.splice(pos, 1);
-        this.props.updateLines(lines);
+        this.props.deleteLine();
+    };
+    LineEditor.prototype.mouseUp = function (cell) {
+        if (cell == this.lastClicked) {
+            this.props.close(); // TODO: no longer click last cell to close. Want to allow dragging etc.
+        }
+        else {
+            // add control point to existing line
+            this.props.line.keyCells.push(cell);
+            this.props.line.updateRenderPoints();
+            this.props.lineEdited();
+        }
+    };
+    LineEditor.prototype.mouseDown = function (cell) {
+    };
+    LineEditor.prototype.mouseMove = function (cell) {
     };
     return LineEditor;
 }(React.Component));
@@ -1789,6 +1795,7 @@ var LinesEditor = (function (_super) {
     __extends(LinesEditor, _super);
     function LinesEditor(props) {
         var _this = _super.call(this, props) || this;
+        _this.lineEditor = null;
         _this.state = {
             isEditingLineType: false,
             selectedLineType: props.lineTypes[0],
@@ -1806,10 +1813,11 @@ var LinesEditor = (function (_super) {
         }
     };
     LinesEditor.prototype.render = function () {
+        var _this = this;
         if (this.state.isEditingLineType)
             return React.createElement(LineTypeEditor, { editingType: this.state.selectedLineType, lineTypes: this.props.lineTypes, updateLineTypes: this.lineTypesChanged.bind(this) });
         else if (this.props.selectedLine !== undefined)
-            return React.createElement(LineEditor, { editingLine: this.props.selectedLine, lines: this.props.lines, lineTypes: this.props.lineTypes, updateLines: this.linesUpdated.bind(this) });
+            return React.createElement(LineEditor, { line: this.props.selectedLine, lineTypes: this.props.lineTypes, lineEdited: this.lineEdited.bind(this), deleteLine: this.deleteLine.bind(this), close: this.closeLineEditor.bind(this), ref: function (c) { return _this.lineEditor = c; } });
         var that = this;
         return React.createElement("form", null,
             React.createElement("p", null, "Select a line type to draw onto the map, then click cells to draw it. Double click/tap on a line type to edit it."),
@@ -1845,40 +1853,52 @@ var LinesEditor = (function (_super) {
         });
         this.props.updateLineTypes(lineTypes);
     };
-    LinesEditor.prototype.linesUpdated = function (lines) {
-        this.props.updateLines(lines);
+    LinesEditor.prototype.closeLineEditor = function () {
         this.props.lineSelected(undefined);
     };
-    LinesEditor.prototype.mouseUp = function (cell) {
-        if (this.state.isEditingLineType)
+    LinesEditor.prototype.lineEdited = function () {
+        this.props.updateLines(this.props.lines);
+    };
+    LinesEditor.prototype.deleteLine = function () {
+        if (this.props.selectedLine === undefined)
             return;
         var lines = this.props.lines.slice();
-        if (this.props.selectedLine === undefined) {
-            var line = MapLine.getByCell(cell, this.props.lines);
-            if (line !== undefined) {
-                this.props.lineSelected(line);
-                return;
-            }
-            if (this.state.selectedLineType === undefined)
-                return;
-            // create new line, currently with only one point
-            line = new MapLine(this.state.selectedLineType);
-            line.keyCells.push(cell);
-            lines.push(line);
-            this.props.lineSelected(line);
-        }
-        else {
-            if (cell == this.lastClicked) {
-                this.props.lineSelected(undefined);
-            }
-            else {
-                // add control point to existing line
-                this.props.selectedLine.keyCells.push(cell);
-                this.props.selectedLine.updateRenderPoints();
-            }
-        }
+        var pos = lines.indexOf(this.props.selectedLine);
+        lines.splice(pos, 1);
         this.props.updateLines(lines);
-        this.lastClicked = cell;
+        this.closeLineEditor();
+    };
+    LinesEditor.prototype.createNewLine = function (cell) {
+        if (this.state.isEditingLineType)
+            return;
+        var line = MapLine.getByCell(cell, this.props.lines);
+        if (line !== undefined) {
+            this.props.lineSelected(line);
+            return;
+        }
+        if (this.state.selectedLineType === undefined)
+            return;
+        var lines = this.props.lines.slice();
+        // create new line, currently with only one point
+        line = new MapLine(this.state.selectedLineType);
+        line.keyCells.push(cell);
+        lines.push(line);
+        this.props.lineSelected(line);
+        this.props.updateLines(lines);
+    };
+    LinesEditor.prototype.mouseDown = function (cell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseDown(cell);
+    };
+    LinesEditor.prototype.mouseUp = function (cell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseUp(cell);
+        else
+            this.createNewLine(cell);
+    };
+    LinesEditor.prototype.mouseMove = function (cell) {
+        if (this.lineEditor !== null)
+            this.lineEditor.mouseMove(cell);
     };
     LinesEditor.prototype.replacingMap = function (map) {
         if (this.state.selectedLineType !== undefined) {
