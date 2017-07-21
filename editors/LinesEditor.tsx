@@ -130,9 +130,9 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         else
             this.createNewLine(cell);
     }
-    mouseMove(cell: MapCell) {
+    mouseEnter(cell: MapCell) {
         if (this.lineEditor !== null)
-            this.lineEditor.mouseMove(cell);
+            this.lineEditor.mouseEnter(cell);
     }
 
     replacingMap(map: MapData) {

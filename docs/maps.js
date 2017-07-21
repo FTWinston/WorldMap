@@ -1740,7 +1740,9 @@ var LineTypeEditor = (function (_super) {
 var LineEditor = (function (_super) {
     __extends(LineEditor, _super);
     function LineEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.hasDragged = false;
+        return _this;
     }
     LineEditor.prototype.componentWillMount = function () {
         this.setState({
@@ -1774,20 +1776,35 @@ var LineEditor = (function (_super) {
     LineEditor.prototype.deleteLine = function () {
         this.props.deleteLine();
     };
+    LineEditor.prototype.getKeyIndexAt = function (cell) {
+        var cells = this.props.line.keyCells;
+        for (var i = 0; i < cells.length; i++)
+            if (cells[i] == cell)
+                return i;
+        return undefined;
+    };
     LineEditor.prototype.mouseUp = function (cell) {
-        if (cell == this.lastClicked) {
-            this.props.close(); // TODO: no longer click last cell to close. Want to allow dragging etc.
-        }
-        else {
-            // add control point to existing line
+        if (!this.hasDragged) {
+            // add control point to existing line, if we weren't dragging
             this.props.line.keyCells.push(cell);
             this.props.line.updateRenderPoints();
             this.props.lineEdited();
+            this.hasDragged = false;
         }
+        this.draggingCellIndex = undefined;
     };
     LineEditor.prototype.mouseDown = function (cell) {
+        this.draggingCellIndex = this.getKeyIndexAt(cell);
+        this.hasDragged = false;
     };
-    LineEditor.prototype.mouseMove = function (cell) {
+    LineEditor.prototype.mouseEnter = function (cell) {
+        // change a line's key cells by dragging them
+        if (this.draggingCellIndex !== undefined) {
+            this.hasDragged = true;
+            this.props.line.keyCells[this.draggingCellIndex] = cell;
+            this.props.line.updateRenderPoints();
+            this.props.lineEdited();
+        }
     };
     return LineEditor;
 }(React.Component));
@@ -1896,9 +1913,9 @@ var LinesEditor = (function (_super) {
         else
             this.createNewLine(cell);
     };
-    LinesEditor.prototype.mouseMove = function (cell) {
+    LinesEditor.prototype.mouseEnter = function (cell) {
         if (this.lineEditor !== null)
-            this.lineEditor.mouseMove(cell);
+            this.lineEditor.mouseEnter(cell);
     };
     LinesEditor.prototype.replacingMap = function (map) {
         if (this.state.selectedLineType !== undefined) {

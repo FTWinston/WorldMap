@@ -51,22 +51,39 @@ class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
         this.props.deleteLine();
     }
 
-    lastClicked?: MapCell;
+    private getKeyIndexAt(cell: MapCell) {
+        let cells =  this.props.line.keyCells;
+        for (let i=0; i<cells.length; i++)
+            if (cells[i] == cell)
+                return i;
+        return undefined;
+    }
+
+    draggingCellIndex?: number;
+    hasDragged: boolean = false;
     mouseUp(cell: MapCell) {
-        if (cell == this.lastClicked) {
-            this.props.close(); // TODO: no longer click last cell to close. Want to allow dragging etc.
-        }
-        else {
-            // add control point to existing line
+        if (!this.hasDragged) {
+            // add control point to existing line, if we weren't dragging
             this.props.line.keyCells.push(cell);
             this.props.line.updateRenderPoints();
             this.props.lineEdited();
+            
+            this.hasDragged = false;
         }
+        
+        this.draggingCellIndex = undefined;
     }
     mouseDown(cell: MapCell) {
-
+        this.draggingCellIndex = this.getKeyIndexAt(cell);
+        this.hasDragged = false;
     }
-    mouseMove(cell: MapCell) {
-
+    mouseEnter(cell: MapCell) {
+        // change a line's key cells by dragging them
+        if (this.draggingCellIndex !== undefined) {
+            this.hasDragged = true;
+            this.props.line.keyCells[this.draggingCellIndex] = cell;
+            this.props.line.updateRenderPoints();
+            this.props.lineEdited();
+        }
     }
 }
