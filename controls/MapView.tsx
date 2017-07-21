@@ -123,16 +123,9 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         
         let touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
         this.hammer.add(touch);
-        this.hammer.on('touchstart', function(ev: HammerInput) {
-            this.startCellInteract(ev.center.x, ev.center.y);
-        }.bind(this));
         this.hammer.on('touch', function(ev: HammerInput) {
             this.hoverCellAt(ev.center.x, ev.center.y);
         }.bind(this));
-        this.hammer.on('touchend', function(ev: HammerInput) {
-            this.endCellInteract(ev.center.x, ev.center.y);
-        }.bind(this));
-
 
         pan.requireFailure(zoom);
         zoom.requireFailure(pan);
