@@ -4,7 +4,7 @@ interface ICellPattern {
 }
 
 class CellType {
-    constructor(public name: string, public color: string, public pattern?: string, public patternColor?: string) {
+    constructor(public name: string, public color: string, public pattern?: string, public patternColor?: string, public patternNumberPerCell?: number, public patternSize?: number) {
     }
 
     public static empty = new CellType('Empty', '#ffffff');

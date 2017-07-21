@@ -235,7 +235,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         var halfInterval = Math.ceil(cellDrawInterval / 2);
         let xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
 
-        for (let cell of map.cells) {
+        for (let iCell = 0; iCell < map.cells.length; iCell++) {
+            let cell = map.cells[iCell];
             if (cell == null)
                 continue;
 
@@ -255,11 +256,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 continue;
 
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, outline, fillContent, writeCoords);
+            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent, writeCoords);
             this.ctx.translate(-centerX, -centerY);
         }
     }
-    private drawCell(cell: MapCell, radius: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
+    private drawCell(cell: MapCell, radius: number, randomSeed: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
         let ctx = this.ctx;
         ctx.beginPath();
 
@@ -281,21 +282,35 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
 
         if (fillContent) {
-            if (cell.cellType == null)
+            let cellType = cell.cellType;
+
+            if (cellType == null)
                 ctx.fillStyle = '#666';
             else
                 ctx.fillStyle = cell.cellType.color;
 
             ctx.fill();
 
-            if (cell.cellType.pattern !== undefined && cell.cellType.patternColor !== undefined) {
+            if (cellType.pattern !== undefined
+                    && cellType.patternColor !== undefined
+                    && cellType.patternNumberPerCell !== undefined
+                    && cellType.patternSize !== undefined) {
+                let random = new Object(randomSeed);
+                let pattern = MapCell.patterns[cellType.pattern];
+                let numToDraw = cellType.patternNumberPerCell;
+                let patternSize = cellType.patternSize;
+
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = cell.cellType.patternColor;
+                ctx.strokeStyle = cellType.patternColor;
                 
                 let scale = radius / 12;
                 ctx.scale(scale, scale);
 
-                MapCell.patterns[cell.cellType.pattern].draw(ctx, new Object());
+                for (let iPattern=0; iPattern<numToDraw; iPattern++) {
+                    // TODO: offset within radius, based on patternSize
+
+                    pattern.draw(ctx, random);
+                }
                 
                 ctx.scale(1/scale, 1/scale);
             }

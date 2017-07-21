@@ -260,11 +260,13 @@ var MapData = (function () {
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
-    function CellType(name, color, pattern, patternColor) {
+    function CellType(name, color, pattern, patternColor, patternNumberPerCell, patternSize) {
         this.name = name;
         this.color = color;
         this.pattern = pattern;
         this.patternColor = patternColor;
+        this.patternNumberPerCell = patternNumberPerCell;
+        this.patternSize = patternSize;
     }
     CellType.createDefaults = function (types) {
         types.push(new CellType('Water', '#179ce6'));
@@ -902,8 +904,8 @@ var MapView = (function (_super) {
         var cellRadius = this.state.cellRadius;
         var halfInterval = Math.ceil(cellDrawInterval / 2);
         var xOffset = cellDrawInterval <= 2 ? 0 : Math.floor(cellDrawInterval / 2) - 1;
-        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
+        for (var iCell = 0; iCell < map.cells.length; iCell++) {
+            var cell = map.cells[iCell];
             if (cell == null)
                 continue;
             if (this.getCellDisplayY(cell) % cellDrawInterval != 0)
@@ -918,11 +920,11 @@ var MapView = (function (_super) {
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, outline, fillContent, writeCoords);
+            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent, writeCoords);
             this.ctx.translate(-centerX, -centerY);
         }
     };
-    MapView.prototype.drawCell = function (cell, radius, outline, fillContent, writeCoords) {
+    MapView.prototype.drawCell = function (cell, radius, randomSeed, outline, fillContent, writeCoords) {
         var ctx = this.ctx;
         ctx.beginPath();
         var angle, x, y;
@@ -940,17 +942,28 @@ var MapView = (function (_super) {
             ctx.stroke();
         }
         if (fillContent) {
-            if (cell.cellType == null)
+            var cellType = cell.cellType;
+            if (cellType == null)
                 ctx.fillStyle = '#666';
             else
                 ctx.fillStyle = cell.cellType.color;
             ctx.fill();
-            if (cell.cellType.pattern !== undefined && cell.cellType.patternColor !== undefined) {
+            if (cellType.pattern !== undefined
+                && cellType.patternColor !== undefined
+                && cellType.patternNumberPerCell !== undefined
+                && cellType.patternSize !== undefined) {
+                var random = new Object(randomSeed);
+                var pattern = MapCell.patterns[cellType.pattern];
+                var numToDraw = cellType.patternNumberPerCell;
+                var patternSize = cellType.patternSize;
                 ctx.lineWidth = 1;
-                ctx.strokeStyle = cell.cellType.patternColor;
+                ctx.strokeStyle = cellType.patternColor;
                 var scale = radius / 12;
                 ctx.scale(scale, scale);
-                MapCell.patterns[cell.cellType.pattern].draw(ctx, new Object());
+                for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
+                    // TODO: offset within radius, based on patternSize
+                    pattern.draw(ctx, random);
+                }
                 ctx.scale(1 / scale, 1 / scale);
             }
         }
@@ -1401,6 +1414,8 @@ var CellTypeEditor = (function (_super) {
                 color: '#666666',
                 pattern: undefined,
                 patternColor: '#666666',
+                patternNumPerCell: 1,
+                patternSize: 0.85,
             });
         else
             this.setState({
@@ -1408,11 +1423,15 @@ var CellTypeEditor = (function (_super) {
                 color: this.props.editingType.color,
                 pattern: this.props.editingType.pattern,
                 patternColor: this.props.editingType.patternColor === undefined ? '#666666' : this.props.editingType.patternColor,
+                patternNumPerCell: this.props.editingType.patternNumberPerCell === undefined ? 1 : this.props.editingType.patternNumberPerCell,
+                patternSize: this.props.editingType.patternSize === undefined ? 0.85 : this.props.editingType.patternSize,
             });
     };
     CellTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
         var patternName = this.state.pattern === undefined ? '' : this.state.pattern;
+        var numPerCell = this.state.patternNumPerCell === undefined ? '' : this.state.patternNumPerCell.toString();
+        var patternSize = this.state.patternSize === undefined ? '' : this.state.patternSize.toString();
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -1431,6 +1450,12 @@ var CellTypeEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "inPatColor" }, "Pattern Color"),
                 React.createElement("input", { disabled: patternName == '', type: "color", id: "inPatColor", value: this.state.patternColor === undefined ? '' : this.state.patternColor, onChange: this.patternColorChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtPatNum" }, "Number per Cell"),
+                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatNum", value: numPerCell, onChange: this.patternNumChanged.bind(this) })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtPatSize" }, "Pattern Size"),
+                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatSize", value: patternSize, onChange: this.patternSizeChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -1456,6 +1481,16 @@ var CellTypeEditor = (function (_super) {
             patternColor: e.target.value
         });
     };
+    CellTypeEditor.prototype.patternNumChanged = function (e) {
+        this.setState({
+            patternNumPerCell: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.patternSizeChanged = function (e) {
+        this.setState({
+            patternSize: e.target.value
+        });
+    };
     CellTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
         var name = this.state.name === undefined ? '' : this.state.name.trim();
@@ -1469,13 +1504,15 @@ var CellTypeEditor = (function (_super) {
         var editType = this.props.editingType;
         var cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, pattern, patternColor));
+            cellTypes.push(new CellType(name, color, pattern, patternColor, this.state.patternNumPerCell, this.state.patternSize));
         }
         else {
             editType.name = name;
             editType.color = color;
             editType.pattern = pattern;
             editType.patternColor = patternColor;
+            editType.patternNumberPerCell = this.state.patternNumPerCell;
+            editType.patternSize = this.state.patternSize;
         }
         this.props.updateCellTypes(cellTypes);
     };
