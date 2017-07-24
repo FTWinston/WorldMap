@@ -45,6 +45,7 @@
         "editors/LayersEditor.tsx",
 
         "SaveLoad.ts",
+        "Random.ts",
         "WorldMap.tsx"
     ]
 }

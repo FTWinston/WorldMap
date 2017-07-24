@@ -292,24 +292,35 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             ctx.fill();
 
             if (cellType.pattern !== undefined
-                    && cellType.patternColor !== undefined
-                    && cellType.patternNumberPerCell !== undefined
-                    && cellType.patternSize !== undefined) {
-                let random = new Object(randomSeed);
+             && cellType.patternColor !== undefined
+             && cellType.patternNumberPerCell !== undefined
+             && cellType.patternSize !== undefined) {
+                let random = new Random(randomSeed);
                 let pattern = MapCell.patterns[cellType.pattern];
                 let numToDraw = cellType.patternNumberPerCell;
                 let patternSize = cellType.patternSize;
 
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.1;
                 ctx.strokeStyle = cellType.patternColor;
                 
-                let scale = radius / 12;
+                // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+                let halfCellWidth = radius * 0.8660254;
+                let scale = halfCellWidth * patternSize;
+
+                // offset so that pattern always fits within the cell radius, based on patternSize.
+                let maxOffset = scale * (halfCellWidth - patternSize * scale)
+
                 ctx.scale(scale, scale);
 
                 for (let iPattern=0; iPattern<numToDraw; iPattern++) {
-                    // TODO: offset within radius, based on patternSize
+                    let r = maxOffset * Math.sqrt(random.next());
+                    let a = Math.PI * 2 * random.next();
+                    let xOffset = r * Math.cos(a);
+                    let yOffset = r * Math.sin(a);
 
+                    ctx.translate(xOffset, yOffset);
                     pattern.draw(ctx, random);
+                    ctx.translate(-xOffset, -yOffset);
                 }
                 
                 ctx.scale(1/scale, 1/scale);

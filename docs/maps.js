@@ -291,18 +291,20 @@ MapCell.patterns['marsh'] = {
     name: 'Marsh',
     draw: function (ctx, random) {
         ctx.beginPath();
-        ctx.moveTo(-10, 2);
-        ctx.lineTo(10, 2);
-        ctx.moveTo(0, 2);
-        ctx.lineTo(0, -6);
-        ctx.moveTo(3, 2);
-        ctx.lineTo(4, -3.5);
-        ctx.moveTo(-3, 2);
-        ctx.lineTo(-4, -3.5);
-        ctx.moveTo(-6, 2);
-        ctx.lineTo(-7.5, -0.5);
-        ctx.moveTo(6, 2);
-        ctx.lineTo(7.5, -0.5);
+        ctx.moveTo(-1, 0.2);
+        ctx.lineTo(1, 0.2);
+        if (random.next() > 0.2) {
+            ctx.moveTo(0, 0.2);
+            ctx.lineTo(0, -0.6);
+            ctx.moveTo(0.3, 0.2);
+            ctx.lineTo(0.4, -0.35);
+            ctx.moveTo(-0.3, 0.2);
+            ctx.lineTo(-0.4, -0.35);
+            ctx.moveTo(-0.6, 0.2);
+            ctx.lineTo(-0.75, -0.05);
+            ctx.moveTo(0.6, 0.2);
+            ctx.lineTo(0.75, -0.05);
+        }
         ctx.stroke();
     }
 };
@@ -952,17 +954,26 @@ var MapView = (function (_super) {
                 && cellType.patternColor !== undefined
                 && cellType.patternNumberPerCell !== undefined
                 && cellType.patternSize !== undefined) {
-                var random = new Object(randomSeed);
+                var random = new Random(randomSeed);
                 var pattern = MapCell.patterns[cellType.pattern];
                 var numToDraw = cellType.patternNumberPerCell;
                 var patternSize = cellType.patternSize;
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.1;
                 ctx.strokeStyle = cellType.patternColor;
-                var scale = radius / 12;
+                // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+                var halfCellWidth = radius * 0.8660254;
+                var scale = halfCellWidth * patternSize;
+                // offset so that pattern always fits within the cell radius, based on patternSize.
+                var maxOffset = scale * (halfCellWidth - patternSize * scale);
                 ctx.scale(scale, scale);
                 for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
-                    // TODO: offset within radius, based on patternSize
+                    var r = maxOffset * Math.sqrt(random.next());
+                    var a = Math.PI * 2 * random.next();
+                    var xOffset = r * Math.cos(a);
+                    var yOffset = r * Math.sin(a);
+                    ctx.translate(xOffset, yOffset);
                     pattern.draw(ctx, random);
+                    ctx.translate(-xOffset, -yOffset);
                 }
                 ctx.scale(1 / scale, 1 / scale);
             }
@@ -1415,7 +1426,7 @@ var CellTypeEditor = (function (_super) {
                 pattern: undefined,
                 patternColor: '#666666',
                 patternNumPerCell: 1,
-                patternSize: 0.85,
+                patternSize: 1,
             });
         else
             this.setState({
@@ -1424,7 +1435,7 @@ var CellTypeEditor = (function (_super) {
                 pattern: this.props.editingType.pattern,
                 patternColor: this.props.editingType.patternColor === undefined ? '#666666' : this.props.editingType.patternColor,
                 patternNumPerCell: this.props.editingType.patternNumberPerCell === undefined ? 1 : this.props.editingType.patternNumberPerCell,
-                patternSize: this.props.editingType.patternSize === undefined ? 0.85 : this.props.editingType.patternSize,
+                patternSize: this.props.editingType.patternSize === undefined ? 1 : this.props.editingType.patternSize,
             });
     };
     CellTypeEditor.prototype.render = function () {
@@ -1452,10 +1463,10 @@ var CellTypeEditor = (function (_super) {
                 React.createElement("input", { disabled: patternName == '', type: "color", id: "inPatColor", value: this.state.patternColor === undefined ? '' : this.state.patternColor, onChange: this.patternColorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtPatNum" }, "Number per Cell"),
-                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatNum", value: numPerCell, onChange: this.patternNumChanged.bind(this) })),
+                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatNum", value: numPerCell, onChange: this.patternNumChanged.bind(this), min: "1", max: "10" })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtPatSize" }, "Pattern Size"),
-                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatSize", value: patternSize, onChange: this.patternSizeChanged.bind(this) })),
+                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatSize", value: patternSize, onChange: this.patternSizeChanged.bind(this), step: "0.01", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -2370,6 +2381,57 @@ var SaveLoad = (function () {
 SaveLoad.localStorageName = 'savedMap';
 SaveLoad.apiRoot = 'https://jsonbin.io/b/';
 SaveLoad.queryParams = undefined;
+// based on http://cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.3/lib/alea.js
+var Random = (function () {
+    function Random(seed) {
+        this.seed = seed;
+        var mash = Random.mash();
+        this.c = 1;
+        this.s0 = mash(' ');
+        this.s1 = mash(' ');
+        this.s2 = mash(' ');
+        this.s0 -= mash(seed);
+        if (this.s0 < 0)
+            this.s0 += 1;
+        this.s1 -= mash(seed);
+        if (this.s1 < 0)
+            this.s1 += 1;
+        this.s2 -= mash(seed);
+        if (this.s2 < 0)
+            this.s2 += 1;
+    }
+    Random.prototype.next = function () {
+        var t = 2091639 * this.s0 + this.c * 2.3283064365386963e-10; // 2^-32
+        this.s0 = this.s1;
+        this.s1 = this.s2;
+        return this.s2 = t - (this.c = t | 0);
+    };
+    Random.prototype.nextInt32 = function () {
+        return (this.next() * 0x100000000) | 0;
+    };
+    Random.prototype.nextInRange = function (min, max) {
+        return min + this.next() * (max - min);
+    };
+    Random.mash = function () {
+        var n = 0xefc8249d;
+        var mash = function (data) {
+            data = data.toString();
+            for (var i = 0; i < data.length; i++) {
+                n += data.charCodeAt(i);
+                var h = 0.02519603282416938 * n;
+                n = h >>> 0;
+                h -= n;
+                h *= n;
+                n = h >>> 0;
+                h -= n;
+                n += h * 0x100000000; // 2^32
+            }
+            return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
+        };
+        return mash;
+    };
+    return Random;
+}());
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
         s = arguments[i];

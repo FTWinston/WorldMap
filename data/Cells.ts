@@ -1,6 +1,6 @@
 interface ICellPattern {
     name: string;
-    draw: (ctx: CanvasRenderingContext2D, random: object) => void;
+    draw: (ctx: CanvasRenderingContext2D, random: Random) => void;
 }
 
 class CellType {
@@ -32,23 +32,25 @@ class MapCell {
 
 MapCell.patterns['marsh'] = {
     name: 'Marsh',
-    draw(ctx: CanvasRenderingContext2D, random: object) {
+    draw(ctx: CanvasRenderingContext2D, random: Random) {
         ctx.beginPath();
-        ctx.moveTo(-10, 2);
-        ctx.lineTo(10, 2);
+        ctx.moveTo(-1, 0.2);
+        ctx.lineTo(1, 0.2);
 
-        ctx.moveTo(0, 2);
-        ctx.lineTo(0, -6);
+        if (random.next() > 0.2) {
+            ctx.moveTo(0, 0.2);
+            ctx.lineTo(0, -0.6);
 
-        ctx.moveTo(3, 2);
-        ctx.lineTo(4, -3.5);
-        ctx.moveTo(-3, 2);
-        ctx.lineTo(-4, -3.5);
+            ctx.moveTo(0.3, 0.2);
+            ctx.lineTo(0.4, -0.35);
+            ctx.moveTo(-0.3, 0.2);
+            ctx.lineTo(-0.4, -0.35);
 
-        ctx.moveTo(-6, 2);
-        ctx.lineTo(-7.5, -0.5);
-        ctx.moveTo(6, 2);
-        ctx.lineTo(7.5, -0.5);
+            ctx.moveTo(-0.6, 0.2);
+            ctx.lineTo(-0.75, -0.05);
+            ctx.moveTo(0.6, 0.2);
+            ctx.lineTo(0.75, -0.05);
+        }
 
         ctx.stroke();
     }

@@ -22,7 +22,7 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
                 pattern: undefined,
                 patternColor: '#666666',
                 patternNumPerCell: 1,
-                patternSize: 0.85,
+                patternSize: 1,
             });
         else
             this.setState({
@@ -31,7 +31,7 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
                 pattern: this.props.editingType.pattern,
                 patternColor: this.props.editingType.patternColor === undefined ? '#666666' : this.props.editingType.patternColor,
                 patternNumPerCell: this.props.editingType.patternNumberPerCell === undefined ? 1 : this.props.editingType.patternNumberPerCell,
-                patternSize: this.props.editingType.patternSize === undefined ? 0.85 : this.props.editingType.patternSize,
+                patternSize: this.props.editingType.patternSize === undefined ? 1 : this.props.editingType.patternSize,
             });
     }
     render() {
@@ -53,8 +53,8 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
                 </select>
             </div>
             <div role="group"><label htmlFor="inPatColor">Pattern Color</label><input disabled={patternName == ''} type="color" id="inPatColor" value={this.state.patternColor === undefined ? '' : this.state.patternColor} onChange={this.patternColorChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtPatNum">Number per Cell</label><input disabled={patternName == ''} type="number" id="txtPatNum" value={numPerCell} onChange={this.patternNumChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtPatSize">Pattern Size</label><input disabled={patternName == ''} type="number" id="txtPatSize" value={patternSize} onChange={this.patternSizeChanged.bind(this)} /></div>
+            <div role="group"><label htmlFor="txtPatNum">Number per Cell</label><input disabled={patternName == ''} type="number" id="txtPatNum" value={numPerCell} onChange={this.patternNumChanged.bind(this)} min="1" max="10" /></div>
+            <div role="group"><label htmlFor="txtPatSize">Pattern Size</label><input disabled={patternName == ''} type="number" id="txtPatSize" value={patternSize} onChange={this.patternSizeChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <div role="group">
                 <button type="submit">Save type</button>
                 <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
