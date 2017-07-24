@@ -1037,30 +1037,34 @@ var MapView = (function (_super) {
                 && cellType.patternColor !== undefined
                 && cellType.patternNumberPerCell !== undefined
                 && cellType.patternSize !== undefined) {
-                var random = new Random(randomSeed);
-                var pattern = MapCell.patterns[cellType.pattern];
-                var numToDraw = cellType.patternNumberPerCell;
-                var patternSize = cellType.patternSize;
-                ctx.lineWidth = 0.1;
-                ctx.strokeStyle = cellType.patternColor;
-                // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-                var halfCellWidth = radius * 0.855;
-                var scale = halfCellWidth * patternSize;
-                // offset so that pattern always fits within the cell radius, based on patternSize.
-                var maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
-                ctx.scale(scale, scale);
-                for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
-                    var dist = maxOffset * Math.sqrt(random.next());
-                    var angle_1 = Math.PI * 2 * random.next();
-                    var xOffset = dist * Math.cos(angle_1);
-                    var yOffset = dist * Math.sin(angle_1);
-                    ctx.translate(xOffset, yOffset);
-                    pattern.draw(ctx, random);
-                    ctx.translate(-xOffset, -yOffset);
-                }
-                ctx.scale(1 / scale, 1 / scale);
+                this.drawCellPattern(cellType, randomSeed, radius);
             }
         }
+    };
+    MapView.prototype.drawCellPattern = function (cellType, randomSeed, cellRadius) {
+        var ctx = this.ctx;
+        var random = new Random(randomSeed);
+        var pattern = MapCell.patterns[cellType.pattern];
+        var numToDraw = cellType.patternNumberPerCell;
+        var patternSize = cellType.patternSize;
+        ctx.lineWidth = 0.1;
+        ctx.strokeStyle = cellType.patternColor;
+        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+        var halfCellWidth = cellRadius * 0.855;
+        var scale = halfCellWidth * patternSize;
+        // offset so that pattern always fits within the cell radius, based on patternSize.
+        var maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
+        ctx.scale(scale, scale);
+        for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
+            var dist = maxOffset * Math.sqrt(random.next());
+            var angle = Math.PI * 2 * random.next();
+            var xOffset = dist * Math.cos(angle);
+            var yOffset = dist * Math.sin(angle);
+            ctx.translate(xOffset, yOffset);
+            pattern.draw(ctx, random);
+            ctx.translate(-xOffset, -yOffset);
+        }
+        ctx.scale(1 / scale, 1 / scale);
     };
     MapView.prototype.getCellDisplayX = function (cell) {
         return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);

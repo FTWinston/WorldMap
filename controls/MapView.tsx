@@ -293,38 +293,42 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
              && cellType.patternColor !== undefined
              && cellType.patternNumberPerCell !== undefined
              && cellType.patternSize !== undefined) {
-                let random = new Random(randomSeed);
-                let pattern = MapCell.patterns[cellType.pattern];
-                let numToDraw = cellType.patternNumberPerCell;
-                let patternSize = cellType.patternSize;
-
-                ctx.lineWidth = 0.1;
-                ctx.strokeStyle = cellType.patternColor;
-                
-                // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-                let halfCellWidth = radius * 0.855;
-                let scale = halfCellWidth * patternSize;
-
-                // offset so that pattern always fits within the cell radius, based on patternSize.
-                let maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
-
-                ctx.scale(scale, scale);
-
-                for (let iPattern=0; iPattern<numToDraw; iPattern++) {
-                    let dist = maxOffset * Math.sqrt(random.next());
-                    
-                    let angle = Math.PI * 2 * random.next();
-                    let xOffset = dist * Math.cos(angle);
-                    let yOffset = dist * Math.sin(angle);
-
-                    ctx.translate(xOffset, yOffset);
-                    pattern.draw(ctx, random);
-                    ctx.translate(-xOffset, -yOffset);
-                }
-                
-                ctx.scale(1/scale, 1/scale);
+                this.drawCellPattern(cellType, randomSeed, radius);
             }
         }
+    }
+    private drawCellPattern(cellType: CellType, randomSeed: number, cellRadius: number) {
+        let ctx = this.ctx;
+        let random = new Random(randomSeed);
+        let pattern = MapCell.patterns[cellType.pattern as string];
+        let numToDraw = cellType.patternNumberPerCell as number;
+        let patternSize = cellType.patternSize as number;
+
+        ctx.lineWidth = 0.1;
+        ctx.strokeStyle = cellType.patternColor as string;
+        
+        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+        let halfCellWidth = cellRadius * 0.855;
+        let scale = halfCellWidth * patternSize;
+
+        // offset so that pattern always fits within the cell radius, based on patternSize.
+        let maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
+
+        ctx.scale(scale, scale);
+
+        for (let iPattern=0; iPattern<numToDraw; iPattern++) {
+            let dist = maxOffset * Math.sqrt(random.next());
+            
+            let angle = Math.PI * 2 * random.next();
+            let xOffset = dist * Math.cos(angle);
+            let yOffset = dist * Math.sin(angle);
+
+            ctx.translate(xOffset, yOffset);
+            pattern.draw(ctx, random);
+            ctx.translate(-xOffset, -yOffset);
+        }
+        
+        ctx.scale(1/scale, 1/scale);
     }
     private getCellDisplayX(cell: MapCell) {
         return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
