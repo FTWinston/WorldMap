@@ -359,10 +359,11 @@ MapCell.patterns['mountain'] = {
         var x1 = random.nextInRange(0.1, 0.9);
         var x2 = random.nextInRange(-0.9, -0.1);
         var yScale = random.nextInRange(1.4, 2);
-        var yMin = yScale / 2;
+        var yMin = yScale / 3;
+        var yMax = yMin - yScale;
         ctx.beginPath();
         ctx.moveTo(-0.9, yMin);
-        ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 0.9, yMin);
+        ctx.bezierCurveTo(x1, yMax, x2, yMax, 0.9, yMin);
         ctx.stroke();
     }
 };

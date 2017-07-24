@@ -114,11 +114,12 @@ MapCell.patterns['mountain'] = {
         let x1 = random.nextInRange(0.1, 0.9);
         let x2 = random.nextInRange(-0.9, -0.1);
         let yScale = random.nextInRange(1.4, 2);
-        let yMin = yScale / 2;
+        let yMin = yScale / 3;
+        let yMax = yMin - yScale;
 
         ctx.beginPath();
         ctx.moveTo(-0.9,yMin);
-        ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 0.9, yMin);
+        ctx.bezierCurveTo(x1, yMax, x2, yMax, 0.9, yMin);
         ctx.stroke();
     }
 };
