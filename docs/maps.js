@@ -949,12 +949,11 @@ var MapView = (function (_super) {
         var twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         var drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
         var outline = this.props.renderGrid && !twoLevels;
-        var writeCoords = this.props.scrollUI && !twoLevels;
-        this.drawCells(drawInterval, outline, true, writeCoords);
+        this.drawCells(drawInterval, outline, true);
         this.drawLines();
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, this.props.scrollUI);
+            this.drawCells(drawInterval * 2, true, false);
         }
         this.drawLocations();
         if (this.scrollPane !== undefined)
@@ -977,9 +976,8 @@ var MapView = (function (_super) {
                 maxY: Number.MAX_VALUE,
             };
     };
-    MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent, writeCoords) {
+    MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent) {
         this.ctx.lineWidth = 1;
-        this.ctx.font = '8pt sans-serif';
         var drawCellRadius = this.state.cellRadius * cellDrawInterval;
         if (fillContent)
             if (outline)
@@ -1007,11 +1005,11 @@ var MapView = (function (_super) {
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent, writeCoords);
+            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent);
             this.ctx.translate(-centerX, -centerY);
         }
     };
-    MapView.prototype.drawCell = function (cell, radius, randomSeed, outline, fillContent, writeCoords) {
+    MapView.prototype.drawCell = function (cell, radius, randomSeed, outline, fillContent) {
         var ctx = this.ctx;
         ctx.beginPath();
         var angle, x, y;
@@ -1062,12 +1060,6 @@ var MapView = (function (_super) {
                 }
                 ctx.scale(1 / scale, 1 / scale);
             }
-        }
-        if (writeCoords) {
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), 0, 0);
         }
     };
     MapView.prototype.getCellDisplayX = function (cell) {

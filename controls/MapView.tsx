@@ -184,15 +184,14 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let twoLevels = this.props.renderGrid && this.state.cellRadius < 40;
         let drawInterval = this.state.cellDrawInterval === undefined ? 1 : this.state.cellDrawInterval;
         let outline = this.props.renderGrid && !twoLevels;
-        let writeCoords = this.props.scrollUI && !twoLevels;
-
-        this.drawCells(drawInterval, outline, true, writeCoords);
+        
+        this.drawCells(drawInterval, outline, true);
 
         this.drawLines();
         
         if (twoLevels) {
             // outline of next zoom level
-            this.drawCells(drawInterval * 2, true, false, this.props.scrollUI);
+            this.drawCells(drawInterval * 2, true, false);
         }
 
         this.drawLocations();
@@ -217,9 +216,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 maxY: Number.MAX_VALUE,
             }
     }
-    private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
+    private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean) {
         this.ctx.lineWidth = 1;
-        this.ctx.font = '8pt sans-serif';
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
 
         if (fillContent)
@@ -256,11 +254,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 continue;
 
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent, writeCoords);
+            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent);
             this.ctx.translate(-centerX, -centerY);
         }
     }
-    private drawCell(cell: MapCell, radius: number, randomSeed: number, outline: boolean, fillContent: boolean, writeCoords: boolean) {
+    private drawCell(cell: MapCell, radius: number, randomSeed: number, outline: boolean, fillContent: boolean) {
         let ctx = this.ctx;
         ctx.beginPath();
 
@@ -326,14 +324,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 
                 ctx.scale(1/scale, 1/scale);
             }
-        }
-
-        if (writeCoords) {
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            ctx.fillText(this.getCellDisplayX(cell) + ', ' + this.getCellDisplayY(cell), 0, 0);
         }
     }
     private getCellDisplayX(cell: MapCell) {
