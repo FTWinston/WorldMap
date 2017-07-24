@@ -20,7 +20,6 @@
         "typings/react-global.d.ts",
         "typings/hammer.d.ts",
 
-        "data/Drawable.ts",
         "data/MapData.ts",
         "data/Cells.ts",
         "data/Locations.ts",

@@ -269,11 +269,11 @@ var CellType = (function () {
         this.patternSize = patternSize;
     }
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6'));
+        types.push(new CellType('Water', '#179ce6', 'bigWave', '#9fe8ff', 1, 0.5));
         types.push(new CellType('Grass', '#a1e94d'));
-        types.push(new CellType('Forest', '#189b11'));
-        types.push(new CellType('Hills', '#7bac46'));
-        types.push(new CellType('Mountain', '#7c7c4b'));
+        types.push(new CellType('Forest', '#189b11', 'coniferous', '#305b09', 4, 0.35));
+        types.push(new CellType('Hills', '#7bac46', 'hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 'mountain', '#565B42', 1, 0.8));
         types.push(new CellType('Desert', '#ebd178'));
     };
     return CellType;
@@ -342,13 +342,27 @@ MapCell.patterns['hill'] = {
     name: 'Hill',
     draw: function (ctx, random) {
         // vary the height and shape of each hill
-        var x1 = random.nextInRange(-0.3, -0.02);
-        var x2 = random.nextInRange(0.02, 0.3);
+        var x1 = random.nextInRange(-0.6, 0.2);
+        var x2 = random.nextInRange(-0.2, 0.6);
         var yScale = random.nextInRange(0.75, 1.2);
+        var yMin = yScale / 2;
         ctx.beginPath();
-        ctx.moveTo(-1, 0);
-        ctx.bezierCurveTo(x1, yScale, x2, yScale, 1, 0);
-        ctx.fill(); // fill in so that other hills are overlapped rather than shine through
+        ctx.moveTo(-1, yMin);
+        ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 1, yMin);
+        ctx.stroke();
+    }
+};
+MapCell.patterns['mountain'] = {
+    name: 'Mountain',
+    draw: function (ctx, random) {
+        // vary the height and shape of each mountain
+        var x1 = random.nextInRange(0.1, 0.9);
+        var x2 = random.nextInRange(-0.9, -0.1);
+        var yScale = random.nextInRange(1.4, 2);
+        var yMin = yScale / 2;
+        ctx.beginPath();
+        ctx.moveTo(-0.9, yMin);
+        ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 0.9, yMin);
         ctx.stroke();
     }
 };
@@ -358,24 +372,24 @@ MapCell.patterns['coniferous'] = {
         ctx.beginPath();
         ctx.moveTo(0, -1);
         ctx.lineTo(0, 1);
-        ctx.moveTo(-0.6, -0.5);
-        ctx.lineTo(0, -0.4);
-        ctx.lineTo(0.6, -0.5);
-        ctx.moveTo(-0.5, -0.3);
-        ctx.lineTo(0, -0.2);
-        ctx.lineTo(0.5, -0.3);
-        ctx.moveTo(-0.4, -0.1);
-        ctx.lineTo(0, 0);
-        ctx.lineTo(0.4, -0.1);
-        ctx.moveTo(-0.3, 0.1);
-        ctx.lineTo(0, 0.2);
-        ctx.lineTo(0.3, 0.1);
-        ctx.moveTo(-0.2, 0.3);
+        ctx.moveTo(-0.6, 0.5);
         ctx.lineTo(0, 0.4);
-        ctx.lineTo(0.2, 0.3);
-        ctx.moveTo(-0.1, 0.5);
-        ctx.lineTo(0, 0.6);
-        ctx.lineTo(0.1, 0.5);
+        ctx.lineTo(0.6, 0.5);
+        ctx.moveTo(-0.5, 0.3);
+        ctx.lineTo(0, 0.2);
+        ctx.lineTo(0.5, 0.3);
+        ctx.moveTo(-0.4, 0.1);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(0.4, 0.1);
+        ctx.moveTo(-0.3, -0.1);
+        ctx.lineTo(0, -0.2);
+        ctx.lineTo(0.3, -0.1);
+        ctx.moveTo(-0.2, -0.3);
+        ctx.lineTo(0, -0.4);
+        ctx.lineTo(0.2, -0.3);
+        ctx.moveTo(-0.1, -0.5);
+        ctx.lineTo(0, -0.6);
+        ctx.lineTo(0.1, -0.5);
         ctx.stroke();
     }
 };
@@ -1032,16 +1046,16 @@ var MapView = (function (_super) {
                 ctx.lineWidth = 0.1;
                 ctx.strokeStyle = cellType.patternColor;
                 // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-                var halfCellWidth = radius * 0.8660254;
+                var halfCellWidth = radius * 0.855;
                 var scale = halfCellWidth * patternSize;
                 // offset so that pattern always fits within the cell radius, based on patternSize.
-                var maxOffset = scale * (halfCellWidth - patternSize * scale);
+                var maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
                 ctx.scale(scale, scale);
                 for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
-                    var r = maxOffset * Math.sqrt(random.next());
-                    var a = Math.PI * 2 * random.next();
-                    var xOffset = r * Math.cos(a);
-                    var yOffset = r * Math.sin(a);
+                    var dist = maxOffset * Math.sqrt(random.next());
+                    var angle_1 = Math.PI * 2 * random.next();
+                    var xOffset = dist * Math.cos(angle_1);
+                    var yOffset = dist * Math.sin(angle_1);
                     ctx.translate(xOffset, yOffset);
                     pattern.draw(ctx, random);
                     ctx.translate(-xOffset, -yOffset);

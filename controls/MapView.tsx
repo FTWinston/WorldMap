@@ -304,19 +304,20 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 ctx.strokeStyle = cellType.patternColor;
                 
                 // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-                let halfCellWidth = radius * 0.8660254;
+                let halfCellWidth = radius * 0.855;
                 let scale = halfCellWidth * patternSize;
 
                 // offset so that pattern always fits within the cell radius, based on patternSize.
-                let maxOffset = scale * (halfCellWidth - patternSize * scale)
+                let maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
 
                 ctx.scale(scale, scale);
 
                 for (let iPattern=0; iPattern<numToDraw; iPattern++) {
-                    let r = maxOffset * Math.sqrt(random.next());
-                    let a = Math.PI * 2 * random.next();
-                    let xOffset = r * Math.cos(a);
-                    let yOffset = r * Math.sin(a);
+                    let dist = maxOffset * Math.sqrt(random.next());
+                    
+                    let angle = Math.PI * 2 * random.next();
+                    let xOffset = dist * Math.cos(angle);
+                    let yOffset = dist * Math.sin(angle);
 
                     ctx.translate(xOffset, yOffset);
                     pattern.draw(ctx, random);
