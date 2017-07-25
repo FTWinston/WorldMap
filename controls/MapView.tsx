@@ -319,10 +319,14 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
             ctx.fill();
 
-            ctx.scale(8, 8);
-            ctx.fillStyle = this.texturePattern;
-            ctx.fill();
-            ctx.scale(1/8, 1/8);
+            if (cellType.noiseIntensity > 0) {
+                let scale = cellType.noiseScale;
+
+                ctx.scale(scale, scale);
+                ctx.fillStyle = this.texturePattern;
+                ctx.fill();
+                ctx.scale(1/scale, 1/scale);
+            }
 
             if (cellType.detail !== undefined
              && cellType.detailColor !== undefined

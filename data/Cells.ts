@@ -4,18 +4,18 @@ interface ICellDetail {
 }
 
 class CellType {
-    constructor(public name: string, public color: string, public detail?: string, public detailColor?: string, public detailNumberPerCell?: number, public detailSize?: number) {
+    constructor(public name: string, public color: string, public noiseScale: number, public noiseIntensity: number, public noiseDensity: number, public detail?: string, public detailColor?: string, public detailNumberPerCell?: number, public detailSize?: number) {
     }
 
-    public static empty = new CellType('Empty', '#ffffff');
+    public static empty = new CellType('Empty', '#ffffff', 1, 0, 0);
 
     static createDefaults(types: CellType[]) {
-        types.push(new CellType('Water', '#179ce6', 'Wave (large)', '#9fe8ff', 1, 0.5));
-        types.push(new CellType('Grass', '#a1e94d'));
-        types.push(new CellType('Forest', '#189b11', 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Hills', '#7bac46', 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Water', '#179ce6', 5, 0.2, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 2, 0.1, 0.8));
+        types.push(new CellType('Forest', '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Hills', '#7bac46', 10, 0.4, 0.2, 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 10, 0.2, 0.2, 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 1, 0.25, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     }
 }
 

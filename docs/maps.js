@@ -214,7 +214,7 @@ var MapData = (function () {
         map.description = data.description;
         if (data.cellTypes !== undefined)
             map.cellTypes = data.cellTypes.map(function (type) {
-                return new CellType(type.name, type.color, type.pattern, type.patternColor, type.patternNumberPerCell, type.patternSize);
+                return new CellType(type.name, type.color, type.noiseScale, type.noiseIntensity, type.noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize);
             });
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
@@ -260,25 +260,28 @@ var MapData = (function () {
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
-    function CellType(name, color, detail, detailColor, detailNumberPerCell, detailSize) {
+    function CellType(name, color, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
         this.name = name;
         this.color = color;
+        this.noiseScale = noiseScale;
+        this.noiseIntensity = noiseIntensity;
+        this.noiseDensity = noiseDensity;
         this.detail = detail;
         this.detailColor = detailColor;
         this.detailNumberPerCell = detailNumberPerCell;
         this.detailSize = detailSize;
     }
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 'Wave (large)', '#9fe8ff', 1, 0.5));
-        types.push(new CellType('Grass', '#a1e94d'));
-        types.push(new CellType('Forest', '#189b11', 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Hills', '#7bac46', 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Water', '#179ce6', 5, 0.2, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 2, 0.1, 0.8));
+        types.push(new CellType('Forest', '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Hills', '#7bac46', 10, 0.4, 0.2, 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 10, 0.2, 0.2, 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 1, 0.25, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
-CellType.empty = new CellType('Empty', '#ffffff');
+CellType.empty = new CellType('Empty', '#ffffff', 1, 0, 0);
 var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
@@ -1059,10 +1062,13 @@ var MapView = (function (_super) {
             else
                 ctx.fillStyle = cell.cellType.color;
             ctx.fill();
-            ctx.scale(8, 8);
-            ctx.fillStyle = this.texturePattern;
-            ctx.fill();
-            ctx.scale(1 / 8, 1 / 8);
+            if (cellType.noiseIntensity > 0) {
+                var scale = cellType.noiseScale;
+                ctx.scale(scale, scale);
+                ctx.fillStyle = this.texturePattern;
+                ctx.fill();
+                ctx.scale(1 / scale, 1 / scale);
+            }
             if (cellType.detail !== undefined
                 && cellType.detailColor !== undefined
                 && cellType.detailNumberPerCell !== undefined
@@ -1535,6 +1541,9 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: '',
                 color: '#666666',
+                noiseScale: 4,
+                noiseIntensity: 0.1,
+                noiseDensity: 0.3,
                 detail: undefined,
                 detailColor: '#666666',
                 detailNumPerCell: 1,
@@ -1544,6 +1553,9 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
+                noiseScale: this.props.editingType.noiseScale,
+                noiseIntensity: this.props.editingType.noiseIntensity,
+                noiseDensity: this.props.editingType.noiseDensity,
                 detail: this.props.editingType.detail,
                 detailColor: this.props.editingType.detailColor === undefined ? '#666666' : this.props.editingType.detailColor,
                 detailNumPerCell: this.props.editingType.detailNumberPerCell === undefined ? 1 : this.props.editingType.detailNumberPerCell,
@@ -1552,6 +1564,9 @@ var CellTypeEditor = (function (_super) {
     };
     CellTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        var noiseScale = this.state.noiseScale === undefined ? '' : this.state.noiseScale.toString();
+        var noiseIntensity = this.state.noiseIntensity === undefined ? '' : this.state.noiseIntensity.toString();
+        var noiseDensity = this.state.noiseDensity === undefined ? '' : this.state.noiseDensity.toString();
         var detailName = this.state.detail === undefined ? '' : this.state.detail;
         var numPerCell = this.state.detailNumPerCell === undefined ? '' : this.state.detailNumPerCell.toString();
         var detailSize = this.state.detailSize === undefined ? '' : this.state.detailSize.toString();
@@ -1562,6 +1577,17 @@ var CellTypeEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "inColor" }, "Fill Color"),
                 React.createElement("input", { type: "color", id: "inColor", value: this.state.color, onChange: this.colorChanged.bind(this) })),
+            React.createElement("hr", null),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtNoiseScale" }, "Noise scale"),
+                React.createElement("input", { type: "number", id: "txtNoiseScale", value: noiseScale, onChange: this.noiseScaleChanged.bind(this), step: "0.5", min: "1", max: "25" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtNoiseIntensity" }, "Noise intensity"),
+                React.createElement("input", { type: "number", id: "txtNoiseIntensity", value: noiseIntensity, onChange: this.noiseIntensityChanged.bind(this), step: "0.025", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtNoiseDensity" }, "Noise density"),
+                React.createElement("input", { type: "number", id: "txtNoiseDensity", value: noiseDensity, onChange: this.noiseDensityChanged.bind(this), step: "0.05", min: "0", max: "1" })),
+            React.createElement("hr", null),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "ddlDetail" }, "Detail"),
                 React.createElement("select", { id: "ddlDetail", value: detailName, onChange: this.detailChanged.bind(this) },
@@ -1578,7 +1604,7 @@ var CellTypeEditor = (function (_super) {
                 React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetNum", value: numPerCell, onChange: this.detailNumChanged.bind(this), min: "1", max: "10" })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtDetSize" }, "Detail Size"),
-                React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetSize", value: detailSize, onChange: this.detailSizeChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetSize", value: detailSize, onChange: this.detailSizeChanged.bind(this), step: "0.05", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -1592,6 +1618,21 @@ var CellTypeEditor = (function (_super) {
     CellTypeEditor.prototype.colorChanged = function (e) {
         this.setState({
             color: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.noiseScaleChanged = function (e) {
+        this.setState({
+            noiseScale: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.noiseIntensityChanged = function (e) {
+        this.setState({
+            noiseIntensity: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.noiseDensityChanged = function (e) {
+        this.setState({
+            noiseDensity: e.target.value
         });
     };
     CellTypeEditor.prototype.detailChanged = function (e) {
@@ -1616,18 +1657,22 @@ var CellTypeEditor = (function (_super) {
     };
     CellTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        var name = this.state.name === undefined ? '' : this.state.name.trim();
-        if (name == '')
+        if (this.state.name === undefined)
             return;
-        var color = this.state.color === undefined ? '' : this.state.color;
-        if (color == '')
+        var name = this.state.name.trim();
+        if (this.state.color === undefined)
+            return;
+        var color = this.state.color;
+        if (name.length == 0 || color.length == 0)
+            return;
+        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined)
             return;
         var detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
         var detailColor = this.state.detailColor === '' || detail === undefined ? undefined : this.state.detailColor;
         var editType = this.props.editingType;
         var cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
+            cellTypes.push(new CellType(name, color, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
         }
         else {
             editType.name = name;

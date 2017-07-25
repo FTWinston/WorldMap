@@ -7,6 +7,9 @@ interface ICellTypeEditorProps {
 interface ICellTypeEditorState {
     name?: string;
     color?: string;
+    noiseScale?: number;
+    noiseIntensity?: number;
+    noiseDensity?: number;
     detail?: string;
     detailColor?: string;
     detailNumPerCell?: number;
@@ -19,6 +22,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             this.setState({
                 name: '',
                 color: '#666666',
+                noiseScale: 4,
+                noiseIntensity: 0.1,
+                noiseDensity: 0.3,
                 detail: undefined,
                 detailColor: '#666666',
                 detailNumPerCell: 1,
@@ -28,6 +34,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
+                noiseScale: this.props.editingType.noiseScale,
+                noiseIntensity: this.props.editingType.noiseIntensity,
+                noiseDensity: this.props.editingType.noiseDensity,
                 detail: this.props.editingType.detail,
                 detailColor: this.props.editingType.detailColor === undefined ? '#666666' : this.props.editingType.detailColor,
                 detailNumPerCell: this.props.editingType.detailNumberPerCell === undefined ? 1 : this.props.editingType.detailNumberPerCell,
@@ -36,6 +45,11 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     }
     render() {
         let deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
+        
+        let noiseScale = this.state.noiseScale === undefined ? '' : this.state.noiseScale.toString();
+        let noiseIntensity = this.state.noiseIntensity === undefined ? '' : this.state.noiseIntensity.toString();
+        let noiseDensity = this.state.noiseDensity === undefined ? '' : this.state.noiseDensity.toString();
+        
         let detailName = this.state.detail === undefined ? '' : this.state.detail;
         let numPerCell = this.state.detailNumPerCell === undefined ? '' : this.state.detailNumPerCell.toString();
         let detailSize = this.state.detailSize === undefined ? '' : this.state.detailSize.toString();
@@ -43,6 +57,11 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="inColor">Fill Color</label><input type="color" id="inColor" value={this.state.color} onChange={this.colorChanged.bind(this)} /></div>
+            <hr />
+            <div role="group"><label htmlFor="txtNoiseScale">Noise scale</label><input type="number" id="txtNoiseScale" value={noiseScale} onChange={this.noiseScaleChanged.bind(this)} step="0.5" min="1" max="25" /></div>
+            <div role="group"><label htmlFor="txtNoiseIntensity">Noise intensity</label><input type="number" id="txtNoiseIntensity" value={noiseIntensity} onChange={this.noiseIntensityChanged.bind(this)} step="0.025" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtNoiseDensity">Noise density</label><input type="number" id="txtNoiseDensity" value={noiseDensity} onChange={this.noiseDensityChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <hr />
             <div role="group"><label htmlFor="ddlDetail">Detail</label>
                 <select id="ddlDetail" value={detailName} onChange={this.detailChanged.bind(this)}>
                     <option value="">(No detail)</option>
@@ -54,7 +73,7 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             </div>
             <div role="group"><label htmlFor="inDetColor">Detail Color</label><input disabled={detailName == ''} type="color" id="inDetColor" value={this.state.detailColor === undefined ? '' : this.state.detailColor} onChange={this.detailColorChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtDetNum">Number per Cell</label><input disabled={detailName == ''} type="number" id="txtDetNum" value={numPerCell} onChange={this.detailNumChanged.bind(this)} min="1" max="10" /></div>
-            <div role="group"><label htmlFor="txtDetSize">Detail Size</label><input disabled={detailName == ''} type="number" id="txtDetSize" value={detailSize} onChange={this.detailSizeChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtDetSize">Detail Size</label><input disabled={detailName == ''} type="number" id="txtDetSize" value={detailSize} onChange={this.detailSizeChanged.bind(this)} step="0.05" min="0" max="1" /></div>
             <div role="group">
                 <button type="submit">Save type</button>
                 <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
@@ -70,6 +89,21 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     private colorChanged(e: any) {
         this.setState({
             color: e.target.value
+        });
+    }
+    private noiseScaleChanged(e: any) {
+        this.setState({
+            noiseScale: e.target.value
+        });
+    }
+    private noiseIntensityChanged(e: any) {
+        this.setState({
+            noiseIntensity: e.target.value
+        });
+    }
+    private noiseDensityChanged(e: any) {
+        this.setState({
+            noiseDensity: e.target.value
         });
     }
     private detailChanged(e: any) {
@@ -95,12 +129,18 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     private saveType(e: Event) {
         e.preventDefault();
 
-        let name = this.state.name === undefined ? '' : this.state.name.trim();
-        if (name == '')
+        if (this.state.name === undefined)
             return;
+        let name = this.state.name.trim();
         
-        let color = this.state.color === undefined ? '' : this.state.color;
-        if (color == '')
+        if (this.state.color === undefined)
+            return;
+        let color = this.state.color;
+
+        if (name.length == 0 || color.length == 0)
+            return;
+
+        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined)
             return;
 
         let detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
@@ -109,7 +149,7 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         let editType = this.props.editingType;
         let cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
+            cellTypes.push(new CellType(name, color, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
         }
         else {
             editType.name = name;
