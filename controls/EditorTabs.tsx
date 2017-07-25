@@ -43,11 +43,9 @@ class EditorControls extends React.Component<IEditorControlsProps, {}> {
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
     <circle cx="12" cy="10" r="3"/>
 </svg>)}
-            {this.renderButton(EditorType.Layers, 'Layers', // layers
+            {this.renderButton(EditorType.Generation, 'Auto-generation', // zap
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-    <polyline points="2 17 12 22 22 17"/>
-    <polyline points="2 12 12 17 22 12"/>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
 </svg>)}
             <div className="filler" />
         </div>;

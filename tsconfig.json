@@ -41,7 +41,7 @@
         "editors/LocationTypeEditor.tsx",
         "editors/LocationEditor.tsx",
         "editors/LocationsEditor.tsx",
-        "editors/LayersEditor.tsx",
+        "editors/GenerationEditor.tsx",
 
         "SaveLoad.ts",
         "Random.ts",

@@ -5,10 +5,11 @@ const enum EditorType {
     Terrain,
     Lines,
     Locations,
-    Layers,
+    Generation,
 }
 
 interface IMapEditor {
+    render: () => void;
     mouseDown?: (cell: MapCell) => void;
     mouseUp?: (cell: MapCell) => void;
     mouseEnter?: (cell: MapCell) => void;
@@ -114,8 +115,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
                 return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} selectedLine={this.state.selectedLine} lineSelected={this.lineSelected.bind(this)} />;
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
-            case EditorType.Layers:
-                return <LayersEditor {...props} />;
+            case EditorType.Generation:
+                return <GenerationEditor {...props} />;
         }
     }
     private activeEditor?: IMapEditor;

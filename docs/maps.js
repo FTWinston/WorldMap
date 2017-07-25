@@ -813,11 +813,9 @@ var EditorControls = (function (_super) {
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
                 React.createElement("path", { d: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" }),
                 React.createElement("circle", { cx: "12", cy: "10", r: "3" }))),
-            this.renderButton(6 /* Layers */, 'Layers', // layers
+            this.renderButton(6 /* Generation */, 'Auto-generation', // zap
             React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24" },
-                React.createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
-                React.createElement("polyline", { points: "2 17 12 22 22 17" }),
-                React.createElement("polyline", { points: "2 12 12 17 22 12" }))),
+                React.createElement("polygon", { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2" }))),
             React.createElement("div", { className: "filler" }));
     };
     EditorControls.prototype.renderButton = function (editor, text, image) {
@@ -2382,15 +2380,17 @@ var LocationsEditor = (function (_super) {
     };
     return LocationsEditor;
 }(React.Component));
-var LayersEditor = (function (_super) {
-    __extends(LayersEditor, _super);
-    function LayersEditor() {
+var GenerationEditor = (function (_super) {
+    __extends(GenerationEditor, _super);
+    function GenerationEditor() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    LayersEditor.prototype.render = function () {
+    GenerationEditor.prototype.render = function () {
         return React.createElement("form", null);
     };
-    return LayersEditor;
+    GenerationEditor.prototype.mouseDown = function (cell) {
+    };
+    return GenerationEditor;
 }(React.Component));
 var SaveLoad = (function () {
     function SaveLoad() {
@@ -2591,8 +2591,8 @@ var WorldMap = (function (_super) {
                 return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), selectedLine: this.state.selectedLine, lineSelected: this.lineSelected.bind(this) }));
             case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
-            case 6 /* Layers */:
-                return React.createElement(LayersEditor, __assign({}, props));
+            case 6 /* Generation */:
+                return React.createElement(GenerationEditor, __assign({}, props));
         }
     };
     WorldMap.prototype.cellMouseDown = function (cell) {

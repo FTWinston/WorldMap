@@ -51,4 +51,5 @@ class SizeEditor extends React.Component<ISizeEditorProps, ISizeEditorState> {
 
         this.props.changeSize(this.state.newWidth, this.state.newHeight, this.state.resizeAnchor);
     }
+    
 }
