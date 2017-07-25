@@ -239,7 +239,7 @@ class MapData {
             height: number;
             name: string;
             description: string;
-            cellTypes: {name: string, color: string}[];
+            cellTypes: {name: string, color: string, pattern?: string, patternColor?: string, patternNumberPerCell?: number, patternSize?: number}[];
             cells: {typeID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
@@ -253,7 +253,7 @@ class MapData {
 
         if (data.cellTypes !== undefined)
             map.cellTypes = data.cellTypes.map(function (type) {
-                return new CellType(type.name, type.color);
+                return new CellType(type.name, type.color, type.pattern, type.patternColor, type.patternNumberPerCell, type.patternSize);
             });
 
         if (data.cells !== undefined)

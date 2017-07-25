@@ -214,7 +214,7 @@ var MapData = (function () {
         map.description = data.description;
         if (data.cellTypes !== undefined)
             map.cellTypes = data.cellTypes.map(function (type) {
-                return new CellType(type.name, type.color);
+                return new CellType(type.name, type.color, type.pattern, type.patternColor, type.patternNumberPerCell, type.patternSize);
             });
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
