@@ -152,6 +152,8 @@ $buttonHoverColor: #0af;
 
   & > form {
     flex-grow: 1;
+    flex-shrink: 1;
+    overflow-y: auto;
   }
 
   .resizeAnchor {
@@ -179,19 +181,16 @@ $buttonHoverColor: #0af;
 
   .palleteList {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: stretch;
     align-content: flex-start;
 
     > * {
-      margin: 0.25em; padding: 0.5em;
+      margin: 0.2em; padding: 0.35em 0.5em;
       border: solid black 1px;
       color: black;
       border-radius: 0.2em;
-      min-width: 3em;
-      min-height: 2em;
       text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
       cursor: pointer;
 
@@ -208,6 +207,7 @@ $buttonHoverColor: #0af;
 #undoRedo {
   align-self: center;
   display: flex;
+  flex-shrink: 0;
 
   button {
     margin: 0.25em;
