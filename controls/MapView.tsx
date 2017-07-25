@@ -319,13 +319,15 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
             ctx.fill();
 
+            ctx.scale(8, 8);
             ctx.fillStyle = this.texturePattern;
             ctx.fill();
+            ctx.scale(1/8, 1/8);
 
-            if (cellType.pattern !== undefined
-             && cellType.patternColor !== undefined
-             && cellType.patternNumberPerCell !== undefined
-             && cellType.patternSize !== undefined) {
+            if (cellType.detail !== undefined
+             && cellType.detailColor !== undefined
+             && cellType.detailNumberPerCell !== undefined
+             && cellType.detailSize !== undefined) {
                 this.drawCellPattern(cellType, randomSeed, radius);
             }
         }
@@ -333,12 +335,12 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     private drawCellPattern(cellType: CellType, randomSeed: number, cellRadius: number) {
         let ctx = this.ctx;
         let random = new Random(randomSeed);
-        let pattern = MapCell.patterns[cellType.pattern as string];
-        let numToDraw = cellType.patternNumberPerCell as number;
-        let patternSize = cellType.patternSize as number;
+        let pattern = MapCell.details[cellType.detail as string];
+        let numToDraw = cellType.detailNumberPerCell as number;
+        let patternSize = cellType.detailSize as number;
 
         ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.patternColor as string;
+        ctx.strokeStyle = cellType.detailColor as string;
         
         // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
         let halfCellWidth = cellRadius * 0.855;

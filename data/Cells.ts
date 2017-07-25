@@ -1,21 +1,21 @@
-interface ICellPattern {
+interface ICellDetail {
     name: string;
     draw: (ctx: CanvasRenderingContext2D, random: Random) => void;
 }
 
 class CellType {
-    constructor(public name: string, public color: string, public pattern?: string, public patternColor?: string, public patternNumberPerCell?: number, public patternSize?: number) {
+    constructor(public name: string, public color: string, public detail?: string, public detailColor?: string, public detailNumberPerCell?: number, public detailSize?: number) {
     }
 
     public static empty = new CellType('Empty', '#ffffff');
 
     static createDefaults(types: CellType[]) {
-        types.push(new CellType('Water', '#179ce6', 'bigWave', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Water', '#179ce6', 'Wave (large)', '#9fe8ff', 1, 0.5));
         types.push(new CellType('Grass', '#a1e94d'));
-        types.push(new CellType('Forest', '#189b11', 'coniferous', '#305b09', 4, 0.35));
-        types.push(new CellType('Hills', '#7bac46', 'hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 'mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178'));
+        types.push(new CellType('Forest', '#189b11', 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Hills', '#7bac46', 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 'Wave (small)', '#e4c045', 3, 0.5));
     }
 }
 
@@ -27,19 +27,23 @@ class MapCell {
     
     constructor(readonly map: MapData, public cellType: CellType) {}
 
-    static patterns: {[key:string]:ICellPattern} = {};
+    static details: {[key:string]:ICellDetail} = {};
+
+    static addDetail(pattern: ICellDetail) {
+        MapCell.details[pattern.name] = pattern;
+    }
 }
 
-MapCell.patterns['circle'] = {
+MapCell.addDetail({
     name: 'Circle',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         ctx.beginPath();
         ctx.arc(0, 0, 1, 0, Math.PI * 2);
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['marsh'] = {
+MapCell.addDetail({
     name: 'Marsh',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         ctx.beginPath();
@@ -63,9 +67,9 @@ MapCell.patterns['marsh'] = {
 
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['bigWave'] = {
+MapCell.addDetail({
     name: 'Wave (large)',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         // vary the direction (down-up vs up-down) and intensity of each wave
@@ -76,9 +80,9 @@ MapCell.patterns['bigWave'] = {
         ctx.bezierCurveTo(-0.1, -1 * yScale, 0.1, 1 * yScale, 1, 0);
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['smallWave'] = {
+MapCell.addDetail({
     name: 'Wave (small)',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         // vary the direction (down-up vs up-down) and intensity of each wave
@@ -89,9 +93,9 @@ MapCell.patterns['smallWave'] = {
         ctx.bezierCurveTo(-0.1, -1 * yScale, 0.1, 1 * yScale, 1, 0);
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['hill'] = {
+MapCell.addDetail({
     name: 'Hill',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         // vary the height and shape of each hill
@@ -105,9 +109,9 @@ MapCell.patterns['hill'] = {
         ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 1, yMin);
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['mountain'] = {
+MapCell.addDetail({
     name: 'Mountain',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         // vary the height and shape of each mountain
@@ -122,9 +126,9 @@ MapCell.patterns['mountain'] = {
         ctx.bezierCurveTo(x1, yMax, x2, yMax, 0.9, yMin);
         ctx.stroke();
     }
-};
+});
 
-MapCell.patterns['coniferous'] = {
+MapCell.addDetail({
     name: 'Tree (coniferous)',
     draw(ctx: CanvasRenderingContext2D, random: Random) {
         ctx.beginPath();
@@ -157,4 +161,4 @@ MapCell.patterns['coniferous'] = {
 
         ctx.stroke();
     }
-};
+});

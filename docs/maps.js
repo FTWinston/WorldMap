@@ -260,21 +260,21 @@ var MapData = (function () {
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
-    function CellType(name, color, pattern, patternColor, patternNumberPerCell, patternSize) {
+    function CellType(name, color, detail, detailColor, detailNumberPerCell, detailSize) {
         this.name = name;
         this.color = color;
-        this.pattern = pattern;
-        this.patternColor = patternColor;
-        this.patternNumberPerCell = patternNumberPerCell;
-        this.patternSize = patternSize;
+        this.detail = detail;
+        this.detailColor = detailColor;
+        this.detailNumberPerCell = detailNumberPerCell;
+        this.detailSize = detailSize;
     }
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 'bigWave', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Water', '#179ce6', 'Wave (large)', '#9fe8ff', 1, 0.5));
         types.push(new CellType('Grass', '#a1e94d'));
-        types.push(new CellType('Forest', '#189b11', 'coniferous', '#305b09', 4, 0.35));
-        types.push(new CellType('Hills', '#7bac46', 'hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 'mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178'));
+        types.push(new CellType('Forest', '#189b11', 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Hills', '#7bac46', 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
@@ -284,18 +284,21 @@ var MapCell = (function () {
         this.map = map;
         this.cellType = cellType;
     }
+    MapCell.addDetail = function (pattern) {
+        MapCell.details[pattern.name] = pattern;
+    };
     return MapCell;
 }());
-MapCell.patterns = {};
-MapCell.patterns['circle'] = {
+MapCell.details = {};
+MapCell.addDetail({
     name: 'Circle',
     draw: function (ctx, random) {
         ctx.beginPath();
         ctx.arc(0, 0, 1, 0, Math.PI * 2);
         ctx.stroke();
     }
-};
-MapCell.patterns['marsh'] = {
+});
+MapCell.addDetail({
     name: 'Marsh',
     draw: function (ctx, random) {
         ctx.beginPath();
@@ -315,8 +318,8 @@ MapCell.patterns['marsh'] = {
         }
         ctx.stroke();
     }
-};
-MapCell.patterns['bigWave'] = {
+});
+MapCell.addDetail({
     name: 'Wave (large)',
     draw: function (ctx, random) {
         // vary the direction (down-up vs up-down) and intensity of each wave
@@ -326,8 +329,8 @@ MapCell.patterns['bigWave'] = {
         ctx.bezierCurveTo(-0.1, -1 * yScale, 0.1, 1 * yScale, 1, 0);
         ctx.stroke();
     }
-};
-MapCell.patterns['smallWave'] = {
+});
+MapCell.addDetail({
     name: 'Wave (small)',
     draw: function (ctx, random) {
         // vary the direction (down-up vs up-down) and intensity of each wave
@@ -337,8 +340,8 @@ MapCell.patterns['smallWave'] = {
         ctx.bezierCurveTo(-0.1, -1 * yScale, 0.1, 1 * yScale, 1, 0);
         ctx.stroke();
     }
-};
-MapCell.patterns['hill'] = {
+});
+MapCell.addDetail({
     name: 'Hill',
     draw: function (ctx, random) {
         // vary the height and shape of each hill
@@ -351,8 +354,8 @@ MapCell.patterns['hill'] = {
         ctx.bezierCurveTo(x1, -yMin, x2, -yMin, 1, yMin);
         ctx.stroke();
     }
-};
-MapCell.patterns['mountain'] = {
+});
+MapCell.addDetail({
     name: 'Mountain',
     draw: function (ctx, random) {
         // vary the height and shape of each mountain
@@ -366,8 +369,8 @@ MapCell.patterns['mountain'] = {
         ctx.bezierCurveTo(x1, yMax, x2, yMax, 0.9, yMin);
         ctx.stroke();
     }
-};
-MapCell.patterns['coniferous'] = {
+});
+MapCell.addDetail({
     name: 'Tree (coniferous)',
     draw: function (ctx, random) {
         ctx.beginPath();
@@ -393,7 +396,7 @@ MapCell.patterns['coniferous'] = {
         ctx.lineTo(0.1, -0.5);
         ctx.stroke();
     }
-};
+});
 var LocationType = (function () {
     function LocationType(name, textSize, textColor, icon, minDrawCellRadius) {
         this.name = name;
@@ -1056,12 +1059,14 @@ var MapView = (function (_super) {
             else
                 ctx.fillStyle = cell.cellType.color;
             ctx.fill();
+            ctx.scale(8, 8);
             ctx.fillStyle = this.texturePattern;
             ctx.fill();
-            if (cellType.pattern !== undefined
-                && cellType.patternColor !== undefined
-                && cellType.patternNumberPerCell !== undefined
-                && cellType.patternSize !== undefined) {
+            ctx.scale(1 / 8, 1 / 8);
+            if (cellType.detail !== undefined
+                && cellType.detailColor !== undefined
+                && cellType.detailNumberPerCell !== undefined
+                && cellType.detailSize !== undefined) {
                 this.drawCellPattern(cellType, randomSeed, radius);
             }
         }
@@ -1069,11 +1074,11 @@ var MapView = (function (_super) {
     MapView.prototype.drawCellPattern = function (cellType, randomSeed, cellRadius) {
         var ctx = this.ctx;
         var random = new Random(randomSeed);
-        var pattern = MapCell.patterns[cellType.pattern];
-        var numToDraw = cellType.patternNumberPerCell;
-        var patternSize = cellType.patternSize;
+        var pattern = MapCell.details[cellType.detail];
+        var numToDraw = cellType.detailNumberPerCell;
+        var patternSize = cellType.detailSize;
         ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.patternColor;
+        ctx.strokeStyle = cellType.detailColor;
         // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
         var halfCellWidth = cellRadius * 0.855;
         var scale = halfCellWidth * patternSize;
@@ -1530,26 +1535,26 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: '',
                 color: '#666666',
-                pattern: undefined,
-                patternColor: '#666666',
-                patternNumPerCell: 1,
-                patternSize: 1,
+                detail: undefined,
+                detailColor: '#666666',
+                detailNumPerCell: 1,
+                detailSize: 1,
             });
         else
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
-                pattern: this.props.editingType.pattern,
-                patternColor: this.props.editingType.patternColor === undefined ? '#666666' : this.props.editingType.patternColor,
-                patternNumPerCell: this.props.editingType.patternNumberPerCell === undefined ? 1 : this.props.editingType.patternNumberPerCell,
-                patternSize: this.props.editingType.patternSize === undefined ? 1 : this.props.editingType.patternSize,
+                detail: this.props.editingType.detail,
+                detailColor: this.props.editingType.detailColor === undefined ? '#666666' : this.props.editingType.detailColor,
+                detailNumPerCell: this.props.editingType.detailNumberPerCell === undefined ? 1 : this.props.editingType.detailNumberPerCell,
+                detailSize: this.props.editingType.detailSize === undefined ? 1 : this.props.editingType.detailSize,
             });
     };
     CellTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
-        var patternName = this.state.pattern === undefined ? '' : this.state.pattern;
-        var numPerCell = this.state.patternNumPerCell === undefined ? '' : this.state.patternNumPerCell.toString();
-        var patternSize = this.state.patternSize === undefined ? '' : this.state.patternSize.toString();
+        var detailName = this.state.detail === undefined ? '' : this.state.detail;
+        var numPerCell = this.state.detailNumPerCell === undefined ? '' : this.state.detailNumPerCell.toString();
+        var detailSize = this.state.detailSize === undefined ? '' : this.state.detailSize.toString();
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -1558,22 +1563,22 @@ var CellTypeEditor = (function (_super) {
                 React.createElement("label", { htmlFor: "inColor" }, "Fill Color"),
                 React.createElement("input", { type: "color", id: "inColor", value: this.state.color, onChange: this.colorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
-                React.createElement("label", { htmlFor: "ddlPattern" }, "Pattern"),
-                React.createElement("select", { id: "ddlIcon", value: patternName, onChange: this.patternChanged.bind(this) },
-                    React.createElement("option", { value: "" }, "(No pattern)"),
-                    Object.keys(MapCell.patterns).map(function (key) {
-                        var pattern = MapCell.patterns[key];
-                        return React.createElement("option", { key: key, value: key }, pattern.name);
+                React.createElement("label", { htmlFor: "ddlDetail" }, "Detail"),
+                React.createElement("select", { id: "ddlDetail", value: detailName, onChange: this.detailChanged.bind(this) },
+                    React.createElement("option", { value: "" }, "(No detail)"),
+                    Object.keys(MapCell.details).map(function (key) {
+                        var detail = MapCell.details[key];
+                        return React.createElement("option", { key: key, value: key }, detail.name);
                     }))),
             React.createElement("div", { role: "group" },
-                React.createElement("label", { htmlFor: "inPatColor" }, "Pattern Color"),
-                React.createElement("input", { disabled: patternName == '', type: "color", id: "inPatColor", value: this.state.patternColor === undefined ? '' : this.state.patternColor, onChange: this.patternColorChanged.bind(this) })),
+                React.createElement("label", { htmlFor: "inDetColor" }, "Detail Color"),
+                React.createElement("input", { disabled: detailName == '', type: "color", id: "inDetColor", value: this.state.detailColor === undefined ? '' : this.state.detailColor, onChange: this.detailColorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
-                React.createElement("label", { htmlFor: "txtPatNum" }, "Number per Cell"),
-                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatNum", value: numPerCell, onChange: this.patternNumChanged.bind(this), min: "1", max: "10" })),
+                React.createElement("label", { htmlFor: "txtDetNum" }, "Number per Cell"),
+                React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetNum", value: numPerCell, onChange: this.detailNumChanged.bind(this), min: "1", max: "10" })),
             React.createElement("div", { role: "group" },
-                React.createElement("label", { htmlFor: "txtPatSize" }, "Pattern Size"),
-                React.createElement("input", { disabled: patternName == '', type: "number", id: "txtPatSize", value: patternSize, onChange: this.patternSizeChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("label", { htmlFor: "txtDetSize" }, "Detail Size"),
+                React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetSize", value: detailSize, onChange: this.detailSizeChanged.bind(this), step: "0.01", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -1589,24 +1594,24 @@ var CellTypeEditor = (function (_super) {
             color: e.target.value
         });
     };
-    CellTypeEditor.prototype.patternChanged = function (e) {
+    CellTypeEditor.prototype.detailChanged = function (e) {
         this.setState({
-            pattern: e.target.value
+            detail: e.target.value
         });
     };
-    CellTypeEditor.prototype.patternColorChanged = function (e) {
+    CellTypeEditor.prototype.detailColorChanged = function (e) {
         this.setState({
-            patternColor: e.target.value
+            detailColor: e.target.value
         });
     };
-    CellTypeEditor.prototype.patternNumChanged = function (e) {
+    CellTypeEditor.prototype.detailNumChanged = function (e) {
         this.setState({
-            patternNumPerCell: e.target.value
+            detailNumPerCell: e.target.value
         });
     };
-    CellTypeEditor.prototype.patternSizeChanged = function (e) {
+    CellTypeEditor.prototype.detailSizeChanged = function (e) {
         this.setState({
-            patternSize: e.target.value
+            detailSize: e.target.value
         });
     };
     CellTypeEditor.prototype.saveType = function (e) {
@@ -1617,20 +1622,20 @@ var CellTypeEditor = (function (_super) {
         var color = this.state.color === undefined ? '' : this.state.color;
         if (color == '')
             return;
-        var pattern = this.state.pattern == '' ? undefined : this.state.pattern; // yes this is the other way round
-        var patternColor = this.state.patternColor === '' || pattern === undefined ? undefined : this.state.patternColor;
+        var detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
+        var detailColor = this.state.detailColor === '' || detail === undefined ? undefined : this.state.detailColor;
         var editType = this.props.editingType;
         var cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, pattern, patternColor, this.state.patternNumPerCell, this.state.patternSize));
+            cellTypes.push(new CellType(name, color, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
         }
         else {
             editType.name = name;
             editType.color = color;
-            editType.pattern = pattern;
-            editType.patternColor = patternColor;
-            editType.patternNumberPerCell = this.state.patternNumPerCell;
-            editType.patternSize = this.state.patternSize;
+            editType.detail = detail;
+            editType.detailColor = detailColor;
+            editType.detailNumberPerCell = this.state.detailNumPerCell;
+            editType.detailSize = this.state.detailSize;
         }
         this.props.updateCellTypes(cellTypes);
     };
