@@ -854,6 +854,7 @@ var MapView = (function (_super) {
         if (this.props.scrollUI)
             this.setupTouch();
         this.resize();
+        this.createTexture();
     };
     MapView.prototype.componentWillUnmount = function () {
         if (this.props.scrollUI)
@@ -975,6 +976,29 @@ var MapView = (function (_super) {
                 maxY: Number.MAX_VALUE,
             };
     };
+    MapView.prototype.createTexture = function () {
+        this.textureCanvas = document.createElement('canvas');
+        var textureCtx = this.textureCanvas.getContext('2d');
+        var textureSize = this.textureCanvas.width = this.textureCanvas.height = this.state.cellRadius * 2;
+        var sizeSq = textureSize * textureSize;
+        var image = textureCtx.createImageData(textureSize, textureSize);
+        var imageData = image.data;
+        var writePos = 0, fillChance = 0.25, maxAlpha = 32;
+        for (var i = 0; i < sizeSq; ++i) {
+            if (Math.random() > fillChance) {
+                writePos += 4;
+                continue;
+            }
+            var rgb = Math.floor(Math.random() * 256);
+            var a = Math.floor(Math.random() * maxAlpha);
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = a;
+        }
+        textureCtx.putImageData(image, 0, 0);
+        this.texturePattern = this.ctx.createPattern(this.textureCanvas, 'repeat');
+    };
     MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent) {
         this.ctx.lineWidth = 1;
         var drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -1031,6 +1055,8 @@ var MapView = (function (_super) {
                 ctx.fillStyle = '#666';
             else
                 ctx.fillStyle = cell.cellType.color;
+            ctx.fill();
+            ctx.fillStyle = this.texturePattern;
             ctx.fill();
             if (cellType.pattern !== undefined
                 && cellType.patternColor !== undefined
@@ -1270,6 +1296,7 @@ var MapView = (function (_super) {
     MapView.prototype.componentDidUpdate = function (prevProps, prevState) {
         if (prevState.cellRadius != this.state.cellRadius) {
             this.updateSize();
+            this.createTexture();
             this.redraw();
         }
     };

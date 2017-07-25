@@ -41,7 +41,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         super(props);
 
         let scrollSize = props.scrollUI ? this.getScrollbarSize() : {width: 0, height: 0};
-
+        
         this.state = {
             cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
             cellDrawInterval: 1,
@@ -59,7 +59,9 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
         if (this.props.scrollUI)
             this.setupTouch();
+
         this.resize();
+        this.createTexture();
     }
     componentWillUnmount() {
         if (this.props.scrollUI)
@@ -216,6 +218,34 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 maxY: Number.MAX_VALUE,
             }
     }
+    textureCanvas: HTMLCanvasElement;
+    texturePattern: CanvasPattern;
+    private createTexture() {
+        this.textureCanvas = document.createElement('canvas');
+        let textureCtx = this.textureCanvas.getContext('2d') as CanvasRenderingContext2D;
+        let textureSize = this.textureCanvas.width = this.textureCanvas.height = this.state.cellRadius * 2;
+        let sizeSq = textureSize * textureSize;
+        let image = textureCtx.createImageData(textureSize, textureSize);
+        let imageData = image.data;
+        
+        let writePos = 0, fillChance = 0.25, maxAlpha = 32;
+        for (let i=0; i < sizeSq; ++i) {
+            if (Math.random() > fillChance) {
+                writePos += 4;
+                continue;
+            }
+
+            let rgb = Math.floor(Math.random() * 256);
+            let a = Math.floor(Math.random() * maxAlpha);
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = a;
+        }
+        textureCtx.putImageData(image, 0, 0);
+
+        this.texturePattern = this.ctx.createPattern(this.textureCanvas, 'repeat');
+    }
     private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean) {
         this.ctx.lineWidth = 1;
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -287,6 +317,9 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             else
                 ctx.fillStyle = cell.cellType.color;
 
+            ctx.fill();
+
+            ctx.fillStyle = this.texturePattern;
             ctx.fill();
 
             if (cellType.pattern !== undefined
@@ -579,6 +612,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     componentDidUpdate(prevProps: IMapViewProps, prevState: IMapViewState) {
         if (prevState.cellRadius != this.state.cellRadius) {
             this.updateSize();
+            this.createTexture();
             this.redraw();
         }
     }
