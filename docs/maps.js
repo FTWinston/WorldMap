@@ -1959,14 +1959,18 @@ var LineEditor = (function (_super) {
         });
     };
     LineEditor.prototype.render = function () {
-        var deleteButton = React.createElement("button", { type: "button", onClick: this.deleteLine.bind(this) }, "Delete");
+        var deleteButton = React.createElement("button", { type: "button", onClick: this.deleteLine.bind(this) }, "Delete line");
+        var notMultiplePoints = this.props.line.keyCells.length <= 1;
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
-            React.createElement("p", null, "Click the map to add points to the current line."),
+            React.createElement("p", null, "Click the map to add points to the current line. Existing points can be dragged around the map."),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "ddlType" }, "Line Type"),
                 React.createElement("select", { value: this.props.lineTypes.indexOf(this.state.type).toString(), onChange: this.typeChanged.bind(this) }, this.props.lineTypes.map(function (type, id) {
                     return React.createElement("option", { key: id.toString(), value: id.toString() }, type.name);
                 }))),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "button", disabled: notMultiplePoints, onClick: this.removeFirst.bind(this) }, "Remove start point"),
+                React.createElement("button", { type: "button", disabled: notMultiplePoints, onClick: this.removeLast.bind(this) }, "Remove end point")),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save line"),
                 deleteButton));
@@ -1984,6 +1988,16 @@ var LineEditor = (function (_super) {
     };
     LineEditor.prototype.deleteLine = function () {
         this.props.deleteLine();
+    };
+    LineEditor.prototype.removeFirst = function () {
+        this.props.line.keyCells.splice(0, 1);
+        this.props.line.updateRenderPoints();
+        this.props.lineEdited();
+    };
+    LineEditor.prototype.removeLast = function () {
+        this.props.line.keyCells.splice(this.props.line.keyCells.length - 1, 1);
+        this.props.line.updateRenderPoints();
+        this.props.lineEdited();
     };
     LineEditor.prototype.getKeyIndexAt = function (cell) {
         var cells = this.props.line.keyCells;

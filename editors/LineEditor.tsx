@@ -17,16 +17,21 @@ class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
         });
     }
     render() {
-        let deleteButton = <button type="button" onClick={this.deleteLine.bind(this)}>Delete</button>;
+        let deleteButton = <button type="button" onClick={this.deleteLine.bind(this)}>Delete line</button>;
+        let notMultiplePoints = this.props.line.keyCells.length <= 1;
 
         return <form onSubmit={this.saveType.bind(this)}>
-            <p>Click the map to add points to the current line.</p>
+            <p>Click the map to add points to the current line. Existing points can be dragged around the map.</p>
             <div role="group"><label htmlFor="ddlType">Line Type</label>
                 <select value={this.props.lineTypes.indexOf(this.state.type).toString()} onChange={this.typeChanged.bind(this)}>
                     {this.props.lineTypes.map(function(type, id) {
                         return <option key={id.toString()} value={id.toString()}>{type.name}</option>;
                     })}
                 </select>
+            </div>
+            <div role="group">
+                <button type="button" disabled={notMultiplePoints} onClick={this.removeFirst.bind(this)}>Remove start point</button>
+                <button type="button" disabled={notMultiplePoints} onClick={this.removeLast.bind(this)}>Remove end point</button>
             </div>
             <div role="group">
                 <button type="submit">Save line</button>
@@ -47,8 +52,18 @@ class LineEditor extends React.Component<ILineEditorProps, ILineEditorState> {
 
         this.props.close();
     }
-    deleteLine() {
+    private deleteLine() {
         this.props.deleteLine();
+    }
+    private removeFirst() {
+        this.props.line.keyCells.splice(0, 1);
+        this.props.line.updateRenderPoints();
+        this.props.lineEdited();
+    }
+    private removeLast() {
+        this.props.line.keyCells.splice(this.props.line.keyCells.length - 1, 1);
+        this.props.line.updateRenderPoints();
+        this.props.lineEdited();
     }
 
     private getKeyIndexAt(cell: MapCell) {
