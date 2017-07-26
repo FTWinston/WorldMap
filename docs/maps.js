@@ -941,8 +941,14 @@ var MapView = (function (_super) {
         }.bind(this));
         var touch = new Hammer.Pan({ event: 'touch', threshold: 10, pointers: 1, direction: Hammer.DIRECTION_ALL });
         this.hammer.add(touch);
+        this.hammer.on('touchstart', function (ev) {
+            this.startCellInteract(ev.center.x, ev.center.y);
+        }.bind(this));
         this.hammer.on('touch', function (ev) {
             this.hoverCellAt(ev.center.x, ev.center.y);
+        }.bind(this));
+        this.hammer.on('touchend', function (ev) {
+            this.endCellInteract(ev.center.x, ev.center.y);
         }.bind(this));
         pan.requireFailure(zoom);
         zoom.requireFailure(pan);
@@ -1347,12 +1353,14 @@ var MapView = (function (_super) {
         var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
-            if (cell !== null && this.props.cellMouseDown !== undefined)
+            if (cell !== null && this.props.cellMouseDown !== undefined && cell !== this.mouseDownCell)
                 this.props.cellMouseDown(cell);
             this.mouseDownCell = cell;
         }
     };
     MapView.prototype.endCellInteract = function (x, y) {
+        if (this.mouseDownCell === null)
+            return;
         var cellIndex = this.getCellIndexAtPoint(x, y);
         if (cellIndex >= 0 && cellIndex < this.props.map.cells.length) {
             var cell = this.props.map.cells[cellIndex];
