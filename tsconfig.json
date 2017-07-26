@@ -43,8 +43,10 @@
         "editors/LocationsEditor.tsx",
         "editors/GenerationEditor.tsx",
 
-        "SaveLoad.ts",
-        "Random.ts",
+        "tools/SaveLoad.ts",
+        "tools/Random.ts",
+        "tools/Simplex.ts",
+        
         "WorldMap.tsx"
     ]
 }

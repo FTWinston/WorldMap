@@ -2495,9 +2495,46 @@ var GenerationEditor = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     GenerationEditor.prototype.render = function () {
-        return React.createElement("form", null);
+        return React.createElement("form", { onSubmit: this.generate.bind(this) },
+            React.createElement("p", null, "Each cell type must be given a value for its associated height, temperature and precipitation."),
+            React.createElement("p", null, "Select an elevation guide, which controls the overall shape of generated terrain."),
+            React.createElement("p", null, "Later in development, temperature and wind guides will also be specified at this point."),
+            React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
+            React.createElement("div", { role: "group" },
+                React.createElement("button", { type: "submit" }, "Generate")));
     };
-    GenerationEditor.prototype.mouseDown = function (cell) {
+    GenerationEditor.prototype.generate = function (e) {
+        e.preventDefault();
+        // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
+        var noise = new SimplexNoise();
+        var cellTypesByHeight = this.arrangeCellTypesByHeight();
+        for (var _i = 0, _a = this.props.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell === null)
+                continue;
+            var height = noise.noise(cell.xPos, cell.yPos);
+            for (var _b = 0, cellTypesByHeight_1 = cellTypesByHeight; _b < cellTypesByHeight_1.length; _b++) {
+                var sortedCellType = cellTypesByHeight_1[_b];
+                if (height <= sortedCellType[0]) {
+                    cell.cellType = sortedCellType[1];
+                    break;
+                }
+            }
+        }
+        this.props.mapChanged();
+    };
+    GenerationEditor.prototype.arrangeCellTypesByHeight = function () {
+        // TODO: this should use an innate height property, not just the cell types' order
+        var heightIncrement = 1 / (this.props.cellTypes.length);
+        var height = heightIncrement;
+        var sortedCellTypes = [];
+        for (var _i = 0, _a = this.props.cellTypes; _i < _a.length; _i++) {
+            var cellType = _a[_i];
+            sortedCellTypes.push([height, cellType]);
+            height += heightIncrement;
+        }
+        sortedCellTypes[sortedCellTypes.length - 1][0] = 1;
+        return sortedCellTypes;
     };
     return GenerationEditor;
 }(React.Component));
@@ -2623,6 +2660,93 @@ var Random = (function () {
     };
     return Random;
 }());
+// Adapted from https://gist.github.com/banksean/304522, which was in turn
+// Ported from Stefan Gustavson's java implementation
+// http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+var SimplexNoise = (function () {
+    function SimplexNoise() {
+        var p = [];
+        for (var i = 0; i < 256; i++)
+            p[i] = Math.floor(Math.random() * 256);
+        // To remove the need for index wrapping, double the permutation table length
+        this.perm = [];
+        for (var i = 0; i < 512; i++)
+            this.perm[i] = p[i & 255];
+    }
+    SimplexNoise.prototype.dot = function (gi, x, y) {
+        var g = SimplexNoise.grad3[gi];
+        return g[0] * x + g[1] * y;
+    };
+    SimplexNoise.prototype.noise = function (xin, yin) {
+        var n0, n1, n2; // Noise contributions from the three corners
+        // Skew the input space to determine which simplex cell we're in
+        var F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+        var s = (xin + yin) * F2; // Hairy factor for 2D
+        var i = Math.floor(xin + s);
+        var j = Math.floor(yin + s);
+        var G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+        var t = (i + j) * G2;
+        var X0 = i - t; // Unskew the cell origin back to (x,y) space
+        var Y0 = j - t;
+        var x0 = xin - X0; // The x,y distances from the cell origin
+        var y0 = yin - Y0;
+        // For the 2D case, the simplex shape is an equilateral triangle.
+        // Determine which simplex we are in.
+        var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+        if (x0 > y0) {
+            i1 = 1;
+            j1 = 0; // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+        }
+        else {
+            i1 = 0;
+            j1 = 1; // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+        }
+        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+        // c = (3-sqrt(3))/6
+        var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+        var y1 = y0 - j1 + G2;
+        var x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
+        var y2 = y0 - 1.0 + 2.0 * G2;
+        // Work out the hashed gradient indices of the three simplex corners
+        var ii = i & 255;
+        var jj = j & 255;
+        var gi0 = this.perm[ii + this.perm[jj]] % 12;
+        var gi1 = this.perm[ii + i1 + this.perm[jj + j1]] % 12;
+        var gi2 = this.perm[ii + 1 + this.perm[jj + 1]] % 12;
+        // Calculate the contribution from the three corners
+        var t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 < 0)
+            n0 = 0.0;
+        else {
+            t0 *= t0;
+            n0 = t0 * t0 * this.dot(gi0, x0, y0); // (x,y) of grad3 used for 2D gradient
+        }
+        var t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 < 0)
+            n1 = 0.0;
+        else {
+            t1 *= t1;
+            n1 = t1 * t1 * this.dot(gi1, x1, y1);
+        }
+        var t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 < 0)
+            n2 = 0.0;
+        else {
+            t2 *= t2;
+            n2 = t2 * t2 * this.dot(gi2, x2, y2);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to return values in the interval [0,1].
+        return 35.0 * (n0 + n1 + n2) + 0.5;
+    };
+    return SimplexNoise;
+}());
+SimplexNoise.grad3 = [
+    [1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
+    [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
+    [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]
+];
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
         s = arguments[i];
@@ -2701,7 +2825,7 @@ var WorldMap = (function (_super) {
             case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 6 /* Generation */:
-                return React.createElement(GenerationEditor, __assign({}, props));
+                return React.createElement(GenerationEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, cells: this.state.map.cells, mapChanged: this.mapGenerated.bind(this) }));
         }
     };
     WorldMap.prototype.cellMouseDown = function (cell) {
@@ -2791,6 +2915,9 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.updateLines = function (lines) {
         this.state.map.lines = lines;
+        this.mapChanged();
+    };
+    WorldMap.prototype.mapGenerated = function () {
         this.mapChanged();
     };
     WorldMap.prototype.mapChanged = function () {
