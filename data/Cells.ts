@@ -5,6 +5,43 @@ interface ICellDetail {
 
 class CellType {
     constructor(public name: string, public color: string, public noiseScale: number, public noiseIntensity: number, public noiseDensity: number, public detail?: string, public detailColor?: string, public detailNumberPerCell?: number, public detailSize?: number) {
+        this.updateTexture();
+    }
+
+    private textureCanvas?: HTMLCanvasElement;
+    texturePattern?: CanvasPattern;
+    updateTexture() {
+        if (this.noiseIntensity <= 0) {
+            this.textureCanvas = undefined;
+            this.texturePattern = undefined;
+            return;
+        }
+
+        this.textureCanvas = document.createElement('canvas');
+        let textureCtx = this.textureCanvas.getContext('2d') as CanvasRenderingContext2D;
+        let textureSize = this.textureCanvas.width = this.textureCanvas.height = 100;
+        let sizeSq = textureSize * textureSize;
+        let image = textureCtx.createImageData(textureSize, textureSize);
+        let imageData = image.data;
+        
+        let writePos = 0, fillChance = 0.25, maxAlpha = 32;
+        for (let i=0; i < sizeSq; ++i) {
+            if (Math.random() > this.noiseDensity) {
+                writePos += 4;
+                continue;
+            }
+
+            let rgb = Math.floor(Math.random() * 256);
+            let a = Math.floor(Math.random() * this.noiseIntensity * 256);
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = a;
+        }
+        textureCtx.putImageData(image, 0, 0);
+
+        // Note: pattern isn't being created in the destination context. Does that work in all browsers?
+        this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     }
 
     public static empty = new CellType('Empty', '#ffffff', 1, 0, 0);
@@ -15,7 +52,7 @@ class CellType {
         types.push(new CellType('Forest', '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
         types.push(new CellType('Hills', '#7bac46', 10, 0.4, 0.2, 'Hill', '#607860', 1, 0.75));
         types.push(new CellType('Mountain', '#7c7c4b', 10, 0.2, 0.2, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 1, 0.25, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Desert', '#ebd178', 1, 0.1, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     }
 }
 

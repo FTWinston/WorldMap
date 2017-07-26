@@ -226,7 +226,8 @@ class MapData {
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop')
+                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop'
+                || key == 'textureCanvas' || key == 'texturePattern')
                 return undefined;
             return value;
         });

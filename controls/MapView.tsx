@@ -61,7 +61,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             this.setupTouch();
 
         this.resize();
-        this.createTexture();
     }
     componentWillUnmount() {
         if (this.props.scrollUI)
@@ -218,34 +217,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 maxY: Number.MAX_VALUE,
             }
     }
-    textureCanvas: HTMLCanvasElement;
-    texturePattern: CanvasPattern;
-    private createTexture() {
-        this.textureCanvas = document.createElement('canvas');
-        let textureCtx = this.textureCanvas.getContext('2d') as CanvasRenderingContext2D;
-        let textureSize = this.textureCanvas.width = this.textureCanvas.height = this.state.cellRadius * 2;
-        let sizeSq = textureSize * textureSize;
-        let image = textureCtx.createImageData(textureSize, textureSize);
-        let imageData = image.data;
-        
-        let writePos = 0, fillChance = 0.25, maxAlpha = 32;
-        for (let i=0; i < sizeSq; ++i) {
-            if (Math.random() > fillChance) {
-                writePos += 4;
-                continue;
-            }
-
-            let rgb = Math.floor(Math.random() * 256);
-            let a = Math.floor(Math.random() * maxAlpha);
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = a;
-        }
-        textureCtx.putImageData(image, 0, 0);
-
-        this.texturePattern = this.ctx.createPattern(this.textureCanvas, 'repeat');
-    }
     private drawCells(cellDrawInterval: number, outline: boolean, fillContent: boolean) {
         this.ctx.lineWidth = 1;
         let drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -319,11 +290,11 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
 
             ctx.fill();
 
-            if (cellType.noiseIntensity > 0) {
+            if (cellType.texturePattern !== undefined) {
                 let scale = cellType.noiseScale;
 
                 ctx.scale(scale, scale);
-                ctx.fillStyle = this.texturePattern;
+                ctx.fillStyle = cellType.texturePattern;
                 ctx.fill();
                 ctx.scale(1/scale, 1/scale);
             }
@@ -618,7 +589,6 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     componentDidUpdate(prevProps: IMapViewProps, prevState: IMapViewState) {
         if (prevState.cellRadius != this.state.cellRadius) {
             this.updateSize();
-            this.createTexture();
             this.redraw();
         }
     }

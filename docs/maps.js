@@ -201,7 +201,8 @@ var MapData = (function () {
         var json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
                 || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop')
+                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop'
+                || key == 'textureCanvas' || key == 'texturePattern')
                 return undefined;
             return value;
         });
@@ -270,14 +271,44 @@ var CellType = (function () {
         this.detailColor = detailColor;
         this.detailNumberPerCell = detailNumberPerCell;
         this.detailSize = detailSize;
+        this.updateTexture();
     }
+    CellType.prototype.updateTexture = function () {
+        if (this.noiseIntensity <= 0) {
+            this.textureCanvas = undefined;
+            this.texturePattern = undefined;
+            return;
+        }
+        this.textureCanvas = document.createElement('canvas');
+        var textureCtx = this.textureCanvas.getContext('2d');
+        var textureSize = this.textureCanvas.width = this.textureCanvas.height = 100;
+        var sizeSq = textureSize * textureSize;
+        var image = textureCtx.createImageData(textureSize, textureSize);
+        var imageData = image.data;
+        var writePos = 0, fillChance = 0.25, maxAlpha = 32;
+        for (var i = 0; i < sizeSq; ++i) {
+            if (Math.random() > this.noiseDensity) {
+                writePos += 4;
+                continue;
+            }
+            var rgb = Math.floor(Math.random() * 256);
+            var a = Math.floor(Math.random() * this.noiseIntensity * 256);
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = rgb;
+            imageData[writePos++] = a;
+        }
+        textureCtx.putImageData(image, 0, 0);
+        // Note: pattern isn't being created in the destination context. Does that work in all browsers?
+        this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
+    };
     CellType.createDefaults = function (types) {
         types.push(new CellType('Water', '#179ce6', 5, 0.2, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
         types.push(new CellType('Grass', '#a1e94d', 2, 0.1, 0.8));
         types.push(new CellType('Forest', '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
         types.push(new CellType('Hills', '#7bac46', 10, 0.4, 0.2, 'Hill', '#607860', 1, 0.75));
         types.push(new CellType('Mountain', '#7c7c4b', 10, 0.2, 0.2, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 1, 0.25, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Desert', '#ebd178', 1, 0.1, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
@@ -860,7 +891,6 @@ var MapView = (function (_super) {
         if (this.props.scrollUI)
             this.setupTouch();
         this.resize();
-        this.createTexture();
     };
     MapView.prototype.componentWillUnmount = function () {
         if (this.props.scrollUI)
@@ -982,29 +1012,6 @@ var MapView = (function (_super) {
                 maxY: Number.MAX_VALUE,
             };
     };
-    MapView.prototype.createTexture = function () {
-        this.textureCanvas = document.createElement('canvas');
-        var textureCtx = this.textureCanvas.getContext('2d');
-        var textureSize = this.textureCanvas.width = this.textureCanvas.height = this.state.cellRadius * 2;
-        var sizeSq = textureSize * textureSize;
-        var image = textureCtx.createImageData(textureSize, textureSize);
-        var imageData = image.data;
-        var writePos = 0, fillChance = 0.25, maxAlpha = 32;
-        for (var i = 0; i < sizeSq; ++i) {
-            if (Math.random() > fillChance) {
-                writePos += 4;
-                continue;
-            }
-            var rgb = Math.floor(Math.random() * 256);
-            var a = Math.floor(Math.random() * maxAlpha);
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = rgb;
-            imageData[writePos++] = a;
-        }
-        textureCtx.putImageData(image, 0, 0);
-        this.texturePattern = this.ctx.createPattern(this.textureCanvas, 'repeat');
-    };
     MapView.prototype.drawCells = function (cellDrawInterval, outline, fillContent) {
         this.ctx.lineWidth = 1;
         var drawCellRadius = this.state.cellRadius * cellDrawInterval;
@@ -1062,10 +1069,10 @@ var MapView = (function (_super) {
             else
                 ctx.fillStyle = cell.cellType.color;
             ctx.fill();
-            if (cellType.noiseIntensity > 0) {
+            if (cellType.texturePattern !== undefined) {
                 var scale = cellType.noiseScale;
                 ctx.scale(scale, scale);
-                ctx.fillStyle = this.texturePattern;
+                ctx.fillStyle = cellType.texturePattern;
                 ctx.fill();
                 ctx.scale(1 / scale, 1 / scale);
             }
@@ -1307,7 +1314,6 @@ var MapView = (function (_super) {
     MapView.prototype.componentDidUpdate = function (prevProps, prevState) {
         if (prevState.cellRadius != this.state.cellRadius) {
             this.updateSize();
-            this.createTexture();
             this.redraw();
         }
     };
@@ -1677,10 +1683,14 @@ var CellTypeEditor = (function (_super) {
         else {
             editType.name = name;
             editType.color = color;
+            editType.noiseScale = this.state.noiseScale;
+            editType.noiseIntensity = this.state.noiseIntensity;
+            editType.noiseDensity = this.state.noiseDensity;
             editType.detail = detail;
             editType.detailColor = detailColor;
             editType.detailNumberPerCell = this.state.detailNumPerCell;
             editType.detailSize = this.state.detailSize;
+            editType.updateTexture();
         }
         this.props.updateCellTypes(cellTypes);
     };

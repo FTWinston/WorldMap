@@ -154,10 +154,14 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         else {
             editType.name = name;
             editType.color = color;
+            editType.noiseScale = this.state.noiseScale;
+            editType.noiseIntensity = this.state.noiseIntensity;
+            editType.noiseDensity = this.state.noiseDensity;
             editType.detail = detail;
             editType.detailColor = detailColor;
             editType.detailNumberPerCell = this.state.detailNumPerCell;
             editType.detailSize = this.state.detailSize;
+            editType.updateTexture();
         }
 
         this.props.updateCellTypes(cellTypes);
