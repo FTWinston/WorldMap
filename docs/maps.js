@@ -2508,7 +2508,7 @@ var GenerationEditor = (function (_super) {
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
         var noise = new SimplexNoise();
-        var cellTypeLookup = this.constructCellTypeTree();
+        var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.cellTypes);
         for (var _i = 0, _a = this.props.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
@@ -2526,26 +2526,25 @@ var GenerationEditor = (function (_super) {
         this.cellTypeLookup = cellTypeLookup;
     };
     GenerationEditor.cellTypeDistanceMetric = function (a, b) {
-        var heightDif = a.genHeight - b.genHeight;
+        var heightDif = (a.genHeight - b.genHeight); // * 5;
         var tempDif = a.genTemperature - b.genTemperature;
         var precDif = a.genPrecipitation - b.genPrecipitation;
-        return Math.sqrt(heightDif * heightDif * 25 +
+        return Math.sqrt(heightDif * heightDif +
             tempDif * tempDif +
             precDif * precDif);
     };
-    GenerationEditor.prototype.constructCellTypeTree = function () {
+    GenerationEditor.constructCellTypeTree = function (cellTypes) {
         // TODO: this should use innate height/temperature/precipitation properties, not just the cell types' order
-        var heightIncrement = 1 / (this.props.cellTypes.length);
-        var height = heightIncrement;
-        var sortedCellTypes = [];
-        for (var _i = 0, _a = this.props.cellTypes; _i < _a.length; _i++) {
-            var cellType = _a[_i];
+        var heightIncrement = 1 / cellTypes.length;
+        var height = heightIncrement / 2;
+        for (var _i = 0, cellTypes_1 = cellTypes; _i < cellTypes_1.length; _i++) {
+            var cellType = cellTypes_1[_i];
             cellType.genHeight = height;
             cellType.genTemperature = 0;
             cellType.genPrecipitation = 0;
             height += heightIncrement;
         }
-        return new kdTree(this.props.cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+        return new kdTree(cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
     };
     return GenerationEditor;
 }(React.Component));
@@ -2768,18 +2767,18 @@ var kdNode = (function () {
     return kdNode;
 }());
 var kdTree = (function () {
-    function kdTree(points, metric, dimensions) {
+    function kdTree(points, distanceMetric, dimensions) {
         this.points = points;
-        this.metric = metric;
+        this.distanceMetric = distanceMetric;
         this.dimensions = dimensions;
         this.root = this.buildTree(points, 0);
     }
     kdTree.prototype.buildTree = function (points, depth, parent) {
-        var dim = depth % this.dimensions.length;
         if (points.length === 0)
             return undefined;
+        var dim = depth % this.dimensions.length;
         if (points.length === 1)
-            return new kdNode(this.points[0], dim, parent);
+            return new kdNode(points[0], dim, parent);
         points.sort(function (a, b) {
             return a[this.dimensions[dim]] - b[this.dimensions[dim]];
         }.bind(this));
@@ -2789,145 +2788,53 @@ var kdTree = (function () {
         node.right = this.buildTree(points.slice(median + 1), depth + 1, node);
         return node;
     };
-    kdTree.prototype.insert = function (point) {
-        var innerSearch = function (node, parent) {
-            if (node === undefined)
-                return parent;
-            var dimension = this.dimensions[node.dimension];
-            if (point[dimension] < node.point[dimension])
-                return innerSearch(node.left, node);
+    kdTree.prototype.nearestSearch = function (point, node, best) {
+        var dimension = this.dimensions[node.dimension];
+        var ownDistance = this.distanceMetric(point, node.point);
+        var linearPoint = {};
+        for (var i = 0; i < this.dimensions.length; i += 1) {
+            if (i === node.dimension)
+                linearPoint[this.dimensions[i]] = point[this.dimensions[i]];
             else
-                return innerSearch(node.right, node);
-        }.bind(this);
-        var insertPosition = innerSearch(this.root), newNode, dimension;
-        if (insertPosition === undefined) {
-            this.root = new kdNode(point, 0);
+                linearPoint[this.dimensions[i]] = node.point[this.dimensions[i]];
+        }
+        if (node.right === undefined && node.left === undefined) {
+            if (ownDistance < best[1]) {
+                best[0] = node;
+                best[1] = ownDistance;
+            }
             return;
         }
-        newNode = new kdNode(point, (insertPosition.dimension + 1) % this.dimensions.length, insertPosition);
-        dimension = this.dimensions[insertPosition.dimension];
-        if (point[dimension] < insertPosition.point[dimension])
-            insertPosition.left = newNode;
+        var bestChild;
+        if (node.right === undefined)
+            bestChild = node.left;
+        else if (node.left === undefined)
+            bestChild = node.right;
+        else if (point[dimension] < node.point[dimension])
+            bestChild = node.left;
         else
-            insertPosition.right = newNode;
-    };
-    kdTree.prototype.remove = function (point) {
-        if (this.root === undefined)
-            return;
-        var nodeSearch = function (node) {
-            if (node === null)
-                return undefined;
-            if (node.point === point)
-                return node;
-            var dimension = this.dimensions[node.dimension];
-            if (point[dimension] < node.point[dimension])
-                return this.nodeSearch(node.left, node);
+            bestChild = node.right;
+        this.nearestSearch(point, bestChild, best);
+        if (ownDistance < best[1]) {
+            best[0] = node;
+            best[1] = ownDistance;
+        }
+        var linearDistance = this.distanceMetric(linearPoint, node.point);
+        if (linearDistance < best[1]) {
+            var otherChild = void 0;
+            if (bestChild === node.left)
+                otherChild = node.right;
             else
-                return this.nodeSearch(node.right, node);
-        }.bind(this);
-        var removeNode = function (node) {
-            var findMin = function (node, dim) {
-                if (node === undefined)
-                    return undefined;
-                var dimension = this.dimensions[dim];
-                if (node.dimension === dim) {
-                    if (node.left !== undefined)
-                        return findMin(node.left, dim);
-                    else
-                        return node;
-                }
-                var own = node.point[dimension];
-                var left = findMin(node.left, dim);
-                var right = findMin(node.right, dim);
-                var min = node;
-                if (left !== undefined && left.point[dimension] < own)
-                    min = left;
-                if (right !== undefined && right.point[dimension] < min.point[dimension])
-                    min = right;
-                return min;
-            }.bind(this);
-            if (node.left === undefined && node.right === undefined) {
-                if (node.parent === undefined) {
-                    this.root = undefined;
-                    return;
-                }
-                var pDimension = this.dimensions[node.parent.dimension];
-                if (node.point[pDimension] < node.parent.point[pDimension])
-                    node.parent.left = undefined;
-                else
-                    node.parent.right = undefined;
-                return;
-            }
-            // If the right subtree is not empty, swap with the minimum element on the
-            // node's dimension. If it is empty, we swap the left and right subtrees and
-            // do the same.
-            if (node.right !== undefined) {
-                var nextNode = findMin(node.right, node.dimension);
-                var nextObj = nextNode.point;
-                removeNode(nextNode);
-                node.point = nextObj;
-            }
-            else {
-                var nextNode = findMin(node.left, node.dimension);
-                var nextObj = nextNode.point;
-                removeNode(nextNode);
-                node.right = node.left;
-                node.left = undefined;
-                node.point = nextObj;
-            }
-        }.bind(this);
-        var node = nodeSearch(this.root);
-        if (node !== undefined)
-            removeNode(node);
+                otherChild = node.left;
+            if (otherChild !== undefined)
+                this.nearestSearch(point, otherChild, best);
+        }
     };
     kdTree.prototype.nearest = function (point, maxDistance) {
-        var bestNode = undefined;
-        var bestDist = Number.MAX_VALUE;
-        var nearestSearch = function (node) {
-            var dimension = this.dimensions[node.dimension];
-            var ownDistance = this.metric(point, node.point);
-            var linearPoint = {};
-            for (var i = 0; i < this.dimensions.length; i += 1) {
-                if (i === node.dimension)
-                    linearPoint[this.dimensions[i]] = point[this.dimensions[i]];
-                else
-                    linearPoint[this.dimensions[i]] = node.point[this.dimensions[i]];
-            }
-            var linearDistance = this.metric(linearPoint, node.point);
-            if (node.right === null && node.left === null) {
-                if (ownDistance < bestDist) {
-                    bestNode = node;
-                    bestDist = ownDistance;
-                }
-                return;
-            }
-            var bestChild;
-            if (node.right === undefined)
-                bestChild = node.left;
-            else if (node.left === undefined)
-                bestChild = node.right;
-            else if (point[dimension] < node.point[dimension])
-                bestChild = node.left;
-            else
-                bestChild = node.right;
-            nearestSearch(bestChild);
-            if (ownDistance < bestDist) {
-                bestNode = node;
-                bestDist = ownDistance;
-            }
-            if (Math.abs(linearDistance) < bestDist) {
-                var otherChild = void 0;
-                if (bestChild === node.left)
-                    otherChild = node.right;
-                else
-                    otherChild = node.left;
-                if (otherChild !== undefined)
-                    nearestSearch(otherChild);
-            }
-        }.bind(this);
+        var best = [undefined, Number.MAX_VALUE];
         if (this.root)
-            nearestSearch.bind(this.root);
-        return bestNode === undefined ? undefined : bestNode.point;
+            this.nearestSearch(point, this.root, best);
+        return best[0] === undefined ? undefined : best[0].point;
     };
     kdTree.prototype.balanceFactor = function () {
         function height(node) {

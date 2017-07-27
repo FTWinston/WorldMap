@@ -36,7 +36,7 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
 
         let noise = new SimplexNoise();
-        let cellTypeLookup = this.constructCellTypeTree();
+        let cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.cellTypes);
 
         for (let cell of this.props.cells) {
             if (cell === null)
@@ -57,30 +57,29 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
     }
     cellTypeLookup: any;
 
-    private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: ICellTypeCoordinate) {
-        let heightDif = a.genHeight - b.genHeight;
+    private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: CellType) {
+        let heightDif = (a.genHeight - b.genHeight);// * 5;
         let tempDif = a.genTemperature - b.genTemperature;
         let precDif = a.genPrecipitation - b.genPrecipitation;
 
         return Math.sqrt(
-            heightDif * heightDif * 25 +
+            heightDif * heightDif +
             tempDif * tempDif +
             precDif * precDif
         );
     }
-    private constructCellTypeTree() {
+    private static constructCellTypeTree(cellTypes: CellType[]) {
         // TODO: this should use innate height/temperature/precipitation properties, not just the cell types' order
-        let heightIncrement = 1 / (this.props.cellTypes.length);
-        let height = heightIncrement;
+        let heightIncrement = 1 / cellTypes.length;
+        let height = heightIncrement / 2;
 
-        let sortedCellTypes: [number, CellType][] = [];
-        for (let cellType of this.props.cellTypes) {
+        for (let cellType of cellTypes) {
             cellType.genHeight = height;
             cellType.genTemperature = 0;
             cellType.genPrecipitation = 0;
             height += heightIncrement;
         }
 
-        return new kdTree<CellType, ICellTypeCoordinate>(this.props.cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+        return new kdTree<CellType, ICellTypeCoordinate>(cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
     }
 }
