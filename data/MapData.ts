@@ -262,7 +262,7 @@ class MapData {
                 if (cell == null)
                     return null;
 
-                let cellType = map.cellTypes[cell.typeID];
+                let cellType = map.cellTypes[cell.typeID == -1 ? 0 : cell.typeID];
                 return new MapCell(map, cellType);
             });
 
@@ -273,10 +273,10 @@ class MapData {
 
         if (data.locations !== undefined)
             for (let location of data.locations) {
-                let locationType = map.locationTypes[location.typeID];
+                let type = map.locationTypes[location.typeID == -1 ? 0 : location.typeID];
                 let cell = map.cells[location.cellID];
                 if (cell !== null)
-                    map.locations.push(new MapLocation(cell, location.name, locationType));
+                    map.locations.push(new MapLocation(cell, location.name, type));
             }
 
         if (data.lineTypes !== undefined)
@@ -288,7 +288,8 @@ class MapData {
 
         if (data.lines !== undefined)
             for (let line of data.lines) {
-                let mapLine = new MapLine(map.lineTypes[line.typeID])
+                let type = map.lineTypes[line.typeID === -1 ? 0 : line.typeID];
+                let mapLine = new MapLine(type);
                 for (let cellID of line.cellIDs) {
                     let cell = map.cells[cellID];
                     if (cell !== null)

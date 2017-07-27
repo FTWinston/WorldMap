@@ -221,7 +221,7 @@ var MapData = (function () {
             map.cells = data.cells.map(function (cell) {
                 if (cell == null)
                     return null;
-                var cellType = map.cellTypes[cell.typeID];
+                var cellType = map.cellTypes[cell.typeID == -1 ? 0 : cell.typeID];
                 return new MapCell(map, cellType);
             });
         if (data.locationTypes !== undefined)
@@ -231,10 +231,10 @@ var MapData = (function () {
         if (data.locations !== undefined)
             for (var _i = 0, _a = data.locations; _i < _a.length; _i++) {
                 var location_2 = _a[_i];
-                var locationType = map.locationTypes[location_2.typeID];
+                var type = map.locationTypes[location_2.typeID == -1 ? 0 : location_2.typeID];
                 var cell = map.cells[location_2.cellID];
                 if (cell !== null)
-                    map.locations.push(new MapLocation(cell, location_2.name, locationType));
+                    map.locations.push(new MapLocation(cell, location_2.name, type));
             }
         if (data.lineTypes !== undefined)
             map.lineTypes = data.lineTypes.map(function (type) {
@@ -244,7 +244,8 @@ var MapData = (function () {
         if (data.lines !== undefined)
             for (var _b = 0, _c = data.lines; _b < _c.length; _b++) {
                 var line = _c[_b];
-                var mapLine = new MapLine(map.lineTypes[line.typeID]);
+                var type = map.lineTypes[line.typeID === -1 ? 0 : line.typeID];
+                var mapLine = new MapLine(type);
                 for (var _d = 0, _e = line.cellIDs; _d < _e.length; _d++) {
                     var cellID = _e[_d];
                     var cell = map.cells[cellID];
