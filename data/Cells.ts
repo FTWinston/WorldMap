@@ -8,6 +8,10 @@ class CellType {
         this.updateTexture();
     }
 
+    genHeight: number;
+    genTemperature: number;
+    genPrecipitation: number;
+
     private textureCanvas?: HTMLCanvasElement;
     texturePattern?: CanvasPattern;
     updateTexture() {

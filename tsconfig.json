@@ -46,6 +46,7 @@
         "tools/SaveLoad.ts",
         "tools/Random.ts",
         "tools/Simplex.ts",
+        "tools/kdTree.ts",
         
         "WorldMap.tsx"
     ]

@@ -5,7 +5,13 @@ interface IGenerationEditorProps {
 }
 
 interface IGenerationEditorState {
-    
+
+}
+
+interface ICellTypeCoordinate {
+    genHeight: number,
+    genTemperature: number,
+    genPrecipitation: number,
 }
 
 class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerationEditorState> implements IMapEditor {
@@ -30,34 +36,51 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
 
         let noise = new SimplexNoise();
-        let cellTypesByHeight = this.arrangeCellTypesByHeight();
+        let cellTypeLookup = this.constructCellTypeTree();
 
         for (let cell of this.props.cells) {
             if (cell === null)
                 continue;
 
             let height = noise.noise(cell.xPos, cell.yPos);
-            for (let sortedCellType of cellTypesByHeight)
-                if (height <= sortedCellType[0]) {
-                    cell.cellType = sortedCellType[1];
-                    break;
-                }
+            let nearestType = cellTypeLookup.nearest({
+                genHeight: height,
+                genTemperature: 0,
+                genPrecipitation: 0,
+            });
+            if (nearestType !== undefined)
+                cell.cellType = nearestType;
         }
 
         this.props.mapChanged();
+        this.cellTypeLookup = cellTypeLookup;
     }
-    private arrangeCellTypesByHeight() {
-        // TODO: this should use an innate height property, not just the cell types' order
+    cellTypeLookup: any;
+
+    private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: ICellTypeCoordinate) {
+        let heightDif = a.genHeight - b.genHeight;
+        let tempDif = a.genTemperature - b.genTemperature;
+        let precDif = a.genPrecipitation - b.genPrecipitation;
+
+        return Math.sqrt(
+            heightDif * heightDif * 25 +
+            tempDif * tempDif +
+            precDif * precDif
+        );
+    }
+    private constructCellTypeTree() {
+        // TODO: this should use innate height/temperature/precipitation properties, not just the cell types' order
         let heightIncrement = 1 / (this.props.cellTypes.length);
         let height = heightIncrement;
 
         let sortedCellTypes: [number, CellType][] = [];
         for (let cellType of this.props.cellTypes) {
-            sortedCellTypes.push([height, cellType]);
+            cellType.genHeight = height;
+            cellType.genTemperature = 0;
+            cellType.genPrecipitation = 0;
             height += heightIncrement;
         }
 
-        sortedCellTypes[sortedCellTypes.length - 1][0] = 1;
-        return sortedCellTypes;
+        return new kdTree<CellType, ICellTypeCoordinate>(this.props.cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
     }
 }
