@@ -116,7 +116,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Generation:
-                return <GenerationEditor {...props} cellTypes={this.state.map.cellTypes} cells={this.state.map.cells} mapChanged={this.mapGenerated.bind(this)} />;
+                return <GenerationEditor {...props} map={this.state.map} mapChanged={this.mapGenerated.bind(this)} />;
         }
     }
     private activeEditor?: IMapEditor;

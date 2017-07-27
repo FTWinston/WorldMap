@@ -24,6 +24,7 @@
         "data/Cells.ts",
         "data/Locations.ts",
         "data/Lines.ts",
+        "data/Guides.ts",
 
         "controls/ResizeAnchorInput.tsx",
         "controls/ChangeHistory.tsx",

@@ -594,6 +594,30 @@ var MapLine = (function () {
     return MapLine;
 }());
 MapLine.stepsPerSegment = 16;
+var Guides = (function () {
+    function Guides() {
+    }
+    return Guides;
+}());
+Guides.scalarGuides = [
+    {
+        name: 'Linear gradient, increasing west to east',
+        generation: function (x, y, width, height) { return x / width; },
+    },
+    {
+        name: 'Linear gradient, increasing east to west',
+        generation: function (x, y, width, height) { return (width - x) / width; },
+    },
+    {
+        name: 'Linear gradient, increasing north to south',
+        generation: function (x, y, width, height) { return y / height; },
+    },
+    {
+        name: 'Linear gradient, increasing south to north',
+        generation: function (x, y, width, height) { return (height - y) / height; },
+    }
+];
+Guides.vectorGuides = [];
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -2507,13 +2531,17 @@ var GenerationEditor = (function (_super) {
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
-        var noise = new SimplexNoise();
-        var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.cellTypes);
-        for (var _i = 0, _a = this.props.cells; _i < _a.length; _i++) {
+        var highFreqNoise = new SimplexNoise();
+        var lowFreqNoise = new SimplexNoise();
+        var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
+        var heightGuide = Guides.scalarGuides[2].generation;
+        for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
                 continue;
-            var height = noise.noise(cell.xPos, cell.yPos);
+            var height = 0.15 * highFreqNoise.noise(cell.xPos, cell.yPos)
+                + 0.70 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + 0.15 * heightGuide(cell.xPos, cell.yPos, this.props.map.width, this.props.map.height);
             var nearestType = cellTypeLookup.nearest({
                 genHeight: height,
                 genTemperature: 0,
@@ -2929,7 +2957,7 @@ var WorldMap = (function (_super) {
             case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 6 /* Generation */:
-                return React.createElement(GenerationEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, cells: this.state.map.cells, mapChanged: this.mapGenerated.bind(this) }));
+                return React.createElement(GenerationEditor, __assign({}, props, { map: this.state.map, mapChanged: this.mapGenerated.bind(this) }));
         }
     };
     WorldMap.prototype.cellMouseDown = function (cell) {

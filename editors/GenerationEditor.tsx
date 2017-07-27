@@ -1,6 +1,5 @@
 interface IGenerationEditorProps {
-    cellTypes: CellType[];
-    cells: PossibleMapCell[];
+    map: MapData;
     mapChanged: () => void;
 }
 
@@ -35,14 +34,19 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
 
-        let noise = new SimplexNoise();
-        let cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.cellTypes);
+        let highFreqNoise = new SimplexNoise();
+        let lowFreqNoise = new SimplexNoise();
+        let cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
 
-        for (let cell of this.props.cells) {
+        let heightGuide = Guides.scalarGuides[2].generation;
+        for (let cell of this.props.map.cells) {
             if (cell === null)
                 continue;
 
-            let height = noise.noise(cell.xPos, cell.yPos);
+            let height = 0.15 * highFreqNoise.noise(cell.xPos, cell.yPos) 
+                       + 0.70 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                       + 0.15 * heightGuide(cell.xPos, cell.yPos, this.props.map.width, this.props.map.height);
+
             let nearestType = cellTypeLookup.nearest({
                 genHeight: height,
                 genTemperature: 0,
