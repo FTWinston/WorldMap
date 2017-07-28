@@ -29,7 +29,7 @@ class CellType {
         let imageData = image.data;
         
         let writePos = 0, fillChance = 0.25, maxAlpha = 32;
-        for (let i=0; i < sizeSq; ++i) {
+        for (let i=0; i < sizeSq; i++) {
             if (Math.random() > this.noiseDensity) {
                 writePos += 4;
                 continue;

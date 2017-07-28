@@ -30,6 +30,7 @@
         "controls/ChangeHistory.tsx",
         "controls/EditorTabs.tsx",
         "controls/MapView.tsx",
+        "controls/GuideView.tsx",
 
         "editors/DownloadEditor.tsx",
         "editors/OverviewEditor.tsx",

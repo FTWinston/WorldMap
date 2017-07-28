@@ -287,7 +287,7 @@ var CellType = (function () {
         var image = textureCtx.createImageData(textureSize, textureSize);
         var imageData = image.data;
         var writePos = 0, fillChance = 0.25, maxAlpha = 32;
-        for (var i = 0; i < sizeSq; ++i) {
+        for (var i = 0; i < sizeSq; i++) {
             if (Math.random() > this.noiseDensity) {
                 writePos += 4;
                 continue;
@@ -601,20 +601,82 @@ var Guides = (function () {
 }());
 Guides.scalarGuides = [
     {
+        name: 'Completely level',
+        isVector: false,
+        generation: function (x, y, width, height) { return 0.5; },
+    },
+    {
         name: 'Linear gradient, increasing west to east',
+        isVector: false,
         generation: function (x, y, width, height) { return x / width; },
     },
     {
         name: 'Linear gradient, increasing east to west',
+        isVector: false,
         generation: function (x, y, width, height) { return (width - x) / width; },
     },
     {
         name: 'Linear gradient, increasing north to south',
+        isVector: false,
         generation: function (x, y, width, height) { return y / height; },
     },
     {
         name: 'Linear gradient, increasing south to north',
+        isVector: false,
         generation: function (x, y, width, height) { return (height - y) / height; },
+    },
+    {
+        name: 'Linear gradient, increasing northwest to southeast',
+        isVector: false,
+        generation: function (x, y, width, height) { return y / height * 0.5 + x / width * 0.5; },
+    },
+    {
+        name: 'Linear gradient, increasing northeast to southwest',
+        isVector: false,
+        generation: function (x, y, width, height) { return y / height * 0.5 + (width - x) / width * 0.5; },
+    },
+    {
+        name: 'Linear gradient, increasing southwest to northeast',
+        isVector: false,
+        generation: function (x, y, width, height) { return (height - y) / height * 0.5 + x / width * 0.5; },
+    },
+    {
+        name: 'Linear gradient, increasing southeast to northwest',
+        isVector: false,
+        generation: function (x, y, width, height) { return (height - y) / height * 0.5 + (width - x) / width * 0.5; },
+    },
+    {
+        name: 'North-south ridge',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var hw = width / 2;
+            if (x <= hw)
+                return x / hw;
+            else
+                return (width - x) / hw;
+        },
+    },
+    {
+        name: 'North-south ravine',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var hw = width / 2;
+            if (x <= hw)
+                return 1 - x / hw;
+            else
+                return 1 - (width - x) / hw;
+        },
+    },
+    {
+        name: 'East-west ravine',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var hh = height / 2;
+            if (y <= hh)
+                return 1 - y / hh;
+            else
+                return 1 - (height - y) / hh;
+        },
     }
 ];
 Guides.vectorGuides = [];
@@ -1448,6 +1510,48 @@ var MapView = (function (_super) {
         }.bind(this));
     };
     return MapView;
+}(React.Component));
+var GuideView = (function (_super) {
+    __extends(GuideView, _super);
+    function GuideView() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    GuideView.prototype.componentDidMount = function () {
+        var ctx = this.canvas.getContext('2d');
+        if (ctx !== null) {
+            if (this.props.guide.isVector)
+                this.drawVector(ctx, this.props.guide);
+            else
+                this.drawScalar(ctx, this.props.guide);
+        }
+    };
+    GuideView.prototype.render = function () {
+        var _this = this;
+        return React.createElement("canvas", { width: 50, height: 50, ref: function (c) { return _this.canvas = c; }, title: this.props.guide.name, className: this.props.className, onClick: this.clicked.bind(this) });
+    };
+    GuideView.prototype.clicked = function () {
+        if (this.props.onClick !== undefined)
+            this.props.onClick(this.props.guide);
+    };
+    GuideView.prototype.drawScalar = function (ctx, guide) {
+        var width = this.canvas.width;
+        var height = this.canvas.height;
+        var image = ctx.createImageData(width, height);
+        var imageData = image.data;
+        var writePos = 0;
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++) {
+                var rgb = Math.floor(guide.generation(x, y, width, height) * 255);
+                imageData[writePos++] = rgb;
+                imageData[writePos++] = rgb;
+                imageData[writePos++] = rgb;
+                imageData[writePos++] = 255;
+            }
+        ctx.putImageData(image, 0, 0);
+    };
+    GuideView.prototype.drawVector = function (ctx, guide) {
+    };
+    return GuideView;
 }(React.Component));
 var DownloadEditor = (function (_super) {
     __extends(DownloadEditor, _super);
@@ -2516,17 +2620,44 @@ var LocationsEditor = (function (_super) {
 }(React.Component));
 var GenerationEditor = (function (_super) {
     __extends(GenerationEditor, _super);
-    function GenerationEditor() {
-        return _super !== null && _super.apply(this, arguments) || this;
+    function GenerationEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            heightGuide: Guides.scalarGuides[0],
+            selectingHeightGuide: false,
+        };
+        return _this;
     }
     GenerationEditor.prototype.render = function () {
+        var that = this;
+        if (this.state.selectingHeightGuide)
+            return React.createElement("form", null,
+                React.createElement("p", null, "Select an elevation guide, which controls the overall shape of generated terrain."),
+                React.createElement("div", { className: "palleteList" }, Guides.scalarGuides.map(function (guide, id) {
+                    var classes = guide == that.state.heightGuide ? 'selected' : undefined;
+                    return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: that.heightGuideSelected.bind(that) });
+                })));
         return React.createElement("form", { onSubmit: this.generate.bind(this) },
             React.createElement("p", null, "Each cell type must be given a value for its associated height, temperature and precipitation."),
-            React.createElement("p", null, "Select an elevation guide, which controls the overall shape of generated terrain."),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("p", null, "The elevation guide controls the overall shape of generated terrain. Click below to change the selected height guide."),
+                React.createElement("div", { className: "palleteList" },
+                    React.createElement(GuideView, { guide: this.state.heightGuide, onClick: that.showHeightGuideSelection.bind(that) }))),
             React.createElement("p", null, "Later in development, temperature and wind guides will also be specified at this point."),
             React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Generate")));
+    };
+    GenerationEditor.prototype.showHeightGuideSelection = function (guide) {
+        this.setState({
+            selectingHeightGuide: true,
+        });
+    };
+    GenerationEditor.prototype.heightGuideSelected = function (guide) {
+        this.setState({
+            heightGuide: guide,
+            selectingHeightGuide: false,
+        });
     };
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
@@ -2534,14 +2665,16 @@ var GenerationEditor = (function (_super) {
         var highFreqNoise = new SimplexNoise();
         var lowFreqNoise = new SimplexNoise();
         var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
-        var heightGuide = Guides.scalarGuides[2].generation;
+        var heightGuide = this.state.heightGuide.generation;
+        var maxX = this.props.map.width * MapData.packedWidthRatio;
+        var maxY = this.props.map.height * MapData.packedHeightRatio;
         for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
                 continue;
             var height = 0.15 * highFreqNoise.noise(cell.xPos, cell.yPos)
-                + 0.70 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + 0.15 * heightGuide(cell.xPos, cell.yPos, this.props.map.width, this.props.map.height);
+                + 0.55 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + 0.30 * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
             var nearestType = cellTypeLookup.nearest({
                 genHeight: height,
                 genTemperature: 0,
