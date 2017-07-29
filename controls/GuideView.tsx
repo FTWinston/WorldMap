@@ -7,6 +7,13 @@ interface IGuideViewProps {
 class GuideView extends React.Component<IGuideViewProps, {}> {
     private canvas: HTMLCanvasElement;
     componentDidMount() {
+        this.redraw();
+    }
+    componentDidUpdate(prevProps: IGuideViewProps) {
+        if (prevProps.guide !== this.props.guide)
+            this.redraw();
+    }
+    private redraw() {
         let ctx = this.canvas.getContext('2d');
         if (ctx === null)
             return;

@@ -26,6 +26,7 @@ interface IWorldMapState {
     activeEditor?: EditorType;
     editorHeading?: string;
     selectedLine?: MapLine;
+    generationSettings: GenerationSettings;
 }
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
@@ -42,6 +43,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         super(props);
         this.state = {
             map: new MapData(0, 0),
+            generationSettings: new GenerationSettings(),
         };
     }
 
@@ -117,7 +119,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Generation:
-                return <GenerationEditor {...props} map={this.state.map} mapChanged={this.mapGenerated.bind(this)} />;
+                return <GenerationEditor {...props} map={this.state.map} settings={this.state.generationSettings} mapChanged={this.mapGenerated.bind(this)} settingsChanged={this.generationSettingsChanged.bind(this)} />;
         }
     }
     private activeEditor?: IMapEditor;
@@ -215,10 +217,15 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
     private mapChanged() {
         this.setState({
-            map: this.state.map
+            map: this.state.map,
         });
         this.mapView.redraw();
         this.changes.recordMapChange(this.state.map);
+    }
+    private generationSettingsChanged() {
+        this.setState({
+            generationSettings: this.state.generationSettings,
+        })
     }
     private replaceMap(map: MapData){
         // don't hold onto a line from the "old" map; find the equivalent
