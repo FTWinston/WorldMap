@@ -26,6 +26,13 @@
     #worldRoot #editor h1 {
       margin-top: 0;
       margin-bottom: 0.5em; }
+    #worldRoot #editor h2 {
+      margin-top: 0;
+      margin-bottom: 0; }
+    #worldRoot #editor h2 + div[role="group"] {
+      margin-top: 0; }
+      #worldRoot #editor h2 + div[role="group"] > p:first-child {
+        margin-top: 0.5em; }
 
 #editorControls {
   display: flex;

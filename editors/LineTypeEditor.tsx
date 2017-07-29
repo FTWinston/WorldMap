@@ -75,22 +75,22 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
     }
     private widthChanged(e: any) {
         this.setState({
-            width: e.target.value
+            width: parseInt(e.target.value),
         });
     }
     private startWidthChanged(e: any) {
         this.setState({
-            startWidth: e.target.value
+            startWidth: parseInt(e.target.value),
         });
     }
     private endWidthChanged(e: any) {
         this.setState({
-            endWidth: e.target.value
+            endWidth: parseInt(e.target.value),
         });
     }
     private curvitureChanged(e: any) {
         this.setState({
-            curviture: e.target.value.toString()
+            curviture: parseFloat(e.target.value),
         });
     }
     private saveType(e: Event) {

@@ -86,12 +86,12 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             </div>
             <div role="group"><label htmlFor="inDetColor">Detail Color</label><input disabled={detailName == ''} type="color" id="inDetColor" value={this.state.detailColor === undefined ? '' : this.state.detailColor} onChange={this.detailColorChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtDetNum">Number per Cell</label><input disabled={detailName == ''} type="number" id="txtDetNum" value={numPerCell} onChange={this.detailNumChanged.bind(this)} min="1" max="10" /></div>
-            <div role="group"><label htmlFor="txtDetSize">Detail Size</label><input disabled={detailName == ''} type="number" id="txtDetSize" value={detailSize} onChange={this.detailSizeChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtDetSize">Detail Size</label><input disabled={detailName == ''} type="range" id="txtDetSize" value={detailSize} onChange={this.detailSizeChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <hr />
             <p>The following settings only affect auto-generation</p>
-            <div role="group"><label htmlFor="txtHeight">Height</label><input type="number" id="txtHeight" value={height} onChange={this.heightChanged.bind(this)} step="0.05" min="0" max="1" /></div>
-            <div role="group"><label htmlFor="txtTemperature">Temperature</label><input type="number" id="txtTemperature" value={temperature} onChange={this.temperatureChanged.bind(this)} step="0.05" min="0" max="1" /></div>
-            <div role="group"><label htmlFor="txtPrecipitation">Precipitation</label><input type="number" id="txtPrecipitation" value={precipitation} onChange={this.precipitationChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtHeight">Height</label><input type="range" id="txtHeight" value={height} onChange={this.heightChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtTemperature">Temperature</label><input type="range" id="txtTemperature" value={temperature} onChange={this.temperatureChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtPrecipitation">Precipitation</label><input type="range" id="txtPrecipitation" value={precipitation} onChange={this.precipitationChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <div role="group">
                 <button type="submit">Save type</button>
                 <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
@@ -111,32 +111,32 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     }
     private heightChanged(e: any) {
         this.setState({
-            height: e.target.value
+            height: parseFloat(e.target.value),
         });
     }
     private temperatureChanged(e: any) {
         this.setState({
-            temperature: e.target.value
+            temperature: parseFloat(e.target.value),
         });
     }
     private precipitationChanged(e: any) {
         this.setState({
-            precipitation: e.target.value
+            precipitation: parseFloat(e.target.value),
         });
     }
     private noiseScaleChanged(e: any) {
         this.setState({
-            noiseScale: e.target.value
+            noiseScale: parseFloat(e.target.value),
         });
     }
     private noiseIntensityChanged(e: any) {
         this.setState({
-            noiseIntensity: e.target.value
+            noiseIntensity: parseFloat(e.target.value),
         });
     }
     private noiseDensityChanged(e: any) {
         this.setState({
-            noiseDensity: e.target.value
+            noiseDensity: parseFloat(e.target.value),
         });
     }
     private detailChanged(e: any) {
@@ -151,12 +151,12 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     }
     private detailNumChanged(e: any) {
         this.setState({
-            detailNumPerCell: e.target.value
+            detailNumPerCell: parseInt(e.target.value),
         });
     }
     private detailSizeChanged(e: any) {
         this.setState({
-            detailSize: e.target.value
+            detailSize: parseFloat(e.target.value),
         });
     }
     private saveType(e: Event) {

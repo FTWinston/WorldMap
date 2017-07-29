@@ -7,11 +7,6 @@ interface GenerationGuide {
 class Guides {
     static scalarGuides: GenerationGuide[] = [
         {
-            name: 'Completely level',
-            isVector: false,
-            generation: (x: number, y: number, width: number, height: number) => 0.5,
-        },
-        {
             name: 'Linear gradient, increasing west to east',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => x / width,
