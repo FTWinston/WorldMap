@@ -313,7 +313,7 @@ var CellType = (function () {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 0.15, 0.5, 0.5, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Water', '#179ce6', 0.15, 0.5, 1.0, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
         types.push(new CellType('Grass', '#a1e94d', 0.4, 0.55, 0.35, 2, 0.1, 0.8));
         types.push(new CellType('Forest', '#189b11', 0.4, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
         types.push(new CellType('Forest Hills', '#189b11', 0.70, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
@@ -1558,6 +1558,71 @@ var GuideView = (function (_super) {
     };
     return GuideView;
 }(React.Component));
+var GenerationField = (function (_super) {
+    __extends(GenerationField, _super);
+    function GenerationField() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    GenerationField.prototype.render = function () {
+        var lowerName = this.props.name.toLowerCase();
+        return React.createElement("div", null,
+            React.createElement("h2", null, this.props.name),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("p", null,
+                    "The ",
+                    lowerName,
+                    " guide controls the overall ",
+                    lowerName,
+                    " of generated terrain. Click below to change the selected ",
+                    lowerName,
+                    " guide."),
+                React.createElement("div", { className: "palleteList" },
+                    React.createElement(GuideView, { guide: this.props.guide, onClick: this.props.showGuideSelection }))),
+            React.createElement("p", null,
+                "Fine tune the ",
+                lowerName,
+                " by specifying a \"fixed\" ",
+                lowerName,
+                ", and scaling how much this, the ",
+                lowerName,
+                " guide and randomness contribute to the generated map."),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtFixedHeight" },
+                    "Fixed ",
+                    lowerName),
+                React.createElement("input", { type: "range", id: "txtFixedHeight", value: this.props.fixedValue.toString(), onChange: this.fixedChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtHeightScaleFixed" },
+                    "Scale: Fixed ",
+                    lowerName),
+                React.createElement("input", { type: "range", id: "txtHeightScaleFixed", value: this.props.fixedScale.toString(), onChange: this.fixedScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtHeightScaleGuide" }, "Scale: Guide"),
+                React.createElement("input", { type: "range", id: "txtHeightScaleGuide", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtHeightScaleLowFreq" }, "Large variations"),
+                React.createElement("input", { type: "range", id: "txtHeightScaleLowFreq", value: this.props.lowFreqScale.toString(), onChange: this.lowFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("label", { htmlFor: "txtHeightScaleHighFreq" }, "Small variations"),
+                React.createElement("input", { type: "range", id: "txtHeightScaleHighFreq", value: this.props.highFreqScale.toString(), onChange: this.highFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })));
+    };
+    GenerationField.prototype.fixedChanged = function (e) {
+        this.props.changed(parseFloat(e.target.value), this.props.fixedScale, this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
+    };
+    GenerationField.prototype.fixedScaleChanged = function (e) {
+        this.props.changed(this.props.fixedValue, parseFloat(e.target.value), this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
+    };
+    GenerationField.prototype.guideScaleChanged = function (e) {
+        this.props.changed(this.props.fixedValue, this.props.fixedScale, parseFloat(e.target.value), this.props.lowFreqScale, this.props.highFreqScale);
+    };
+    GenerationField.prototype.lowFreqScaleChanged = function (e) {
+        this.props.changed(this.props.fixedValue, this.props.fixedScale, this.props.guideScale, parseFloat(e.target.value), this.props.highFreqScale);
+    };
+    GenerationField.prototype.highFreqScaleChanged = function (e) {
+        this.props.changed(this.props.fixedValue, this.props.fixedScale, this.props.guideScale, this.props.lowFreqScale, parseFloat(e.target.value));
+    };
+    return GenerationField;
+}(React.Component));
 var DownloadEditor = (function (_super) {
     __extends(DownloadEditor, _super);
     function DownloadEditor(props) {
@@ -2701,37 +2766,11 @@ var GenerationEditor = (function (_super) {
         return React.createElement("form", { onSubmit: this.generate.bind(this) },
             React.createElement("p", null, "Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing."),
             React.createElement("hr", null),
-            React.createElement("h2", null, "Height"),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("p", null, "The elevation guide controls the overall shape of generated terrain. Click below to change the selected height guide."),
-                React.createElement("div", { className: "palleteList" },
-                    React.createElement(GuideView, { guide: this.state.heightGuide, onClick: this.showHeightGuideSelection.bind(this) }))),
-            React.createElement("p", null, "Fine tune the height by specifying a \"fixed\" height, and scaling how much this, the height guide and randomness contribute to the generated map."),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtFixedHeight" }, "Fixed value"),
-                React.createElement("input", { type: "range", id: "txtFixedHeight", value: this.state.fixedHeight.toString(), onChange: this.fixedHeightChanged.bind(this), step: "0.01", min: "0", max: "1" })),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleFixed" }, "Scale: Fixed value"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleFixed", value: this.state.heightScaleFixed.toString(), onChange: this.heightScaleFixedChanged.bind(this), step: "0.01", min: "0", max: "1" })),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleGuide" }, "Scale: Guide"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleGuide", value: this.state.heightScaleGuide.toString(), onChange: this.heightScaleGuideChanged.bind(this), step: "0.01", min: "0", max: "1" })),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleLowFreq" }, "Large variations"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleLowFreq", value: this.state.heightScaleLowFreq.toString(), onChange: this.heightScaleLowFreqChanged.bind(this), step: "0.01", min: "0", max: "1" })),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleHighFreq" }, "Small variations"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleHighFreq", value: this.state.heightScaleHighFreq.toString(), onChange: this.heightScaleHighFreqChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement(GenerationField, { name: "Height", guide: this.state.heightGuide, fixedValue: this.state.fixedHeight, fixedScale: this.state.heightScaleFixed, guideScale: this.state.heightScaleGuide, lowFreqScale: this.state.heightScaleLowFreq, highFreqScale: this.state.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) }),
             React.createElement("hr", null),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("p", null, "The temperature guide controls the overall temperature of generated terrain. Click below to change the selected temperature guide."),
-                React.createElement("div", { className: "palleteList" },
-                    React.createElement(GuideView, { guide: this.state.temperatureGuide, onClick: this.showTemperatureGuideSelection.bind(this) }))),
+            React.createElement(GenerationField, { name: "Temperature", guide: this.state.temperatureGuide, fixedValue: this.state.fixedTemperature, fixedScale: this.state.temperatureScaleFixed, guideScale: this.state.temperatureScaleGuide, lowFreqScale: this.state.temperatureScaleLowFreq, highFreqScale: this.state.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) }),
             React.createElement("hr", null),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("p", null, "The precipitation guide controls the overall rainfall / humidity of generated terrain. Click below to change the selected precipitation guide."),
-                React.createElement("div", { className: "palleteList" },
-                    React.createElement(GuideView, { guide: this.state.precipitationGuide, onClick: this.showPrecipitationGuideSelection.bind(this) }))),
+            React.createElement(GenerationField, { name: "Precipitation", guide: this.state.precipitationGuide, fixedValue: this.state.fixedPrecipitation, fixedScale: this.state.precipitationScaleFixed, guideScale: this.state.precipitationScaleGuide, lowFreqScale: this.state.precipitationScaleLowFreq, highFreqScale: this.state.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) }),
             React.createElement("hr", null),
             React.createElement("p", null, "Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated."),
             React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
@@ -2779,29 +2818,31 @@ var GenerationEditor = (function (_super) {
             selectingPrecipitationGuide: false,
         });
     };
-    GenerationEditor.prototype.fixedHeightChanged = function (e) {
+    GenerationEditor.prototype.heightChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
         this.setState({
-            fixedHeight: parseFloat(e.target.value),
+            fixedHeight: fixedValue,
+            heightScaleFixed: fixedScale,
+            heightScaleGuide: guideScale,
+            heightScaleLowFreq: lowFreqScale,
+            heightScaleHighFreq: highFreqScale,
         });
     };
-    GenerationEditor.prototype.heightScaleFixedChanged = function (e) {
+    GenerationEditor.prototype.temperatureChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
         this.setState({
-            heightScaleFixed: parseFloat(e.target.value),
+            fixedTemperature: fixedValue,
+            temperatureScaleFixed: fixedScale,
+            temperatureScaleGuide: guideScale,
+            temperatureScaleLowFreq: lowFreqScale,
+            temperatureScaleHighFreq: highFreqScale,
         });
     };
-    GenerationEditor.prototype.heightScaleGuideChanged = function (e) {
+    GenerationEditor.prototype.precipitationChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
         this.setState({
-            heightScaleGuide: parseFloat(e.target.value),
-        });
-    };
-    GenerationEditor.prototype.heightScaleLowFreqChanged = function (e) {
-        this.setState({
-            heightScaleLowFreq: parseFloat(e.target.value),
-        });
-    };
-    GenerationEditor.prototype.heightScaleHighFreqChanged = function (e) {
-        this.setState({
-            heightScaleHighFreq: parseFloat(e.target.value),
+            fixedPrecipitation: fixedValue,
+            precipitationScaleFixed: fixedScale,
+            precipitationScaleGuide: guideScale,
+            precipitationScaleLowFreq: lowFreqScale,
+            precipitationScaleHighFreq: highFreqScale,
         });
     };
     GenerationEditor.prototype.generate = function (e) {
@@ -2821,10 +2862,23 @@ var GenerationEditor = (function (_super) {
         if (heightScaleTot == 0)
             heightScaleTot = 1;
         var fixedHeightScale = this.state.fixedHeight * this.state.heightScaleFixed / heightScaleTot;
-        console.log('fixedHeight: ' + this.state.fixedHeight + ', scale: ' + this.state.heightScaleFixed + ', tot = ' + heightScaleTot + ', result = ' + fixedHeightScale);
         var guideHeightScale = this.state.heightScaleGuide / heightScaleTot;
         var lowFreqHeightScale = this.state.heightScaleLowFreq / heightScaleTot;
         var highFreqHeightScale = this.state.heightScaleHighFreq / heightScaleTot;
+        var temperatureScaleTot = this.state.temperatureScaleFixed + this.state.temperatureScaleGuide + this.state.temperatureScaleLowFreq + this.state.temperatureScaleHighFreq;
+        if (temperatureScaleTot == 0)
+            temperatureScaleTot = 1;
+        var fixedTemperatureScale = this.state.fixedTemperature * this.state.temperatureScaleFixed / temperatureScaleTot;
+        var guideTemperatureScale = this.state.temperatureScaleGuide / temperatureScaleTot;
+        var lowFreqTemperatureScale = this.state.temperatureScaleLowFreq / temperatureScaleTot;
+        var highFreqTemperatureScale = this.state.temperatureScaleHighFreq / temperatureScaleTot;
+        var precipitationScaleTot = this.state.precipitationScaleFixed + this.state.precipitationScaleGuide + this.state.precipitationScaleLowFreq + this.state.precipitationScaleHighFreq;
+        if (precipitationScaleTot == 0)
+            precipitationScaleTot = 1;
+        var fixedPrecipitationScale = this.state.fixedPrecipitation * this.state.precipitationScaleFixed / precipitationScaleTot;
+        var guidePrecipitationScale = this.state.precipitationScaleGuide / precipitationScaleTot;
+        var lowFreqPrecipitationScale = this.state.precipitationScaleLowFreq / precipitationScaleTot;
+        var highFreqPrecipitationScale = this.state.precipitationScaleHighFreq / precipitationScaleTot;
         var maxX = this.props.map.width * MapData.packedWidthRatio;
         var maxY = this.props.map.height * MapData.packedHeightRatio;
         for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
@@ -2835,12 +2889,14 @@ var GenerationEditor = (function (_super) {
                 + highFreqHeightScale * highFreqHeightNoise.noise(cell.xPos, cell.yPos)
                 + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
                 + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var temper = 0.10 * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
-                + 0.35 * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + 0.55 * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var precip = 0.10 * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
-                + 0.50 * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + 0.40 * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var temper = fixedTemperatureScale
+                + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
+                + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var precip = fixedPrecipitationScale
+                + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
+                + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
             var nearestType = cellTypeLookup.nearest({
                 genHeight: height,
                 genTemperature: temper,

@@ -127,7 +127,7 @@ $buttonHoverColor: #0af;
 
 // editor tools
 #editor > form {
-  & > div[role="group"] {
+  & div[role="group"] {
     display: flex;
     flex-direction: row;
     justify-content: flex-start;

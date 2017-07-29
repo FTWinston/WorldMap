@@ -80,20 +80,20 @@
     position: absolute;
     touch-action: none; }
 
-#editor > form > div[role="group"] {
+#editor > form div[role="group"] {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
   align-content: flex-start; }
-  #editor > form > div[role="group"].vertical {
+  #editor > form div[role="group"].vertical {
     flex-direction: column; }
-    #editor > form > div[role="group"].vertical > p {
+    #editor > form div[role="group"].vertical > p {
       margin-bottom: 0; }
-  #editor > form > div[role="group"] > label {
+  #editor > form div[role="group"] > label {
     min-width: 4em; }
-  #editor > form > div[role="group"]:not(:first-child) {
+  #editor > form div[role="group"]:not(:first-child) {
     margin-top: 1em; }
-  #editor > form > div[role="group"]:not(.vertical) > input {
+  #editor > form div[role="group"]:not(.vertical) > input {
     flex-shrink: 1;
     width: 10em;
     text-align: center; }

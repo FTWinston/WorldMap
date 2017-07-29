@@ -54,7 +54,7 @@ class CellType {
 
     static createDefaults(types: CellType[]) {
         types.push(new CellType('Water', '#179ce6',
-            0.15, 0.5, 0.5,
+            0.15, 0.5, 1.0,
             5, 0.1, 0.4,
             'Wave (large)', '#9fe8ff', 1, 0.5
         ));

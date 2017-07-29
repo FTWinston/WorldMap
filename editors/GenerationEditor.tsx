@@ -78,34 +78,14 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         return <form onSubmit={this.generate.bind(this)}>
             <p>Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing.</p>
             <hr/>
-            <h2>Height</h2>
-            <div role="group" className="vertical">
-                <p>The elevation guide controls the overall shape of generated terrain. Click below to change the selected height guide.</p>
-                <div className="palleteList">
-                    <GuideView guide={this.state.heightGuide} onClick={this.showHeightGuideSelection.bind(this)} />
-                </div>
-            </div>
-            <p>Fine tune the height by specifying a "fixed" height, and scaling how much this, the height guide and randomness contribute to the generated map.</p>
-            <div role="group" className="vertical"><label htmlFor="txtFixedHeight">Fixed value</label><input type="range" id="txtFixedHeight" value={this.state.fixedHeight.toString()} onChange={this.fixedHeightChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleFixed">Scale: Fixed value</label><input type="range" id="txtHeightScaleFixed" value={this.state.heightScaleFixed.toString()} onChange={this.heightScaleFixedChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleGuide">Scale: Guide</label><input type="range" id="txtHeightScaleGuide" value={this.state.heightScaleGuide.toString()} onChange={this.heightScaleGuideChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleLowFreq">Large variations</label><input type="range" id="txtHeightScaleLowFreq" value={this.state.heightScaleLowFreq.toString()} onChange={this.heightScaleLowFreqChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleHighFreq">Small variations</label><input type="range" id="txtHeightScaleHighFreq" value={this.state.heightScaleHighFreq.toString()} onChange={this.heightScaleHighFreqChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-
+            <GenerationField name="Height" guide={this.state.heightGuide} fixedValue={this.state.fixedHeight} fixedScale={this.state.heightScaleFixed}
+                guideScale={this.state.heightScaleGuide} lowFreqScale={this.state.heightScaleLowFreq} highFreqScale={this.state.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />
+            <hr/>            
+            <GenerationField name="Temperature" guide={this.state.temperatureGuide} fixedValue={this.state.fixedTemperature} fixedScale={this.state.temperatureScaleFixed}
+                guideScale={this.state.temperatureScaleGuide} lowFreqScale={this.state.temperatureScaleLowFreq} highFreqScale={this.state.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />
             <hr/>
-            <div role="group" className="vertical">
-                <p>The temperature guide controls the overall temperature of generated terrain. Click below to change the selected temperature guide.</p>
-                <div className="palleteList">
-                    <GuideView guide={this.state.temperatureGuide} onClick={this.showTemperatureGuideSelection.bind(this)} />
-                </div>
-            </div>
-            <hr/>
-            <div role="group" className="vertical">
-                <p>The precipitation guide controls the overall rainfall / humidity of generated terrain. Click below to change the selected precipitation guide.</p>
-                <div className="palleteList">
-                    <GuideView guide={this.state.precipitationGuide} onClick={this.showPrecipitationGuideSelection.bind(this)} />
-                </div>
-            </div>
+            <GenerationField name="Precipitation" guide={this.state.precipitationGuide} fixedValue={this.state.fixedPrecipitation} fixedScale={this.state.precipitationScaleFixed}
+                guideScale={this.state.precipitationScaleGuide} lowFreqScale={this.state.precipitationScaleLowFreq} highFreqScale={this.state.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />
             <hr/>
             <p>Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated.</p>
 
@@ -161,29 +141,31 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         } as any);
     }
 
-    private fixedHeightChanged(e: any) {
+    private heightChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         this.setState({
-            fixedHeight: parseFloat(e.target.value),
+            fixedHeight: fixedValue,
+            heightScaleFixed: fixedScale,
+            heightScaleGuide: guideScale,
+            heightScaleLowFreq: lowFreqScale,
+            heightScaleHighFreq: highFreqScale,
         } as any);
     }
-    private heightScaleFixedChanged(e: any) {
+    private temperatureChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         this.setState({
-            heightScaleFixed: parseFloat(e.target.value),
+            fixedTemperature: fixedValue,
+            temperatureScaleFixed: fixedScale,
+            temperatureScaleGuide: guideScale,
+            temperatureScaleLowFreq: lowFreqScale,
+            temperatureScaleHighFreq: highFreqScale,
         } as any);
     }
-    private heightScaleGuideChanged(e: any) {
+    private precipitationChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         this.setState({
-            heightScaleGuide: parseFloat(e.target.value),
-        } as any);
-    }
-    private heightScaleLowFreqChanged(e: any) {
-        this.setState({
-            heightScaleLowFreq: parseFloat(e.target.value),
-        } as any);
-    }
-    private heightScaleHighFreqChanged(e: any) {
-        this.setState({
-            heightScaleHighFreq: parseFloat(e.target.value),
+            fixedPrecipitation: fixedValue,
+            precipitationScaleFixed: fixedScale,
+            precipitationScaleGuide: guideScale,
+            precipitationScaleLowFreq: lowFreqScale,
+            precipitationScaleHighFreq: highFreqScale,
         } as any);
     }
 
@@ -208,14 +190,26 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         let heightScaleTot = this.state.heightScaleFixed + this.state.heightScaleGuide + this.state.heightScaleLowFreq + this.state.heightScaleHighFreq;
         if (heightScaleTot == 0)
             heightScaleTot = 1;
-        
         let fixedHeightScale = this.state.fixedHeight * this.state.heightScaleFixed / heightScaleTot;
-        console.log('fixedHeight: ' + this.state.fixedHeight + ', scale: ' + this.state.heightScaleFixed + ', tot = ' + heightScaleTot + ', result = ' + fixedHeightScale);
-
         let guideHeightScale = this.state.heightScaleGuide / heightScaleTot;
         let lowFreqHeightScale = this.state.heightScaleLowFreq/ heightScaleTot;
         let highFreqHeightScale = this.state.heightScaleHighFreq / heightScaleTot;
 
+        let temperatureScaleTot = this.state.temperatureScaleFixed + this.state.temperatureScaleGuide + this.state.temperatureScaleLowFreq + this.state.temperatureScaleHighFreq;
+        if (temperatureScaleTot == 0)
+            temperatureScaleTot = 1;
+        let fixedTemperatureScale = this.state.fixedTemperature * this.state.temperatureScaleFixed / temperatureScaleTot;
+        let guideTemperatureScale = this.state.temperatureScaleGuide / temperatureScaleTot;
+        let lowFreqTemperatureScale = this.state.temperatureScaleLowFreq/ temperatureScaleTot;
+        let highFreqTemperatureScale = this.state.temperatureScaleHighFreq / temperatureScaleTot;
+
+        let precipitationScaleTot = this.state.precipitationScaleFixed + this.state.precipitationScaleGuide + this.state.precipitationScaleLowFreq + this.state.precipitationScaleHighFreq;
+        if (precipitationScaleTot == 0)
+            precipitationScaleTot = 1;
+        let fixedPrecipitationScale = this.state.fixedPrecipitation * this.state.precipitationScaleFixed / precipitationScaleTot;
+        let guidePrecipitationScale = this.state.precipitationScaleGuide / precipitationScaleTot;
+        let lowFreqPrecipitationScale = this.state.precipitationScaleLowFreq/ precipitationScaleTot;
+        let highFreqPrecipitationScale = this.state.precipitationScaleHighFreq / precipitationScaleTot;
 
         let maxX = this.props.map.width * MapData.packedWidthRatio;
         let maxY = this.props.map.height * MapData.packedHeightRatio;
@@ -229,13 +223,15 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
                        + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
                        + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
 
-            let temper = 0.10 * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos) 
-                       + 0.35 * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                       + 0.55 * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+            let temper = fixedTemperatureScale
+                       + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos) 
+                       + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                       + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
 
-            let precip = 0.10 * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos) 
-                       + 0.50 * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                       + 0.40 * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
+            let precip = fixedPrecipitationScale
+                       + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos) 
+                       + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                       + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
 
             let nearestType = cellTypeLookup.nearest({
                 genHeight: height,
