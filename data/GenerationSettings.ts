@@ -22,14 +22,14 @@ class GenerationSettings {
     precipitationScaleHighFreq: number;
 
     constructor() {
-        this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+        this.heightGuide = Guides.scalarGuides[0],
         this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
         this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
 
-        this.fixedHeight = 0.5;
-        this.heightScaleFixed = 0;
-        this.heightScaleGuide = 0.3;
-        this.heightScaleLowFreq = 0.55;
+        this.fixedHeight = 0;
+        this.heightScaleFixed = 0.15;
+        this.heightScaleGuide = 1;
+        this.heightScaleLowFreq = 0.40;
         this.heightScaleHighFreq = 0.15;
           
         this.fixedTemperature = 0.5;

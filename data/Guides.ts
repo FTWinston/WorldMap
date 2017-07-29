@@ -7,6 +7,23 @@ interface GenerationGuide {
 class Guides {
     static scalarGuides: GenerationGuide[] = [
         {
+            name: 'Raised center',
+            isVector: false,
+            generation: (x: number, y: number, width: number, height: number) => { 
+                let hw = width/2;
+                let xComponent = x <= hw
+                    ? x / hw
+                    : (width - x) / hw;
+
+                let hh = height/2;
+                let yComponent = y <= hh
+                    ? y / hh
+                    : (height - y) / hh;
+
+                return xComponent * yComponent;
+            },
+        },
+        {
             name: 'Linear gradient, increasing west to east',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => x / width,
@@ -66,6 +83,17 @@ class Guides {
                     return 1 - x / hw;
                 else
                     return 1 - (width - x) / hw;
+            },
+        },
+        {
+            name: 'East-west ridge',
+            isVector: false,
+            generation: (x: number, y: number, width: number, height: number) => {
+                let hh = height/2;
+                if (y <= hh)
+                    return y / hh;
+                else
+                    return (height - y) / hh;
             },
         },
         {

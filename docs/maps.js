@@ -611,6 +611,21 @@ var Guides = (function () {
 }());
 Guides.scalarGuides = [
     {
+        name: 'Raised center',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var hw = width / 2;
+            var xComponent = x <= hw
+                ? x / hw
+                : (width - x) / hw;
+            var hh = height / 2;
+            var yComponent = y <= hh
+                ? y / hh
+                : (height - y) / hh;
+            return xComponent * yComponent;
+        },
+    },
+    {
         name: 'Linear gradient, increasing west to east',
         isVector: false,
         generation: function (x, y, width, height) { return x / width; },
@@ -673,6 +688,17 @@ Guides.scalarGuides = [
         },
     },
     {
+        name: 'East-west ridge',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var hh = height / 2;
+            if (y <= hh)
+                return y / hh;
+            else
+                return (height - y) / hh;
+        },
+    },
+    {
         name: 'East-west ravine',
         isVector: false,
         generation: function (x, y, width, height) {
@@ -687,13 +713,13 @@ Guides.scalarGuides = [
 Guides.vectorGuides = [];
 var GenerationSettings = (function () {
     function GenerationSettings() {
-        this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+        this.heightGuide = Guides.scalarGuides[0],
             this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            this.fixedHeight = 0.5;
-        this.heightScaleFixed = 0;
-        this.heightScaleGuide = 0.3;
-        this.heightScaleLowFreq = 0.55;
+            this.fixedHeight = 0;
+        this.heightScaleFixed = 0.15;
+        this.heightScaleGuide = 1;
+        this.heightScaleLowFreq = 0.40;
         this.heightScaleHighFreq = 0.15;
         this.fixedTemperature = 0.5;
         this.temperatureScaleFixed = 0;
@@ -2942,7 +2968,7 @@ var GenerationEditor = (function (_super) {
         this.cellTypeLookup = cellTypeLookup;
     };
     GenerationEditor.cellTypeDistanceMetric = function (a, b) {
-        var heightDif = (a.genHeight - b.genHeight); // * 5;
+        var heightDif = (a.genHeight - b.genHeight) * 5;
         var tempDif = a.genTemperature - b.genTemperature;
         var precDif = a.genPrecipitation - b.genPrecipitation;
         return Math.sqrt(heightDif * heightDif +

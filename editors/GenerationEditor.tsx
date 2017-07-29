@@ -239,7 +239,7 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
     cellTypeLookup: any;
 
     private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: CellType) {
-        let heightDif = (a.genHeight - b.genHeight);// * 5;
+        let heightDif = (a.genHeight - b.genHeight) * 5;
         let tempDif = a.genTemperature - b.genTemperature;
         let precDif = a.genPrecipitation - b.genPrecipitation;
 
