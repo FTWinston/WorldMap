@@ -240,7 +240,11 @@ class MapData {
             height: number;
             name: string;
             description: string;
-            cellTypes: {name: string, color: string, noiseScale: number, noiseIntensity: number, noiseDensity: number, detail?: string, detailColor?: string, detailNumberPerCell?: number, detailSize?: number}[];
+            cellTypes: {name: string, color: string,
+                genHeight?: number, genTemperature?: number, genPrecipitation?: number,
+                noiseScale?: number, noiseIntensity?: number, noiseDensity?: number,
+                detail?: string, detailColor?: string, detailNumberPerCell?: number, detailSize?: number
+            }[];
             cells: {typeID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
@@ -254,7 +258,18 @@ class MapData {
 
         if (data.cellTypes !== undefined)
             map.cellTypes = data.cellTypes.map(function (type) {
-                return new CellType(type.name, type.color, type.noiseScale, type.noiseIntensity, type.noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize);
+                let genHeight = type.genHeight === undefined ? 0.5 : type.genHeight;
+                let genTemperature = type.genTemperature === undefined ? 0.5 : type.genTemperature;
+                let genPrecipitation = type.genPrecipitation === undefined ? 0.5 : type.genPrecipitation;
+                let noiseScale = type.noiseScale === undefined ? 1 : type.noiseScale;
+                let noiseIntensity = type.noiseIntensity === undefined ? 0 : type.noiseIntensity;
+                let noiseDensity = type.noiseDensity === undefined ? 0 : type.noiseDensity;
+
+                return new CellType(type.name, type.color,
+                    genHeight, genTemperature, genPrecipitation,
+                    noiseScale, noiseIntensity, noiseDensity,
+                    type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize
+                );
             });
 
         if (data.cells !== undefined)

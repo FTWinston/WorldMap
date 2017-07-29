@@ -215,7 +215,13 @@ var MapData = (function () {
         map.description = data.description;
         if (data.cellTypes !== undefined)
             map.cellTypes = data.cellTypes.map(function (type) {
-                return new CellType(type.name, type.color, type.noiseScale, type.noiseIntensity, type.noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize);
+                var genHeight = type.genHeight === undefined ? 0.5 : type.genHeight;
+                var genTemperature = type.genTemperature === undefined ? 0.5 : type.genTemperature;
+                var genPrecipitation = type.genPrecipitation === undefined ? 0.5 : type.genPrecipitation;
+                var noiseScale = type.noiseScale === undefined ? 1 : type.noiseScale;
+                var noiseIntensity = type.noiseIntensity === undefined ? 0 : type.noiseIntensity;
+                var noiseDensity = type.noiseDensity === undefined ? 0 : type.noiseDensity;
+                return new CellType(type.name, type.color, genHeight, genTemperature, genPrecipitation, noiseScale, noiseIntensity, noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize);
             });
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
@@ -262,9 +268,12 @@ var MapData = (function () {
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
-    function CellType(name, color, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
+    function CellType(name, color, genHeight, genTemperature, genPrecipitation, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
         this.name = name;
         this.color = color;
+        this.genHeight = genHeight;
+        this.genTemperature = genTemperature;
+        this.genPrecipitation = genPrecipitation;
         this.noiseScale = noiseScale;
         this.noiseIntensity = noiseIntensity;
         this.noiseDensity = noiseDensity;
@@ -304,16 +313,17 @@ var CellType = (function () {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 5, 0.2, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
-        types.push(new CellType('Grass', '#a1e94d', 2, 0.1, 0.8));
-        types.push(new CellType('Forest', '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Hills', '#7bac46', 10, 0.4, 0.2, 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 10, 0.2, 0.2, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 1, 0.1, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Water', '#179ce6', 0.15, 0.5, 0.5, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 0.4, 0.55, 0.35, 2, 0.1, 0.8));
+        types.push(new CellType('Forest', '#189b11', 0.4, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Forest Hills', '#189b11', 0.70, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
+        types.push(new CellType('Hills', '#7bac46', 0.70, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 0.9, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 0.4, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
-CellType.empty = new CellType('Empty', '#ffffff', 1, 0, 0);
+CellType.empty = new CellType('Empty', '#ffffff', -1, -1, -1, 1, 0, 0);
 var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
@@ -1684,6 +1694,9 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: '',
                 color: '#666666',
+                height: 0.5,
+                temperature: 0.5,
+                precipitation: 0.5,
                 noiseScale: 4,
                 noiseIntensity: 0.1,
                 noiseDensity: 0.3,
@@ -1696,6 +1709,9 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
+                height: this.props.editingType.genHeight,
+                temperature: this.props.editingType.genTemperature,
+                precipitation: this.props.editingType.genPrecipitation,
                 noiseScale: this.props.editingType.noiseScale,
                 noiseIntensity: this.props.editingType.noiseIntensity,
                 noiseDensity: this.props.editingType.noiseDensity,
@@ -1707,6 +1723,9 @@ var CellTypeEditor = (function (_super) {
     };
     CellTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
+        var height = this.state.height === undefined ? '' : this.state.height.toString();
+        var temperature = this.state.temperature === undefined ? '' : this.state.temperature.toString();
+        var precipitation = this.state.precipitation === undefined ? '' : this.state.precipitation.toString();
         var noiseScale = this.state.noiseScale === undefined ? '' : this.state.noiseScale.toString();
         var noiseIntensity = this.state.noiseIntensity === undefined ? '' : this.state.noiseIntensity.toString();
         var noiseDensity = this.state.noiseDensity === undefined ? '' : this.state.noiseDensity.toString();
@@ -1748,6 +1767,17 @@ var CellTypeEditor = (function (_super) {
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtDetSize" }, "Detail Size"),
                 React.createElement("input", { disabled: detailName == '', type: "number", id: "txtDetSize", value: detailSize, onChange: this.detailSizeChanged.bind(this), step: "0.05", min: "0", max: "1" })),
+            React.createElement("hr", null),
+            React.createElement("p", null, "The following settings only affect auto-generation"),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtHeight" }, "Height"),
+                React.createElement("input", { type: "number", id: "txtHeight", value: height, onChange: this.heightChanged.bind(this), step: "0.05", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtTemperature" }, "Temperature"),
+                React.createElement("input", { type: "number", id: "txtTemperature", value: temperature, onChange: this.temperatureChanged.bind(this), step: "0.05", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("label", { htmlFor: "txtPrecipitation" }, "Precipitation"),
+                React.createElement("input", { type: "number", id: "txtPrecipitation", value: precipitation, onChange: this.precipitationChanged.bind(this), step: "0.05", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Save type"),
                 React.createElement("button", { type: "button", onClick: this.cancelEdit.bind(this) }, "Cancel"),
@@ -1761,6 +1791,21 @@ var CellTypeEditor = (function (_super) {
     CellTypeEditor.prototype.colorChanged = function (e) {
         this.setState({
             color: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.heightChanged = function (e) {
+        this.setState({
+            height: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.temperatureChanged = function (e) {
+        this.setState({
+            temperature: e.target.value
+        });
+    };
+    CellTypeEditor.prototype.precipitationChanged = function (e) {
+        this.setState({
+            precipitation: e.target.value
         });
     };
     CellTypeEditor.prototype.noiseScaleChanged = function (e) {
@@ -1808,18 +1853,22 @@ var CellTypeEditor = (function (_super) {
         var color = this.state.color;
         if (name.length == 0 || color.length == 0)
             return;
-        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined)
+        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined
+            || this.state.height === undefined || this.state.temperature === undefined || this.state.precipitation === undefined)
             return;
         var detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
         var detailColor = this.state.detailColor === '' || detail === undefined ? undefined : this.state.detailColor;
         var editType = this.props.editingType;
         var cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
+            cellTypes.push(new CellType(name, color, this.state.height, this.state.temperature, this.state.precipitation, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
         }
         else {
             editType.name = name;
             editType.color = color;
+            editType.genHeight = this.state.height;
+            editType.genTemperature = this.state.temperature;
+            editType.genPrecipitation = this.state.precipitation;
             editType.noiseScale = this.state.noiseScale;
             editType.noiseIntensity = this.state.noiseIntensity;
             editType.noiseDensity = this.state.noiseDensity;
@@ -2623,30 +2672,48 @@ var GenerationEditor = (function (_super) {
     function GenerationEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            heightGuide: Guides.scalarGuides[0],
+            heightGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            temperatureGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            precipitationGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             selectingHeightGuide: false,
+            selectingTemperatureGuide: false,
+            selectingPrecipitationGuide: false,
         };
         return _this;
     }
     GenerationEditor.prototype.render = function () {
-        var that = this;
         if (this.state.selectingHeightGuide)
-            return React.createElement("form", null,
-                React.createElement("p", null, "Select an elevation guide, which controls the overall shape of generated terrain."),
-                React.createElement("div", { className: "palleteList" }, Guides.scalarGuides.map(function (guide, id) {
-                    var classes = guide == that.state.heightGuide ? 'selected' : undefined;
-                    return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: that.heightGuideSelected.bind(that) });
-                })));
+            return this.renderGuideSelection(this.state.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
+        if (this.state.selectingTemperatureGuide)
+            return this.renderGuideSelection(this.state.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
+        if (this.state.selectingPrecipitationGuide)
+            return this.renderGuideSelection(this.state.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
         return React.createElement("form", { onSubmit: this.generate.bind(this) },
-            React.createElement("p", null, "Each cell type must be given a value for its associated height, temperature and precipitation."),
+            React.createElement("p", null, "Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing."),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("p", null, "The elevation guide controls the overall shape of generated terrain. Click below to change the selected height guide."),
                 React.createElement("div", { className: "palleteList" },
-                    React.createElement(GuideView, { guide: this.state.heightGuide, onClick: that.showHeightGuideSelection.bind(that) }))),
-            React.createElement("p", null, "Later in development, temperature and wind guides will also be specified at this point."),
+                    React.createElement(GuideView, { guide: this.state.heightGuide, onClick: this.showHeightGuideSelection.bind(this) }))),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("p", null, "The temperature guide controls the overall temperature of generated terrain. Click below to change the selected temperature guide."),
+                React.createElement("div", { className: "palleteList" },
+                    React.createElement(GuideView, { guide: this.state.temperatureGuide, onClick: this.showTemperatureGuideSelection.bind(this) }))),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("p", null, "The precipitation guide controls the overall rainfall / humidity of generated terrain. Click below to change the selected precipitation guide."),
+                React.createElement("div", { className: "palleteList" },
+                    React.createElement(GuideView, { guide: this.state.precipitationGuide, onClick: this.showPrecipitationGuideSelection.bind(this) }))),
+            React.createElement("p", null, "Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated."),
             React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
             React.createElement("div", { role: "group" },
                 React.createElement("button", { type: "submit" }, "Generate")));
+    };
+    GenerationEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, intro) {
+        return React.createElement("form", null,
+            React.createElement("p", null, intro),
+            React.createElement("div", { className: "palleteList" }, Guides.scalarGuides.map(function (guide, id) {
+                var classes = guide == selectedValue ? 'selected' : undefined;
+                return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: onSelected });
+            })));
     };
     GenerationEditor.prototype.showHeightGuideSelection = function (guide) {
         this.setState({
@@ -2659,26 +2726,60 @@ var GenerationEditor = (function (_super) {
             selectingHeightGuide: false,
         });
     };
+    GenerationEditor.prototype.showTemperatureGuideSelection = function (guide) {
+        this.setState({
+            selectingTemperatureGuide: true,
+        });
+    };
+    GenerationEditor.prototype.temperatureGuideSelected = function (guide) {
+        this.setState({
+            temperatureGuide: guide,
+            selectingTemperatureGuide: false,
+        });
+    };
+    GenerationEditor.prototype.showPrecipitationGuideSelection = function (guide) {
+        this.setState({
+            selectingPrecipitationGuide: true,
+        });
+    };
+    GenerationEditor.prototype.precipitationGuideSelected = function (guide) {
+        this.setState({
+            precipitationGuide: guide,
+            selectingPrecipitationGuide: false,
+        });
+    };
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
-        var highFreqNoise = new SimplexNoise();
-        var lowFreqNoise = new SimplexNoise();
         var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
         var heightGuide = this.state.heightGuide.generation;
+        var lowFreqHeightNoise = new SimplexNoise();
+        var highFreqHeightNoise = new SimplexNoise();
+        var temperatureGuide = this.state.temperatureGuide.generation;
+        var lowFreqTemperatureNoise = new SimplexNoise();
+        var highFreqTemperatureNoise = new SimplexNoise();
+        var precipitationGuide = this.state.precipitationGuide.generation;
+        var lowFreqPrecipitationNoise = new SimplexNoise();
+        var highFreqPrecipitationNoise = new SimplexNoise();
         var maxX = this.props.map.width * MapData.packedWidthRatio;
         var maxY = this.props.map.height * MapData.packedHeightRatio;
         for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
                 continue;
-            var height = 0.15 * highFreqNoise.noise(cell.xPos, cell.yPos)
-                + 0.55 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
+            var height = 0.15 * highFreqHeightNoise.noise(cell.xPos, cell.yPos)
+                + 0.55 * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
                 + 0.30 * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var temper = 0.10 * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
+                + 0.35 * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + 0.55 * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var precip = 0.10 * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
+                + 0.50 * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + 0.40 * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
             var nearestType = cellTypeLookup.nearest({
                 genHeight: height,
-                genTemperature: 0,
-                genPrecipitation: 0,
+                genTemperature: temper,
+                genPrecipitation: precip,
             });
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
@@ -2695,16 +2796,6 @@ var GenerationEditor = (function (_super) {
             precDif * precDif);
     };
     GenerationEditor.constructCellTypeTree = function (cellTypes) {
-        // TODO: this should use innate height/temperature/precipitation properties, not just the cell types' order
-        var heightIncrement = 1 / cellTypes.length;
-        var height = heightIncrement / 2;
-        for (var _i = 0, cellTypes_1 = cellTypes; _i < cellTypes_1.length; _i++) {
-            var cellType = cellTypes_1[_i];
-            cellType.genHeight = height;
-            cellType.genTemperature = 0;
-            cellType.genPrecipitation = 0;
-            height += heightIncrement;
-        }
         return new kdTree(cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
     };
     return GenerationEditor;
@@ -2810,6 +2901,9 @@ var Random = (function () {
     };
     Random.prototype.nextInRange = function (min, max) {
         return min + this.next() * (max - min);
+    };
+    Random.randomIntRange = function (minInclusive, maxExclusive) {
+        return Math.floor(minInclusive + Math.random() * (maxExclusive - minInclusive));
     };
     Random.mash = function () {
         var n = 0xefc8249d;

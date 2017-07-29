@@ -5,7 +5,11 @@ interface IGenerationEditorProps {
 
 interface IGenerationEditorState {
     heightGuide: GenerationGuide;
+    temperatureGuide: GenerationGuide;
+    precipitationGuide: GenerationGuide;
     selectingHeightGuide: boolean;
+    selectingTemperatureGuide: boolean;
+    selectingPrecipitationGuide: boolean;
 }
 
 interface ICellTypeCoordinate {
@@ -19,34 +23,47 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         super(props);
 
         this.state = {
-            heightGuide: Guides.scalarGuides[0],
+            heightGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            temperatureGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            precipitationGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             selectingHeightGuide: false,
+            selectingTemperatureGuide: false,
+            selectingPrecipitationGuide: false,
         };
     }
     render() {
-        let that = this;
         if (this.state.selectingHeightGuide)
-            return <form>
-                <p>Select an elevation guide, which controls the overall shape of generated terrain.</p>
-                <div className="palleteList">
-                    {Guides.scalarGuides.map(function(guide, id) {
-                        let classes = guide == that.state.heightGuide ? 'selected' : undefined;
-                        return <GuideView guide={guide} key={id.toString()} className={classes} onClick={that.heightGuideSelected.bind(that)} />;
-                    })}
-                </div>
-            </form>;
+            return this.renderGuideSelection(this.state.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
+        if (this.state.selectingTemperatureGuide)
+            return this.renderGuideSelection(this.state.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
+        if (this.state.selectingPrecipitationGuide)
+            return this.renderGuideSelection(this.state.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
         
         return <form onSubmit={this.generate.bind(this)}>
-            <p>Each cell type must be given a value for its associated height, temperature and precipitation.</p>
+            <p>Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing.</p>
 
             <div role="group" className="vertical">
                 <p>The elevation guide controls the overall shape of generated terrain. Click below to change the selected height guide.</p>
                 <div className="palleteList">
-                    <GuideView guide={this.state.heightGuide} onClick={that.showHeightGuideSelection.bind(that)} />
+                    <GuideView guide={this.state.heightGuide} onClick={this.showHeightGuideSelection.bind(this)} />
                 </div>
             </div>
 
-            <p>Later in development, temperature and wind guides will also be specified at this point.</p>
+            <div role="group" className="vertical">
+                <p>The temperature guide controls the overall temperature of generated terrain. Click below to change the selected temperature guide.</p>
+                <div className="palleteList">
+                    <GuideView guide={this.state.temperatureGuide} onClick={this.showTemperatureGuideSelection.bind(this)} />
+                </div>
+            </div>
+
+            <div role="group" className="vertical">
+                <p>The precipitation guide controls the overall rainfall / humidity of generated terrain. Click below to change the selected precipitation guide.</p>
+                <div className="palleteList">
+                    <GuideView guide={this.state.precipitationGuide} onClick={this.showPrecipitationGuideSelection.bind(this)} />
+                </div>
+            </div>
+
+            <p>Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated.</p>
 
             <p>For now the whole map will be generated, but you might want to only generate over empty cells.</p>
             
@@ -54,6 +71,17 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
                 <button type="submit">Generate</button>
             </div>
         </form>
+    }
+    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, intro: string) {
+        return <form>
+            <p>{intro}</p>
+            <div className="palleteList">
+                {Guides.scalarGuides.map(function(guide, id) {
+                    let classes = guide == selectedValue ? 'selected' : undefined;
+                    return <GuideView guide={guide} key={id.toString()} className={classes} onClick={onSelected} />;
+                })}
+            </div>
+        </form>;
     }
     private showHeightGuideSelection(guide: GenerationGuide) {
         this.setState({
@@ -64,17 +92,48 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         this.setState({
             heightGuide: guide,
             selectingHeightGuide: false,
-        });
+        } as any);
+    }
+    private showTemperatureGuideSelection(guide: GenerationGuide) {
+        this.setState({
+            selectingTemperatureGuide: true,
+        } as any);
+    }
+    private temperatureGuideSelected(guide: GenerationGuide) {
+        this.setState({
+            temperatureGuide: guide,
+            selectingTemperatureGuide: false,
+        } as any);
+    }
+    private showPrecipitationGuideSelection(guide: GenerationGuide) {
+        this.setState({
+            selectingPrecipitationGuide: true,
+        } as any);
+    }
+    private precipitationGuideSelected(guide: GenerationGuide) {
+        this.setState({
+            precipitationGuide: guide,
+            selectingPrecipitationGuide: false,
+        } as any);
     }
     private generate(e: Event) {
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
 
-        let highFreqNoise = new SimplexNoise();
-        let lowFreqNoise = new SimplexNoise();
         let cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
-
+        
         let heightGuide = this.state.heightGuide.generation;
+        let lowFreqHeightNoise = new SimplexNoise();
+        let highFreqHeightNoise = new SimplexNoise();
+
+        let temperatureGuide = this.state.temperatureGuide.generation;
+        let lowFreqTemperatureNoise = new SimplexNoise();
+        let highFreqTemperatureNoise = new SimplexNoise();
+        
+        let precipitationGuide = this.state.precipitationGuide.generation;
+        let lowFreqPrecipitationNoise = new SimplexNoise();
+        let highFreqPrecipitationNoise = new SimplexNoise();
+
         let maxX = this.props.map.width * MapData.packedWidthRatio;
         let maxY = this.props.map.height * MapData.packedHeightRatio;
 
@@ -82,14 +141,22 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
             if (cell === null)
                 continue;
 
-            let height = 0.15 * highFreqNoise.noise(cell.xPos, cell.yPos) 
-                       + 0.55 * lowFreqNoise.noise(cell.xPos / 10, cell.yPos / 10)
+            let height = 0.15 * highFreqHeightNoise.noise(cell.xPos, cell.yPos) 
+                       + 0.55 * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
                        + 0.30 * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
+
+            let temper = 0.10 * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos) 
+                       + 0.35 * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                       + 0.55 * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+
+            let precip = 0.10 * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos) 
+                       + 0.50 * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                       + 0.40 * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
 
             let nearestType = cellTypeLookup.nearest({
                 genHeight: height,
-                genTemperature: 0,
-                genPrecipitation: 0,
+                genTemperature: temper,
+                genPrecipitation: precip,
             });
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
@@ -112,17 +179,6 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         );
     }
     private static constructCellTypeTree(cellTypes: CellType[]) {
-        // TODO: this should use innate height/temperature/precipitation properties, not just the cell types' order
-        let heightIncrement = 1 / cellTypes.length;
-        let height = heightIncrement / 2;
-
-        for (let cellType of cellTypes) {
-            cellType.genHeight = height;
-            cellType.genTemperature = 0;
-            cellType.genPrecipitation = 0;
-            height += heightIncrement;
-        }
-
         return new kdTree<CellType, ICellTypeCoordinate>(cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
     }
 }

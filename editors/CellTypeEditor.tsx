@@ -7,6 +7,9 @@ interface ICellTypeEditorProps {
 interface ICellTypeEditorState {
     name?: string;
     color?: string;
+    height?: number;
+    temperature?: number;
+    precipitation?: number;
     noiseScale?: number;
     noiseIntensity?: number;
     noiseDensity?: number;
@@ -22,6 +25,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             this.setState({
                 name: '',
                 color: '#666666',
+                height: 0.5,
+                temperature: 0.5,
+                precipitation: 0.5,
                 noiseScale: 4,
                 noiseIntensity: 0.1,
                 noiseDensity: 0.3,
@@ -34,6 +40,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
+                height: this.props.editingType.genHeight,
+                temperature: this.props.editingType.genTemperature,
+                precipitation: this.props.editingType.genPrecipitation,
                 noiseScale: this.props.editingType.noiseScale,
                 noiseIntensity: this.props.editingType.noiseIntensity,
                 noiseDensity: this.props.editingType.noiseDensity,
@@ -46,6 +55,10 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     render() {
         let deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
         
+        let height = this.state.height === undefined ? '' : this.state.height.toString();
+        let temperature = this.state.temperature === undefined ? '' : this.state.temperature.toString();
+        let precipitation = this.state.precipitation === undefined ? '' : this.state.precipitation.toString();
+
         let noiseScale = this.state.noiseScale === undefined ? '' : this.state.noiseScale.toString();
         let noiseIntensity = this.state.noiseIntensity === undefined ? '' : this.state.noiseIntensity.toString();
         let noiseDensity = this.state.noiseDensity === undefined ? '' : this.state.noiseDensity.toString();
@@ -74,6 +87,11 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             <div role="group"><label htmlFor="inDetColor">Detail Color</label><input disabled={detailName == ''} type="color" id="inDetColor" value={this.state.detailColor === undefined ? '' : this.state.detailColor} onChange={this.detailColorChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="txtDetNum">Number per Cell</label><input disabled={detailName == ''} type="number" id="txtDetNum" value={numPerCell} onChange={this.detailNumChanged.bind(this)} min="1" max="10" /></div>
             <div role="group"><label htmlFor="txtDetSize">Detail Size</label><input disabled={detailName == ''} type="number" id="txtDetSize" value={detailSize} onChange={this.detailSizeChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <hr />
+            <p>The following settings only affect auto-generation</p>
+            <div role="group"><label htmlFor="txtHeight">Height</label><input type="number" id="txtHeight" value={height} onChange={this.heightChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtTemperature">Temperature</label><input type="number" id="txtTemperature" value={temperature} onChange={this.temperatureChanged.bind(this)} step="0.05" min="0" max="1" /></div>
+            <div role="group"><label htmlFor="txtPrecipitation">Precipitation</label><input type="number" id="txtPrecipitation" value={precipitation} onChange={this.precipitationChanged.bind(this)} step="0.05" min="0" max="1" /></div>
             <div role="group">
                 <button type="submit">Save type</button>
                 <button type="button" onClick={this.cancelEdit.bind(this)}>Cancel</button>
@@ -89,6 +107,21 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
     private colorChanged(e: any) {
         this.setState({
             color: e.target.value
+        });
+    }
+    private heightChanged(e: any) {
+        this.setState({
+            height: e.target.value
+        });
+    }
+    private temperatureChanged(e: any) {
+        this.setState({
+            temperature: e.target.value
+        });
+    }
+    private precipitationChanged(e: any) {
+        this.setState({
+            precipitation: e.target.value
         });
     }
     private noiseScaleChanged(e: any) {
@@ -140,7 +173,8 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         if (name.length == 0 || color.length == 0)
             return;
 
-        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined)
+        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined
+            || this.state.height === undefined || this.state.temperature === undefined || this.state.precipitation === undefined)
             return;
 
         let detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
@@ -149,11 +183,14 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         let editType = this.props.editingType;
         let cellTypes = this.props.cellTypes.slice();
         if (editType === undefined) {
-            cellTypes.push(new CellType(name, color, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
+            cellTypes.push(new CellType(name, color, this.state.height, this.state.temperature, this.state.precipitation, this.state.noiseScale, this.state.noiseIntensity, this.state.noiseDensity, detail, detailColor, this.state.detailNumPerCell, this.state.detailSize));
         }
         else {
             editType.name = name;
             editType.color = color;
+            editType.genHeight = this.state.height;
+            editType.genTemperature = this.state.temperature;
+            editType.genPrecipitation = this.state.precipitation;
             editType.noiseScale = this.state.noiseScale;
             editType.noiseIntensity = this.state.noiseIntensity;
             editType.noiseDensity = this.state.noiseDensity;

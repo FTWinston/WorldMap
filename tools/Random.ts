@@ -42,6 +42,10 @@ class Random {
         return min + this.next() * (max - min);
     }
 
+    static randomIntRange(minInclusive: number, maxExclusive: number) {
+        return Math.floor(minInclusive + Math.random() * (maxExclusive - minInclusive));
+    }
+
     private static mash() {
         let n = 0xefc8249d;
 
