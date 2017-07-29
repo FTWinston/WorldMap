@@ -69,11 +69,12 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         if (prevState.activeEditor != this.state.activeEditor)
             this.mapView.redraw();
     }
+
     render() {
         if (this.state.map === undefined)
             return <div id="worldRoot" />;
 
-        let map = <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => this.mapView = c}
+        let map = <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => { if (c !== null) this.mapView = c}}
                     editor={this.state.activeEditor} selectedLine={this.state.selectedLine}
                     cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)}
                     cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />;
@@ -90,7 +91,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             <div id="editor">
                 <h1>{this.state.editorHeading}</h1>
                 {activeEditor}
-                <ChangeHistory ref={(c) => this.changes = c} updateMap={this.replaceMap.bind(this)} />
+                <ChangeHistory ref={(c) => {if (c !== null) this.changes = c}} updateMap={this.replaceMap.bind(this)} />
             </div>
         </div>;
     }
@@ -99,7 +100,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             return <div>No map</div>;
 
         const props = {
-            ref: (c: IMapEditor) => this.activeEditor = c
+            ref: (c: IMapEditor | null) => this.activeEditor = (c === null) ? undefined : c
         };
         
         switch(editor) {
@@ -202,7 +203,6 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     private lineSelected(line?: MapLine) {
         this.setState({
             selectedLine: line,
-            map: this.state.map
         });
         this.mapView.redraw();
     }
@@ -239,7 +239,10 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapView.redraw();
     }
     private selectEditor(editor: EditorType, name: string) {
-        this.setState({activeEditor: editor, editorHeading: name, map: this.state.map});
+        this.setState({
+            activeEditor: editor,
+            editorHeading: name,
+        });
     }
 }
 

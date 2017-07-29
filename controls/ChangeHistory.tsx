@@ -79,9 +79,7 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
             
             this.setState(function (prevState) {
                 return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
                     lastSavedChangedIndex: prevState.lastAppliedChangeIndex - 1,
-                    saveInProgress: prevState.saveInProgress,
                 }
             });
         }
@@ -89,7 +87,6 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
             this.setState(function (prevState) {
                 return {
                     lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
-                    saveInProgress: prevState.saveInProgress,
                 }
             });
 
@@ -104,7 +101,6 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         this.setState(function (prevState) {
             return {
                 lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1,
-                saveInProgress: prevState.saveInProgress,
             }
         });
     }
@@ -117,7 +113,6 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         this.setState(function (prevState) {
             return {
                 lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
-                saveInProgress: prevState.saveInProgress,
             }
         });
     }
@@ -132,8 +127,6 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         SaveLoad.saveData(currentData, function(success: boolean) {
             this.setState(function (prevState: IChangeHistoryState) {
                 return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
-                    lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
                     saveInProgress: false,
                 }
             });
@@ -141,7 +134,6 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
 
         this.setState(function (prevState: IChangeHistoryState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
                 lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
                 saveInProgress: true,
             }

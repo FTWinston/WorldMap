@@ -8,24 +8,22 @@ class GuideView extends React.Component<IGuideViewProps, {}> {
     private canvas: HTMLCanvasElement;
     componentDidMount() {
         let ctx = this.canvas.getContext('2d');
-        if (ctx !== null) {
-            if (this.props.guide.isVector)
-                this.drawVector(ctx, this.props.guide);
-            else
-                this.drawScalar(ctx, this.props.guide);
-        }
+        if (ctx === null)
+            return;
+
+        if (this.props.guide.isVector)
+            this.drawVector(ctx, this.props.guide, this.canvas.width, this.canvas.height);
+        else
+            this.drawScalar(ctx, this.props.guide, this.canvas.width, this.canvas.height);
     }
     render() {
-        return <canvas width={50} height={50} ref={(c) => this.canvas = c} title={this.props.guide.name} className={this.props.className} onClick={this.clicked.bind(this)}></canvas>;
+        return <canvas width={50} height={50} ref={(c) => { if (c !== null) this.canvas = c}} title={this.props.guide.name} className={this.props.className} onClick={this.clicked.bind(this)}></canvas>;
     }
     private clicked() {
         if (this.props.onClick !== undefined)
             this.props.onClick(this.props.guide);
     }
-    private drawScalar(ctx: CanvasRenderingContext2D, guide: GenerationGuide) {
-        let width = this.canvas.width;
-        let height = this.canvas.height;
-
+    private drawScalar(ctx: CanvasRenderingContext2D, guide: GenerationGuide, width: number, height: number) {
         let image = ctx.createImageData(width, height);
         let imageData = image.data;
         
@@ -42,7 +40,7 @@ class GuideView extends React.Component<IGuideViewProps, {}> {
         ctx.putImageData(image, 0, 0);
 
     }
-    private drawVector(ctx: CanvasRenderingContext2D, guide: GenerationGuide) {
+    private drawVector(ctx: CanvasRenderingContext2D, guide: GenerationGuide, width: number, height: number) {
         
     }
 }

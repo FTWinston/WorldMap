@@ -78,12 +78,8 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         if (this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
         
-        this.setState(function (prevState) {
-            return {
-                isEditingTerrainType: prevState.isEditingTerrainType,
-                selectedTerrainType: prevState.selectedTerrainType,
-                isDrawingOnMap: true,
-            }
+        this.setState({
+            isDrawingOnMap: true,
         });
         cell.cellType = this.state.selectedTerrainType;
         this.props.hasDrawn(false);
@@ -92,12 +88,8 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         if (!this.state.isDrawingOnMap)
             return;
 
-        this.setState(function (prevState) {
-            return {
-                isEditingTerrainType: prevState.isEditingTerrainType,
-                selectedTerrainType: prevState.selectedTerrainType,
-                isDrawingOnMap: false,
-            }
+        this.setState({
+            isDrawingOnMap: false,
         });
     }
     mouseEnter(cell: MapCell) {
@@ -122,7 +114,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         }
 
         this.setState({
-           isEditingTerrainType: editingType,
+            isEditingTerrainType: editingType,
             selectedTerrainType: cellType,
             isDrawingOnMap: false, 
         });

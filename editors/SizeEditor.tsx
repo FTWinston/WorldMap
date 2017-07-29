@@ -38,13 +38,19 @@ class SizeEditor extends React.Component<ISizeEditorProps, ISizeEditorState> {
         </form>;
     }
     private widthChanged(e: any) {
-        this.setState({newWidth: e.target.value, newHeight: this.state.newHeight, resizeAnchor: this.state.resizeAnchor});
+        this.setState({
+            newWidth: e.target.value
+        });
     }
     private heightChanged(e: any) {
-        this.setState({newWidth: this.state.newWidth, newHeight: e.target.value, resizeAnchor: this.state.resizeAnchor});
+        this.setState({
+            newHeight: e.target.value
+        });
     }
     private setMode(mode: ResizeAnchorMode) {
-        this.setState({newWidth: this.state.newWidth, newHeight: this.state.newHeight, resizeAnchor: mode});
+        this.setState({
+            resizeAnchor: mode
+        });
     }
     private changeSize(e: Event) {
         e.preventDefault();

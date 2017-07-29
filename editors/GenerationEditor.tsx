@@ -4,30 +4,11 @@ interface IGenerationEditorProps {
 }
 
 interface IGenerationEditorState {
-    heightGuide: GenerationGuide;
-    temperatureGuide: GenerationGuide;
-    precipitationGuide: GenerationGuide;
     selectingHeightGuide: boolean;
     selectingTemperatureGuide: boolean;
     selectingPrecipitationGuide: boolean;
 
-    fixedHeight: number;
-    heightScaleFixed: number;
-    heightScaleGuide: number;
-    heightScaleLowFreq: number;
-    heightScaleHighFreq: number;
-    
-    fixedTemperature: number;
-    temperatureScaleFixed: number;
-    temperatureScaleGuide: number;
-    temperatureScaleLowFreq: number;
-    temperatureScaleHighFreq: number;
-    
-    fixedPrecipitation: number;
-    precipitationScaleFixed: number;
-    precipitationScaleGuide: number;
-    precipitationScaleLowFreq: number;
-    precipitationScaleHighFreq: number;
+    settings: GenerationSettings;
 }
 
 interface ICellTypeCoordinate {
@@ -41,51 +22,31 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         super(props);
 
         this.state = {
-            heightGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            temperatureGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            precipitationGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            settings: new GenerationSettings(),
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
-
-            fixedHeight: 0.5,
-            heightScaleFixed: 0,
-            heightScaleGuide: 0.3,
-            heightScaleLowFreq: 0.55,
-            heightScaleHighFreq: 0.15,
-
-            fixedTemperature: 0.5,
-            temperatureScaleFixed: 0,
-            temperatureScaleGuide: 0.55,
-            temperatureScaleLowFreq: 0.1,
-            temperatureScaleHighFreq: 0.35,
-
-            fixedPrecipitation: 0.5,
-            precipitationScaleFixed: 0,
-            precipitationScaleGuide: 0.4,
-            precipitationScaleLowFreq: 0.5,
-            precipitationScaleHighFreq: 0.1,
         };
     }
     render() {
         if (this.state.selectingHeightGuide)
-            return this.renderGuideSelection(this.state.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
         if (this.state.selectingTemperatureGuide)
-            return this.renderGuideSelection(this.state.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
         if (this.state.selectingPrecipitationGuide)
-            return this.renderGuideSelection(this.state.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
         
         return <form onSubmit={this.generate.bind(this)}>
             <p>Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing.</p>
             <hr/>
-            <GenerationField name="Height" guide={this.state.heightGuide} fixedValue={this.state.fixedHeight} fixedScale={this.state.heightScaleFixed}
-                guideScale={this.state.heightScaleGuide} lowFreqScale={this.state.heightScaleLowFreq} highFreqScale={this.state.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />
+            <GenerationField name="Height" guide={this.state.settings.heightGuide} fixedValue={this.state.settings.fixedHeight} fixedScale={this.state.settings.heightScaleFixed}
+                guideScale={this.state.settings.heightScaleGuide} lowFreqScale={this.state.settings.heightScaleLowFreq} highFreqScale={this.state.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />
             <hr/>            
-            <GenerationField name="Temperature" guide={this.state.temperatureGuide} fixedValue={this.state.fixedTemperature} fixedScale={this.state.temperatureScaleFixed}
-                guideScale={this.state.temperatureScaleGuide} lowFreqScale={this.state.temperatureScaleLowFreq} highFreqScale={this.state.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />
+            <GenerationField name="Temperature" guide={this.state.settings.temperatureGuide} fixedValue={this.state.settings.fixedTemperature} fixedScale={this.state.settings.temperatureScaleFixed}
+                guideScale={this.state.settings.temperatureScaleGuide} lowFreqScale={this.state.settings.temperatureScaleLowFreq} highFreqScale={this.state.settings.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />
             <hr/>
-            <GenerationField name="Precipitation" guide={this.state.precipitationGuide} fixedValue={this.state.fixedPrecipitation} fixedScale={this.state.precipitationScaleFixed}
-                guideScale={this.state.precipitationScaleGuide} lowFreqScale={this.state.precipitationScaleLowFreq} highFreqScale={this.state.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />
+            <GenerationField name="Precipitation" guide={this.state.settings.precipitationGuide} fixedValue={this.state.settings.fixedPrecipitation} fixedScale={this.state.settings.precipitationScaleFixed}
+                guideScale={this.state.settings.precipitationScaleGuide} lowFreqScale={this.state.settings.precipitationScaleLowFreq} highFreqScale={this.state.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />
             <hr/>
             <p>Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated.</p>
 
@@ -110,63 +71,81 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
     private showHeightGuideSelection(guide: GenerationGuide) {
         this.setState({
             selectingHeightGuide: true,
-        } as any);
+        });
     }
     private heightGuideSelected(guide: GenerationGuide) {
+        this.state.settings.heightGuide = guide;
         this.setState({
-            heightGuide: guide,
+            settings: this.state.settings,
             selectingHeightGuide: false,
-        } as any);
+        });
     }
     private showTemperatureGuideSelection(guide: GenerationGuide) {
         this.setState({
             selectingTemperatureGuide: true,
-        } as any);
+        });
     }
     private temperatureGuideSelected(guide: GenerationGuide) {
+        this.state.settings.temperatureGuide = guide;
         this.setState({
-            temperatureGuide: guide,
+            settings: this.state.settings,
             selectingTemperatureGuide: false,
-        } as any);
+        });
     }
     private showPrecipitationGuideSelection(guide: GenerationGuide) {
         this.setState({
             selectingPrecipitationGuide: true,
-        } as any);
+        });
     }
     private precipitationGuideSelected(guide: GenerationGuide) {
+        this.state.settings.precipitationGuide = guide;
         this.setState({
-            precipitationGuide: guide,
+            settings: this.state.settings,
             selectingPrecipitationGuide: false,
-        } as any);
+        });
     }
 
     private heightChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+        let settings = this.state.settings;
+
+        settings.fixedHeight = fixedValue;
+        settings.heightScaleFixed = fixedScale;
+        settings.heightScaleGuide = guideScale;
+        settings.heightScaleLowFreq = lowFreqScale;
+        settings.heightScaleHighFreq = highFreqScale;
+
         this.setState({
-            fixedHeight: fixedValue,
-            heightScaleFixed: fixedScale,
-            heightScaleGuide: guideScale,
-            heightScaleLowFreq: lowFreqScale,
-            heightScaleHighFreq: highFreqScale,
-        } as any);
+            settings: settings,
+            selectingHeightGuide: false,
+        });
     }
     private temperatureChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+        let settings = this.state.settings;
+
+        settings.fixedTemperature = fixedValue;
+        settings.temperatureScaleFixed = fixedScale;
+        settings.temperatureScaleGuide = guideScale;
+        settings.temperatureScaleLowFreq = lowFreqScale;
+        settings.temperatureScaleHighFreq = highFreqScale;
+
         this.setState({
-            fixedTemperature: fixedValue,
-            temperatureScaleFixed: fixedScale,
-            temperatureScaleGuide: guideScale,
-            temperatureScaleLowFreq: lowFreqScale,
-            temperatureScaleHighFreq: highFreqScale,
-        } as any);
+            settings: settings,
+            selectingTemperatureGuide: false,
+        });
     }
     private precipitationChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+        let settings = this.state.settings;
+        
+        settings.fixedPrecipitation = fixedValue;
+        settings.precipitationScaleFixed = fixedScale;
+        settings.precipitationScaleGuide = guideScale;
+        settings.precipitationScaleLowFreq = lowFreqScale;
+        settings.precipitationScaleHighFreq = highFreqScale;
+        
         this.setState({
-            fixedPrecipitation: fixedValue,
-            precipitationScaleFixed: fixedScale,
-            precipitationScaleGuide: guideScale,
-            precipitationScaleLowFreq: lowFreqScale,
-            precipitationScaleHighFreq: highFreqScale,
-        } as any);
+            settings: settings,
+            selectingPrecipitationGuide: false,
+        });
     }
 
     private generate(e: Event) {
@@ -174,42 +153,43 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, IGenerati
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
 
         let cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
+        let settings = this.state.settings;
         
-        let heightGuide = this.state.heightGuide.generation;
+        let heightGuide = settings.heightGuide.generation;
         let lowFreqHeightNoise = new SimplexNoise();
         let highFreqHeightNoise = new SimplexNoise();
 
-        let temperatureGuide = this.state.temperatureGuide.generation;
+        let temperatureGuide = settings.temperatureGuide.generation;
         let lowFreqTemperatureNoise = new SimplexNoise();
         let highFreqTemperatureNoise = new SimplexNoise();
         
-        let precipitationGuide = this.state.precipitationGuide.generation;
+        let precipitationGuide = settings.precipitationGuide.generation;
         let lowFreqPrecipitationNoise = new SimplexNoise();
         let highFreqPrecipitationNoise = new SimplexNoise();
 
-        let heightScaleTot = this.state.heightScaleFixed + this.state.heightScaleGuide + this.state.heightScaleLowFreq + this.state.heightScaleHighFreq;
+        let heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
         if (heightScaleTot == 0)
             heightScaleTot = 1;
-        let fixedHeightScale = this.state.fixedHeight * this.state.heightScaleFixed / heightScaleTot;
-        let guideHeightScale = this.state.heightScaleGuide / heightScaleTot;
-        let lowFreqHeightScale = this.state.heightScaleLowFreq/ heightScaleTot;
-        let highFreqHeightScale = this.state.heightScaleHighFreq / heightScaleTot;
+        let fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
+        let guideHeightScale = settings.heightScaleGuide / heightScaleTot;
+        let lowFreqHeightScale = settings.heightScaleLowFreq/ heightScaleTot;
+        let highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
 
-        let temperatureScaleTot = this.state.temperatureScaleFixed + this.state.temperatureScaleGuide + this.state.temperatureScaleLowFreq + this.state.temperatureScaleHighFreq;
+        let temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
         if (temperatureScaleTot == 0)
             temperatureScaleTot = 1;
-        let fixedTemperatureScale = this.state.fixedTemperature * this.state.temperatureScaleFixed / temperatureScaleTot;
-        let guideTemperatureScale = this.state.temperatureScaleGuide / temperatureScaleTot;
-        let lowFreqTemperatureScale = this.state.temperatureScaleLowFreq/ temperatureScaleTot;
-        let highFreqTemperatureScale = this.state.temperatureScaleHighFreq / temperatureScaleTot;
+        let fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
+        let guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
+        let lowFreqTemperatureScale = settings.temperatureScaleLowFreq/ temperatureScaleTot;
+        let highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
 
-        let precipitationScaleTot = this.state.precipitationScaleFixed + this.state.precipitationScaleGuide + this.state.precipitationScaleLowFreq + this.state.precipitationScaleHighFreq;
+        let precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
         if (precipitationScaleTot == 0)
             precipitationScaleTot = 1;
-        let fixedPrecipitationScale = this.state.fixedPrecipitation * this.state.precipitationScaleFixed / precipitationScaleTot;
-        let guidePrecipitationScale = this.state.precipitationScaleGuide / precipitationScaleTot;
-        let lowFreqPrecipitationScale = this.state.precipitationScaleLowFreq/ precipitationScaleTot;
-        let highFreqPrecipitationScale = this.state.precipitationScaleHighFreq / precipitationScaleTot;
+        let fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
+        let guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
+        let lowFreqPrecipitationScale = settings.precipitationScaleLowFreq/ precipitationScaleTot;
+        let highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
 
         let maxX = this.props.map.width * MapData.packedWidthRatio;
         let maxY = this.props.map.height * MapData.packedHeightRatio;

@@ -5,12 +5,12 @@ interface ILineTypeEditorProps {
 }
 
 interface ILineTypeEditorState {
-    name?: string;
-    color?: string;
-    width?: number;
-    startWidth?: number;
-    endWidth?: number;
-    curviture?: number;
+    name: string;
+    color: string;
+    width: number;
+    startWidth: number;
+    endWidth: number;
+    curviture: number;
 }
 
 class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEditorState> {
@@ -37,19 +37,19 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
     render() {
         let deleteButton = this.props.editingType === undefined || this.props.lineTypes.length < 2 ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
 
-        let width = this.state.width === undefined ? '' : this.state.width;
-        let startWidth = this.state.startWidth === undefined ? '' : this.state.startWidth;
-        let endWidth = this.state.endWidth === undefined ? '' : this.state.endWidth;
-        let curviture = this.state.curviture === undefined ? '' : this.state.curviture;
+        let width = this.state.width.toString();
+        let startWidth = this.state.startWidth.toString();
+        let endWidth = this.state.endWidth.toString();
+        let curviture = this.state.curviture.toString();
 
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="inColor">Color</label><input type="color" id="inColor" value={this.state.color} onChange={this.colorChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtWidth">Width</label><input type="number" id="txtWidth" value={width.toString()} onChange={this.widthChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtStartWidth">Start width</label><input type="number" id="txtStartWidth" value={startWidth.toString()} onChange={this.startWidthChanged.bind(this)} /></div>
-            <div role="group"><label htmlFor="txtEndWidth">End width</label><input type="number" id="txtEndWidth" value={endWidth.toString()} onChange={this.endWidthChanged.bind(this)} /></div>
+            <div role="group"><label htmlFor="txtWidth">Width</label><input type="number" id="txtWidth" value={width} onChange={this.widthChanged.bind(this)} /></div>
+            <div role="group"><label htmlFor="txtStartWidth">Start width</label><input type="number" id="txtStartWidth" value={startWidth} onChange={this.startWidthChanged.bind(this)} /></div>
+            <div role="group"><label htmlFor="txtEndWidth">End width</label><input type="number" id="txtEndWidth" value={endWidth} onChange={this.endWidthChanged.bind(this)} /></div>
             <div role="group"><label htmlFor="selCurviture">Curviture</label>
-                <select id="selCurviture" value={curviture.toString()} onChange={this.curvitureChanged.bind(this)}>
+                <select id="selCurviture" value={curviture} onChange={this.curvitureChanged.bind(this)}>
                     <option value="1">High</option>
                     <option value="0.5">Medium</option>
                     <option value="0.2">Low</option>
@@ -96,15 +96,9 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
     private saveType(e: Event) {
         e.preventDefault();
 
-        let name = this.state.name === undefined ? '' : this.state.name.trim();
-        if (name == '')
-            return;
-        
-        let color = this.state.color === undefined ? '' : this.state.color;
-        if (color == '')
-            return;
-
-        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined || this.state.curviture === undefined)
+        let name = this.state.name.trim();
+        let color = this.state.color;
+        if (name == '' || color == '')
             return;
 
         let changedCurviture: LineType|undefined = undefined;

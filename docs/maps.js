@@ -685,6 +685,49 @@ Guides.scalarGuides = [
     }
 ];
 Guides.vectorGuides = [];
+var GenerationSettings = (function () {
+    function GenerationSettings() {
+        this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.fixedHeight = 0.5;
+        this.heightScaleFixed = 0;
+        this.heightScaleGuide = 0.3;
+        this.heightScaleLowFreq = 0.55;
+        this.heightScaleHighFreq = 0.15;
+        this.fixedTemperature = 0.5;
+        this.temperatureScaleFixed = 0;
+        this.temperatureScaleGuide = 0.55;
+        this.temperatureScaleLowFreq = 0.1;
+        this.temperatureScaleHighFreq = 0.35;
+        this.fixedPrecipitation = 0.5;
+        this.precipitationScaleFixed = 0;
+        this.precipitationScaleGuide = 0.4;
+        this.precipitationScaleLowFreq = 0.5;
+        this.precipitationScaleHighFreq = 0.1;
+    }
+    GenerationSettings.prototype.randomize = function () {
+        this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.fixedHeight = Math.random();
+        this.heightScaleFixed = Math.random() * 0.5;
+        this.heightScaleGuide = Math.random() * 0.5;
+        this.heightScaleLowFreq = Math.random() * 0.5 + 0.2;
+        this.heightScaleHighFreq = Math.random() * 0.25;
+        this.fixedTemperature = Math.random();
+        this.temperatureScaleFixed = Math.random() * 0.5;
+        this.temperatureScaleGuide = Math.random() * 0.5;
+        this.temperatureScaleLowFreq = Math.random() * 0.5 + 0.2;
+        this.temperatureScaleHighFreq = Math.random() * 0.25;
+        this.fixedPrecipitation = Math.random();
+        this.precipitationScaleFixed = Math.random() * 0.5;
+        this.precipitationScaleGuide = Math.random() * 0.5;
+        this.precipitationScaleLowFreq = Math.random() * 0.5 + 0.2;
+        this.precipitationScaleHighFreq = Math.random() * 0.25;
+    };
+    return GenerationSettings;
+}());
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -840,9 +883,7 @@ var ChangeHistory = (function (_super) {
             this.changes.shift();
             this.setState(function (prevState) {
                 return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
                     lastSavedChangedIndex: prevState.lastAppliedChangeIndex - 1,
-                    saveInProgress: prevState.saveInProgress,
                 };
             });
         }
@@ -850,7 +891,6 @@ var ChangeHistory = (function (_super) {
             this.setState(function (prevState) {
                 return {
                     lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
-                    saveInProgress: prevState.saveInProgress,
                 };
             });
         this.changes.push(data);
@@ -862,7 +902,6 @@ var ChangeHistory = (function (_super) {
         this.setState(function (prevState) {
             return {
                 lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1,
-                saveInProgress: prevState.saveInProgress,
             };
         });
     };
@@ -873,7 +912,6 @@ var ChangeHistory = (function (_super) {
         this.setState(function (prevState) {
             return {
                 lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
-                saveInProgress: prevState.saveInProgress,
             };
         });
     };
@@ -888,15 +926,12 @@ var ChangeHistory = (function (_super) {
         SaveLoad.saveData(currentData, function (success) {
             this.setState(function (prevState) {
                 return {
-                    lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
-                    lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
                     saveInProgress: false,
                 };
             });
         }.bind(this));
         this.setState(function (prevState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex,
                 lastSavedChangedIndex: prevState.lastAppliedChangeIndex,
                 saveInProgress: true,
             };
@@ -969,6 +1004,10 @@ var MapView = (function (_super) {
         _this.state = {
             cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
             cellDrawInterval: 1,
+            viewWidth: 1,
+            viewHeight: 1,
+            mapWidth: 1,
+            mapHeight: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
         };
@@ -1050,21 +1089,24 @@ var MapView = (function (_super) {
     MapView.prototype.render = function () {
         var _this = this;
         if (!this.props.scrollUI) {
-            return React.createElement("canvas", { ref: function (c) { return _this.canvas = c; }, width: this.state.mapWidth, height: this.state.mapHeight });
+            return React.createElement("canvas", { ref: function (c) { if (c !== null)
+                    _this.canvas = c; }, width: this.state.mapWidth, height: this.state.mapHeight });
         }
-        var canvasWidth = this.state.viewWidth !== undefined ? this.state.viewWidth : 0;
-        if (this.state.scrollbarWidth !== undefined)
-            canvasWidth -= this.state.scrollbarWidth;
-        var canvasHeight = this.state.viewHeight !== undefined ? this.state.viewHeight : 0;
-        if (this.state.scrollbarHeight !== undefined)
-            canvasHeight -= this.state.scrollbarHeight;
-        return React.createElement("div", { id: "mapRoot", ref: function (c) { return _this.root = c; } },
-            React.createElement("canvas", { ref: function (c) { return _this.canvas = c; }, width: canvasWidth, height: canvasHeight }),
-            React.createElement("div", { ref: function (c) { return _this.scrollPane = c; }, className: "scrollPane", style: {
+        var canvasWidth = this.state.viewWidth;
+        canvasWidth -= this.state.scrollbarWidth;
+        var canvasHeight = this.state.viewHeight;
+        canvasHeight -= this.state.scrollbarHeight;
+        return React.createElement("div", { id: "mapRoot", ref: function (c) { if (c !== null)
+                _this.root = c; } },
+            React.createElement("canvas", { ref: function (c) { if (c !== null)
+                    _this.canvas = c; }, width: canvasWidth, height: canvasHeight }),
+            React.createElement("div", { ref: function (c) { if (c !== null)
+                    _this.scrollPane = c; }, className: "scrollPane", style: {
                     width: this.state.viewWidth,
                     height: this.state.viewHeight,
                 }, onScroll: this.redraw.bind(this), onWheel: this.mouseScroll.bind(this), onMouseMove: this.mouseMove.bind(this), onMouseEnter: this.mouseMove.bind(this), onMouseDown: this.mouseDown.bind(this), onMouseUp: this.mouseUp.bind(this) },
-                React.createElement("div", { ref: function (c) { return _this.scrollSize = c; }, className: "scrollSize", style: {
+                React.createElement("div", { ref: function (c) { if (c !== null)
+                        _this.scrollSize = c; }, className: "scrollSize", style: {
                         width: this.state.mapWidth + 'px',
                         height: this.state.mapHeight + 'px'
                     } })));
@@ -1407,7 +1449,10 @@ var MapView = (function (_super) {
             displayRadius *= 2;
             cellDrawInterval *= 2;
         }
-        this.setState({ cellRadius: radius, cellDrawInterval: cellDrawInterval });
+        this.setState({
+            cellRadius: radius,
+            cellDrawInterval: cellDrawInterval
+        });
     };
     MapView.prototype.componentDidUpdate = function (prevProps, prevState) {
         if (prevState.cellRadius != this.state.cellRadius) {
@@ -1523,24 +1568,23 @@ var GuideView = (function (_super) {
     }
     GuideView.prototype.componentDidMount = function () {
         var ctx = this.canvas.getContext('2d');
-        if (ctx !== null) {
-            if (this.props.guide.isVector)
-                this.drawVector(ctx, this.props.guide);
-            else
-                this.drawScalar(ctx, this.props.guide);
-        }
+        if (ctx === null)
+            return;
+        if (this.props.guide.isVector)
+            this.drawVector(ctx, this.props.guide, this.canvas.width, this.canvas.height);
+        else
+            this.drawScalar(ctx, this.props.guide, this.canvas.width, this.canvas.height);
     };
     GuideView.prototype.render = function () {
         var _this = this;
-        return React.createElement("canvas", { width: 50, height: 50, ref: function (c) { return _this.canvas = c; }, title: this.props.guide.name, className: this.props.className, onClick: this.clicked.bind(this) });
+        return React.createElement("canvas", { width: 50, height: 50, ref: function (c) { if (c !== null)
+                _this.canvas = c; }, title: this.props.guide.name, className: this.props.className, onClick: this.clicked.bind(this) });
     };
     GuideView.prototype.clicked = function () {
         if (this.props.onClick !== undefined)
             this.props.onClick(this.props.guide);
     };
-    GuideView.prototype.drawScalar = function (ctx, guide) {
-        var width = this.canvas.width;
-        var height = this.canvas.height;
+    GuideView.prototype.drawScalar = function (ctx, guide, width, height) {
         var image = ctx.createImageData(width, height);
         var imageData = image.data;
         var writePos = 0;
@@ -1554,7 +1598,7 @@ var GuideView = (function (_super) {
             }
         ctx.putImageData(image, 0, 0);
     };
-    GuideView.prototype.drawVector = function (ctx, guide) {
+    GuideView.prototype.drawVector = function (ctx, guide, width, height) {
     };
     return GuideView;
 }(React.Component));
@@ -1646,7 +1690,8 @@ var DownloadEditor = (function (_super) {
                 React.createElement("input", { type: "number", id: "txtCellSize", value: this.state.gridSize.toString(), onChange: this.cellSizeChanged.bind(this) })),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("button", { type: "submit" }, "Download map")),
-            React.createElement(MapView, { map: this.props.map, scrollUI: false, renderGrid: this.state.showGrid, fixedCellRadius: this.state.gridSize / 2, ref: function (c) { return _this.view = c; } }));
+            React.createElement(MapView, { map: this.props.map, scrollUI: false, renderGrid: this.state.showGrid, fixedCellRadius: this.state.gridSize / 2, ref: function (c) { if (c !== null)
+                    _this.view = c; } }));
     };
     DownloadEditor.prototype.cellSizeChanged = function (e) {
         this.setState({
@@ -1685,10 +1730,12 @@ var OverviewEditor = (function (_super) {
         return React.createElement("form", null,
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
-                React.createElement("input", { type: "text", defaultValue: this.props.name, key: this.detectPropChange ? 'txtA' : 'txtB', ref: function (c) { return _this.name = c; }, onBlur: this.nameChanged.bind(this) })),
+                React.createElement("input", { type: "text", defaultValue: this.props.name, key: this.detectPropChange ? 'txtA' : 'txtB', ref: function (c) { if (c !== null)
+                        _this.name = c; }, onBlur: this.nameChanged.bind(this) })),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("label", { htmlFor: "txtDesc" }, "Description"),
-                React.createElement("textarea", { defaultValue: this.props.description, key: this.detectPropChange ? 'descA' : 'descB', ref: function (c) { return _this.desc = c; }, onBlur: this.descChanged.bind(this), rows: 20 })));
+                React.createElement("textarea", { defaultValue: this.props.description, key: this.detectPropChange ? 'descA' : 'descB', ref: function (c) { if (c !== null)
+                        _this.desc = c; }, onBlur: this.descChanged.bind(this), rows: 20 })));
     };
     OverviewEditor.prototype.nameChanged = function (e) {
         var value = e.target.value;
@@ -1730,13 +1777,19 @@ var SizeEditor = (function (_super) {
                 React.createElement("button", { type: "submit", disabled: sameSize }, "Change size")));
     };
     SizeEditor.prototype.widthChanged = function (e) {
-        this.setState({ newWidth: e.target.value, newHeight: this.state.newHeight, resizeAnchor: this.state.resizeAnchor });
+        this.setState({
+            newWidth: e.target.value
+        });
     };
     SizeEditor.prototype.heightChanged = function (e) {
-        this.setState({ newWidth: this.state.newWidth, newHeight: e.target.value, resizeAnchor: this.state.resizeAnchor });
+        this.setState({
+            newHeight: e.target.value
+        });
     };
     SizeEditor.prototype.setMode = function (mode) {
-        this.setState({ newWidth: this.state.newWidth, newHeight: this.state.newHeight, resizeAnchor: mode });
+        this.setState({
+            resizeAnchor: mode
+        });
     };
     SizeEditor.prototype.changeSize = function (e) {
         e.preventDefault();
@@ -1783,12 +1836,12 @@ var CellTypeEditor = (function (_super) {
     };
     CellTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.editingType == CellType.empty ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
-        var height = this.state.height === undefined ? '' : this.state.height.toString();
-        var temperature = this.state.temperature === undefined ? '' : this.state.temperature.toString();
-        var precipitation = this.state.precipitation === undefined ? '' : this.state.precipitation.toString();
-        var noiseScale = this.state.noiseScale === undefined ? '' : this.state.noiseScale.toString();
-        var noiseIntensity = this.state.noiseIntensity === undefined ? '' : this.state.noiseIntensity.toString();
-        var noiseDensity = this.state.noiseDensity === undefined ? '' : this.state.noiseDensity.toString();
+        var height = this.state.height.toString();
+        var temperature = this.state.temperature.toString();
+        var precipitation = this.state.precipitation.toString();
+        var noiseScale = this.state.noiseScale.toString();
+        var noiseIntensity = this.state.noiseIntensity.toString();
+        var noiseDensity = this.state.noiseDensity.toString();
         var detailName = this.state.detail === undefined ? '' : this.state.detail;
         var numPerCell = this.state.detailNumPerCell === undefined ? '' : this.state.detailNumPerCell.toString();
         var detailSize = this.state.detailSize === undefined ? '' : this.state.detailSize.toString();
@@ -1905,16 +1958,9 @@ var CellTypeEditor = (function (_super) {
     };
     CellTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        if (this.state.name === undefined)
-            return;
         var name = this.state.name.trim();
-        if (this.state.color === undefined)
-            return;
         var color = this.state.color;
         if (name.length == 0 || color.length == 0)
-            return;
-        if (this.state.noiseScale === undefined || this.state.noiseIntensity === undefined || this.state.noiseDensity === undefined
-            || this.state.height === undefined || this.state.temperature === undefined || this.state.precipitation === undefined)
             return;
         var detail = this.state.detail == '' ? undefined : this.state.detail; // yes this is the other way round
         var detailColor = this.state.detailColor === '' || detail === undefined ? undefined : this.state.detailColor;
@@ -2016,12 +2062,8 @@ var TerrainEditor = (function (_super) {
     TerrainEditor.prototype.mouseDown = function (cell) {
         if (this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
-        this.setState(function (prevState) {
-            return {
-                isEditingTerrainType: prevState.isEditingTerrainType,
-                selectedTerrainType: prevState.selectedTerrainType,
-                isDrawingOnMap: true,
-            };
+        this.setState({
+            isDrawingOnMap: true,
         });
         cell.cellType = this.state.selectedTerrainType;
         this.props.hasDrawn(false);
@@ -2029,12 +2071,8 @@ var TerrainEditor = (function (_super) {
     TerrainEditor.prototype.mouseUp = function (cell) {
         if (!this.state.isDrawingOnMap)
             return;
-        this.setState(function (prevState) {
-            return {
-                isEditingTerrainType: prevState.isEditingTerrainType,
-                selectedTerrainType: prevState.selectedTerrainType,
-                isDrawingOnMap: false,
-            };
+        this.setState({
+            isDrawingOnMap: false,
         });
     };
     TerrainEditor.prototype.mouseEnter = function (cell) {
@@ -2089,10 +2127,10 @@ var LineTypeEditor = (function (_super) {
     };
     LineTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.lineTypes.length < 2 ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
-        var width = this.state.width === undefined ? '' : this.state.width;
-        var startWidth = this.state.startWidth === undefined ? '' : this.state.startWidth;
-        var endWidth = this.state.endWidth === undefined ? '' : this.state.endWidth;
-        var curviture = this.state.curviture === undefined ? '' : this.state.curviture;
+        var width = this.state.width.toString();
+        var startWidth = this.state.startWidth.toString();
+        var endWidth = this.state.endWidth.toString();
+        var curviture = this.state.curviture.toString();
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -2102,16 +2140,16 @@ var LineTypeEditor = (function (_super) {
                 React.createElement("input", { type: "color", id: "inColor", value: this.state.color, onChange: this.colorChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtWidth" }, "Width"),
-                React.createElement("input", { type: "number", id: "txtWidth", value: width.toString(), onChange: this.widthChanged.bind(this) })),
+                React.createElement("input", { type: "number", id: "txtWidth", value: width, onChange: this.widthChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtStartWidth" }, "Start width"),
-                React.createElement("input", { type: "number", id: "txtStartWidth", value: startWidth.toString(), onChange: this.startWidthChanged.bind(this) })),
+                React.createElement("input", { type: "number", id: "txtStartWidth", value: startWidth, onChange: this.startWidthChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtEndWidth" }, "End width"),
-                React.createElement("input", { type: "number", id: "txtEndWidth", value: endWidth.toString(), onChange: this.endWidthChanged.bind(this) })),
+                React.createElement("input", { type: "number", id: "txtEndWidth", value: endWidth, onChange: this.endWidthChanged.bind(this) })),
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "selCurviture" }, "Curviture"),
-                React.createElement("select", { id: "selCurviture", value: curviture.toString(), onChange: this.curvitureChanged.bind(this) },
+                React.createElement("select", { id: "selCurviture", value: curviture, onChange: this.curvitureChanged.bind(this) },
                     React.createElement("option", { value: "1" }, "High"),
                     React.createElement("option", { value: "0.5" }, "Medium"),
                     React.createElement("option", { value: "0.2" }, "Low"),
@@ -2153,13 +2191,9 @@ var LineTypeEditor = (function (_super) {
     };
     LineTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        var name = this.state.name === undefined ? '' : this.state.name.trim();
-        if (name == '')
-            return;
-        var color = this.state.color === undefined ? '' : this.state.color;
-        if (color == '')
-            return;
-        if (this.state.width === undefined || this.state.startWidth === undefined || this.state.endWidth === undefined || this.state.curviture === undefined)
+        var name = this.state.name.trim();
+        var color = this.state.color;
+        if (name == '' || color == '')
             return;
         var changedCurviture = undefined;
         var editType = this.props.editingType;
@@ -2422,8 +2456,6 @@ var LocationTypeEditor = (function (_super) {
     };
     LocationTypeEditor.prototype.render = function () {
         var deleteButton = this.props.editingType === undefined || this.props.locationTypes.length < 2 ? undefined : React.createElement("button", { type: "button", onClick: this.deleteType.bind(this) }, "Delete");
-        for (var id in MapLocation.icons) {
-        }
         return React.createElement("form", { onSubmit: this.saveType.bind(this) },
             React.createElement("div", { role: "group" },
                 React.createElement("label", { htmlFor: "txtName" }, "Name"),
@@ -2475,16 +2507,16 @@ var LocationTypeEditor = (function (_super) {
     };
     LocationTypeEditor.prototype.saveType = function (e) {
         e.preventDefault();
-        var name = this.state.name === undefined ? '' : this.state.name.trim();
+        var name = this.state.name.trim();
         if (name == '')
             return;
-        var textSize = this.state.textSize === undefined ? 0 : this.state.textSize;
+        var textSize = this.state.textSize;
         if (textSize <= 0)
             return;
-        var textColor = this.state.textColor === undefined ? '' : this.state.textColor;
+        var textColor = this.state.textColor;
         if (textColor == '')
             return;
-        var icon = this.state.icon === undefined ? '' : this.state.icon;
+        var icon = this.state.icon;
         if (icon == '')
             return;
         var minDrawRadius = this.state.minDrawCellRadius;
@@ -2611,7 +2643,6 @@ var LocationsEditor = (function (_super) {
         if (this.state.selectedLocationType === undefined || this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
             this.setState(function (prevState) {
                 return {
-                    isEditingLocation: prevState.isEditingLocation,
                     isEditingLocationType: false,
                     isNewLocation: false,
                     selectedLocationType: this.props.locationTypes[0],
@@ -2623,7 +2654,6 @@ var LocationsEditor = (function (_super) {
         if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
                 return {
-                    isEditingLocation: prevState.isEditingLocation,
                     isEditingLocationType: false,
                     isNewLocation: false,
                     selectedLocationType: newProps.locationTypes[0],
@@ -2666,7 +2696,6 @@ var LocationsEditor = (function (_super) {
             isEditingLocationType: false,
             isEditingLocation: false,
             isNewLocation: false,
-            selectedLocationType: this.state.selectedLocationType,
         });
         this.props.typesChanged(types);
     };
@@ -2675,7 +2704,6 @@ var LocationsEditor = (function (_super) {
             isEditingLocationType: false,
             isEditingLocation: false,
             isNewLocation: false,
-            selectedLocationType: this.state.selectedLocationType,
         });
         this.props.locationsChanged(locations);
     };
@@ -2696,7 +2724,6 @@ var LocationsEditor = (function (_super) {
             isEditingLocation: true,
             isNewLocation: isNew,
             selectedLocation: loc,
-            selectedLocationType: this.state.selectedLocationType,
         });
     };
     LocationsEditor.prototype.replacingMap = function (map) {
@@ -2721,7 +2748,6 @@ var LocationsEditor = (function (_super) {
         this.setState({
             isEditingLocationType: editingType,
             isEditingLocation: editingLocation,
-            isNewLocation: this.state.isNewLocation,
             selectedLocationType: locationType,
         });
     };
@@ -2732,45 +2758,28 @@ var GenerationEditor = (function (_super) {
     function GenerationEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            heightGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            temperatureGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            precipitationGuide: Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            settings: new GenerationSettings(),
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
-            fixedHeight: 0.5,
-            heightScaleFixed: 0,
-            heightScaleGuide: 0.3,
-            heightScaleLowFreq: 0.55,
-            heightScaleHighFreq: 0.15,
-            fixedTemperature: 0.5,
-            temperatureScaleFixed: 0,
-            temperatureScaleGuide: 0.55,
-            temperatureScaleLowFreq: 0.1,
-            temperatureScaleHighFreq: 0.35,
-            fixedPrecipitation: 0.5,
-            precipitationScaleFixed: 0,
-            precipitationScaleGuide: 0.4,
-            precipitationScaleLowFreq: 0.5,
-            precipitationScaleHighFreq: 0.1,
         };
         return _this;
     }
     GenerationEditor.prototype.render = function () {
         if (this.state.selectingHeightGuide)
-            return this.renderGuideSelection(this.state.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
         if (this.state.selectingTemperatureGuide)
-            return this.renderGuideSelection(this.state.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
         if (this.state.selectingPrecipitationGuide)
-            return this.renderGuideSelection(this.state.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
+            return this.renderGuideSelection(this.state.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
         return React.createElement("form", { onSubmit: this.generate.bind(this) },
             React.createElement("p", null, "Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing."),
             React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Height", guide: this.state.heightGuide, fixedValue: this.state.fixedHeight, fixedScale: this.state.heightScaleFixed, guideScale: this.state.heightScaleGuide, lowFreqScale: this.state.heightScaleLowFreq, highFreqScale: this.state.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) }),
+            React.createElement(GenerationField, { name: "Height", guide: this.state.settings.heightGuide, fixedValue: this.state.settings.fixedHeight, fixedScale: this.state.settings.heightScaleFixed, guideScale: this.state.settings.heightScaleGuide, lowFreqScale: this.state.settings.heightScaleLowFreq, highFreqScale: this.state.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) }),
             React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Temperature", guide: this.state.temperatureGuide, fixedValue: this.state.fixedTemperature, fixedScale: this.state.temperatureScaleFixed, guideScale: this.state.temperatureScaleGuide, lowFreqScale: this.state.temperatureScaleLowFreq, highFreqScale: this.state.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) }),
+            React.createElement(GenerationField, { name: "Temperature", guide: this.state.settings.temperatureGuide, fixedValue: this.state.settings.fixedTemperature, fixedScale: this.state.settings.temperatureScaleFixed, guideScale: this.state.settings.temperatureScaleGuide, lowFreqScale: this.state.settings.temperatureScaleLowFreq, highFreqScale: this.state.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) }),
             React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Precipitation", guide: this.state.precipitationGuide, fixedValue: this.state.fixedPrecipitation, fixedScale: this.state.precipitationScaleFixed, guideScale: this.state.precipitationScaleGuide, lowFreqScale: this.state.precipitationScaleLowFreq, highFreqScale: this.state.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) }),
+            React.createElement(GenerationField, { name: "Precipitation", guide: this.state.settings.precipitationGuide, fixedValue: this.state.settings.fixedPrecipitation, fixedScale: this.state.settings.precipitationScaleFixed, guideScale: this.state.settings.precipitationScaleGuide, lowFreqScale: this.state.settings.precipitationScaleLowFreq, highFreqScale: this.state.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) }),
             React.createElement("hr", null),
             React.createElement("p", null, "Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated."),
             React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
@@ -2791,8 +2800,9 @@ var GenerationEditor = (function (_super) {
         });
     };
     GenerationEditor.prototype.heightGuideSelected = function (guide) {
+        this.state.settings.heightGuide = guide;
         this.setState({
-            heightGuide: guide,
+            settings: this.state.settings,
             selectingHeightGuide: false,
         });
     };
@@ -2802,8 +2812,9 @@ var GenerationEditor = (function (_super) {
         });
     };
     GenerationEditor.prototype.temperatureGuideSelected = function (guide) {
+        this.state.settings.temperatureGuide = guide;
         this.setState({
-            temperatureGuide: guide,
+            settings: this.state.settings,
             selectingTemperatureGuide: false,
         });
     };
@@ -2813,72 +2824,83 @@ var GenerationEditor = (function (_super) {
         });
     };
     GenerationEditor.prototype.precipitationGuideSelected = function (guide) {
+        this.state.settings.precipitationGuide = guide;
         this.setState({
-            precipitationGuide: guide,
+            settings: this.state.settings,
             selectingPrecipitationGuide: false,
         });
     };
     GenerationEditor.prototype.heightChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.state.settings;
+        settings.fixedHeight = fixedValue;
+        settings.heightScaleFixed = fixedScale;
+        settings.heightScaleGuide = guideScale;
+        settings.heightScaleLowFreq = lowFreqScale;
+        settings.heightScaleHighFreq = highFreqScale;
         this.setState({
-            fixedHeight: fixedValue,
-            heightScaleFixed: fixedScale,
-            heightScaleGuide: guideScale,
-            heightScaleLowFreq: lowFreqScale,
-            heightScaleHighFreq: highFreqScale,
+            settings: settings,
+            selectingHeightGuide: false,
         });
     };
     GenerationEditor.prototype.temperatureChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.state.settings;
+        settings.fixedTemperature = fixedValue;
+        settings.temperatureScaleFixed = fixedScale;
+        settings.temperatureScaleGuide = guideScale;
+        settings.temperatureScaleLowFreq = lowFreqScale;
+        settings.temperatureScaleHighFreq = highFreqScale;
         this.setState({
-            fixedTemperature: fixedValue,
-            temperatureScaleFixed: fixedScale,
-            temperatureScaleGuide: guideScale,
-            temperatureScaleLowFreq: lowFreqScale,
-            temperatureScaleHighFreq: highFreqScale,
+            settings: settings,
+            selectingTemperatureGuide: false,
         });
     };
     GenerationEditor.prototype.precipitationChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.state.settings;
+        settings.fixedPrecipitation = fixedValue;
+        settings.precipitationScaleFixed = fixedScale;
+        settings.precipitationScaleGuide = guideScale;
+        settings.precipitationScaleLowFreq = lowFreqScale;
+        settings.precipitationScaleHighFreq = highFreqScale;
         this.setState({
-            fixedPrecipitation: fixedValue,
-            precipitationScaleFixed: fixedScale,
-            precipitationScaleGuide: guideScale,
-            precipitationScaleLowFreq: lowFreqScale,
-            precipitationScaleHighFreq: highFreqScale,
+            settings: settings,
+            selectingPrecipitationGuide: false,
         });
     };
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
         // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
         var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
-        var heightGuide = this.state.heightGuide.generation;
+        var settings = this.state.settings;
+        var heightGuide = settings.heightGuide.generation;
         var lowFreqHeightNoise = new SimplexNoise();
         var highFreqHeightNoise = new SimplexNoise();
-        var temperatureGuide = this.state.temperatureGuide.generation;
+        var temperatureGuide = settings.temperatureGuide.generation;
         var lowFreqTemperatureNoise = new SimplexNoise();
         var highFreqTemperatureNoise = new SimplexNoise();
-        var precipitationGuide = this.state.precipitationGuide.generation;
+        var precipitationGuide = settings.precipitationGuide.generation;
         var lowFreqPrecipitationNoise = new SimplexNoise();
         var highFreqPrecipitationNoise = new SimplexNoise();
-        var heightScaleTot = this.state.heightScaleFixed + this.state.heightScaleGuide + this.state.heightScaleLowFreq + this.state.heightScaleHighFreq;
+        var heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
         if (heightScaleTot == 0)
             heightScaleTot = 1;
-        var fixedHeightScale = this.state.fixedHeight * this.state.heightScaleFixed / heightScaleTot;
-        var guideHeightScale = this.state.heightScaleGuide / heightScaleTot;
-        var lowFreqHeightScale = this.state.heightScaleLowFreq / heightScaleTot;
-        var highFreqHeightScale = this.state.heightScaleHighFreq / heightScaleTot;
-        var temperatureScaleTot = this.state.temperatureScaleFixed + this.state.temperatureScaleGuide + this.state.temperatureScaleLowFreq + this.state.temperatureScaleHighFreq;
+        var fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
+        var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
+        var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
+        var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
+        var temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
         if (temperatureScaleTot == 0)
             temperatureScaleTot = 1;
-        var fixedTemperatureScale = this.state.fixedTemperature * this.state.temperatureScaleFixed / temperatureScaleTot;
-        var guideTemperatureScale = this.state.temperatureScaleGuide / temperatureScaleTot;
-        var lowFreqTemperatureScale = this.state.temperatureScaleLowFreq / temperatureScaleTot;
-        var highFreqTemperatureScale = this.state.temperatureScaleHighFreq / temperatureScaleTot;
-        var precipitationScaleTot = this.state.precipitationScaleFixed + this.state.precipitationScaleGuide + this.state.precipitationScaleLowFreq + this.state.precipitationScaleHighFreq;
+        var fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
+        var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
+        var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
+        var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
+        var precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
         if (precipitationScaleTot == 0)
             precipitationScaleTot = 1;
-        var fixedPrecipitationScale = this.state.fixedPrecipitation * this.state.precipitationScaleFixed / precipitationScaleTot;
-        var guidePrecipitationScale = this.state.precipitationScaleGuide / precipitationScaleTot;
-        var lowFreqPrecipitationScale = this.state.precipitationScaleLowFreq / precipitationScaleTot;
-        var highFreqPrecipitationScale = this.state.precipitationScaleHighFreq / precipitationScaleTot;
+        var fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
+        var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
+        var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
+        var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
         var maxX = this.props.map.width * MapData.packedWidthRatio;
         var maxY = this.props.map.height * MapData.packedHeightRatio;
         for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
@@ -3272,7 +3294,8 @@ var WorldMap = (function (_super) {
         var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
-        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { return _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
+        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { if (c !== null)
+                _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
         if (!this.props.editable)
             return React.createElement("div", { id: "worldRoot" }, map);
         var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
@@ -3282,14 +3305,15 @@ var WorldMap = (function (_super) {
             React.createElement("div", { id: "editor" },
                 React.createElement("h1", null, this.state.editorHeading),
                 activeEditor,
-                React.createElement(ChangeHistory, { ref: function (c) { return _this.changes = c; }, updateMap: this.replaceMap.bind(this) })));
+                React.createElement(ChangeHistory, { ref: function (c) { if (c !== null)
+                        _this.changes = c; }, updateMap: this.replaceMap.bind(this) })));
     };
     WorldMap.prototype.renderEditor = function (editor) {
         var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", null, "No map");
         var props = {
-            ref: function (c) { return _this.activeEditor = c; }
+            ref: function (c) { return _this.activeEditor = (c === null) ? undefined : c; }
         };
         switch (editor) {
             case 0 /* Download */:
@@ -3389,7 +3413,6 @@ var WorldMap = (function (_super) {
     WorldMap.prototype.lineSelected = function (line) {
         this.setState({
             selectedLine: line,
-            map: this.state.map
         });
         this.mapView.redraw();
     };
@@ -3424,7 +3447,10 @@ var WorldMap = (function (_super) {
         this.mapView.redraw();
     };
     WorldMap.prototype.selectEditor = function (editor, name) {
-        this.setState({ activeEditor: editor, editorHeading: name, map: this.state.map });
+        this.setState({
+            activeEditor: editor,
+            editorHeading: name,
+        });
     };
     return WorldMap;
 }(React.Component));

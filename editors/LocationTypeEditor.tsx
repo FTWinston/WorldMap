@@ -5,10 +5,10 @@ interface ILocationTypeEditorProps {
 }
 
 interface ILocationTypeEditorState {
-    name?: string,
-    textSize?: number,
-    textColor?: string,
-    icon?: string,
+    name: string,
+    textSize: number,
+    textColor: string,
+    icon: string,
     minDrawCellRadius?: number,
 }
 
@@ -32,10 +32,6 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
     }
     render() {
         let deleteButton = this.props.editingType === undefined || this.props.locationTypes.length < 2 ? undefined : <button type="button" onClick={this.deleteType.bind(this)}>Delete</button>;
-
-        for (let id in MapLocation.icons) {
-            
-        }
 
         return <form onSubmit={this.saveType.bind(this)}>
             <div role="group"><label htmlFor="txtName">Name</label><input type="text" id="txtName" value={this.state.name} onChange={this.nameChanged.bind(this)} /></div>
@@ -85,19 +81,19 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
     private saveType(e: Event) {
         e.preventDefault();
 
-        let name = this.state.name === undefined ? '' : this.state.name.trim();
+        let name = this.state.name.trim();
         if (name == '')
             return;
         
-        let textSize = this.state.textSize === undefined ? 0 : this.state.textSize;
+        let textSize = this.state.textSize;
         if (textSize <= 0)
             return;
 
-        let textColor = this.state.textColor === undefined ? '' : this.state.textColor;
+        let textColor = this.state.textColor;
         if (textColor == '')
             return;
 
-        let icon = this.state.icon === undefined ? '' : this.state.icon;
+        let icon = this.state.icon;
         if (icon == '')
             return;
 

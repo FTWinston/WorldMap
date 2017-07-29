@@ -26,7 +26,7 @@ class DownloadEditor extends React.Component<IDownloadEditorProps, IDownloadEdit
                 <button type="submit">Download map</button>
             </div>
 
-            <MapView map={this.props.map} scrollUI={false} renderGrid={this.state.showGrid} fixedCellRadius={this.state.gridSize/2} ref={(c) => this.view = c} />
+            <MapView map={this.props.map} scrollUI={false} renderGrid={this.state.showGrid} fixedCellRadius={this.state.gridSize/2} ref={(c) => { if (c !== null) this.view = c}} />
         </form>;
     }
     private cellSizeChanged(e: any) {
@@ -43,7 +43,7 @@ class DownloadEditor extends React.Component<IDownloadEditorProps, IDownloadEdit
         });
         this.view.redraw();
     }
-    private prepareDownload(e: React.FormEvent) {
+    private prepareDownload(e: React.FormEvent<string>) {
         e.preventDefault();
         this.view.downloadImage();
     }

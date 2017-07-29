@@ -20,8 +20,8 @@ class OverviewEditor extends React.Component<IOverviewEditorProps, {}> {
 
     render() {
         return <form>
-            <div role="group" className="vertical"><label htmlFor="txtName">Name</label><input type="text" defaultValue={this.props.name} key={this.detectPropChange ? 'txtA' : 'txtB'} ref={(c) => this.name = c} onBlur={this.nameChanged.bind(this)} /></div>
-            <div role="group" className="vertical"><label htmlFor="txtDesc">Description</label><textarea defaultValue={this.props.description} key={this.detectPropChange ? 'descA' : 'descB'} ref={(c) => this.desc = c} onBlur={this.descChanged.bind(this)} rows={20} /></div>
+            <div role="group" className="vertical"><label htmlFor="txtName">Name</label><input type="text" defaultValue={this.props.name} key={this.detectPropChange ? 'txtA' : 'txtB'} ref={(c) => { if (c !== null) this.name = c}} onBlur={this.nameChanged.bind(this)} /></div>
+            <div role="group" className="vertical"><label htmlFor="txtDesc">Description</label><textarea defaultValue={this.props.description} key={this.detectPropChange ? 'descA' : 'descB'} ref={(c) => {if (c !== null) this.desc = c}} onBlur={this.descChanged.bind(this)} rows={20} /></div>
         </form>;
     }
     private nameChanged(e: any) {

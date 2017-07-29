@@ -15,12 +15,12 @@ interface IMapViewState {
     cellRadius: number;
     cellDrawInterval: number;
 
-    viewWidth?: number;
-    viewHeight?: number;
-    mapWidth?: number;
-    mapHeight?: number;
-    scrollbarWidth?: number;
-    scrollbarHeight?: number;
+    viewWidth: number;
+    viewHeight: number;
+    mapWidth: number;
+    mapHeight: number;
+    scrollbarWidth: number;
+    scrollbarHeight: number;
 }
 
 declare function saveAs(blob: Blob, name: string): void;
@@ -45,6 +45,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         this.state = {
             cellRadius: props.fixedCellRadius === undefined ? 30 : props.fixedCellRadius,
             cellDrawInterval: 1,
+            viewWidth: 1,
+            viewHeight: 1,
+            mapWidth: 1,
+            mapHeight: 1,
             scrollbarWidth: scrollSize.width,
             scrollbarHeight: scrollSize.height,
         };
@@ -142,20 +146,18 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     render() {
         if (!this.props.scrollUI) {
-            return <canvas ref={(c) => this.canvas = c} width={this.state.mapWidth} height={this.state.mapHeight}></canvas>;
+            return <canvas ref={(c) => { if (c !== null) this.canvas = c}} width={this.state.mapWidth} height={this.state.mapHeight}></canvas>;
         }
 
-        let canvasWidth = this.state.viewWidth !== undefined ? this.state.viewWidth : 0;
-        if (this.state.scrollbarWidth !== undefined)
-            canvasWidth -= this.state.scrollbarWidth;
+        let canvasWidth = this.state.viewWidth;
+        canvasWidth -= this.state.scrollbarWidth;
 
-        let canvasHeight = this.state.viewHeight !== undefined ? this.state.viewHeight : 0;
-        if (this.state.scrollbarHeight !== undefined)
-            canvasHeight -= this.state.scrollbarHeight
+        let canvasHeight = this.state.viewHeight;
+        canvasHeight -= this.state.scrollbarHeight;
 
-        return <div id="mapRoot" ref={(c) => this.root = c}>
-            <canvas ref={(c) => this.canvas = c} width={canvasWidth} height={canvasHeight}></canvas>
-            <div ref={(c) => this.scrollPane = c} className="scrollPane" style={{
+        return <div id="mapRoot" ref={(c) => { if (c !== null) this.root = c}}>
+            <canvas ref={(c) => { if (c !== null) this.canvas = c}} width={canvasWidth} height={canvasHeight}></canvas>
+            <div ref={(c) => { if (c !== null) this.scrollPane = c}} className="scrollPane" style={{
                     width: this.state.viewWidth,
                     height: this.state.viewHeight,
                 }}
@@ -165,7 +167,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 onMouseEnter={this.mouseMove.bind(this)}
                 onMouseDown={this.mouseDown.bind(this)}
                 onMouseUp={this.mouseUp.bind(this)}>
-                    <div ref={(c) => this.scrollSize = c} className="scrollSize" style={{
+                    <div ref={(c) => { if (c !== null) this.scrollSize = c}} className="scrollSize" style={{
                         width: this.state.mapWidth + 'px',
                         height: this.state.mapHeight + 'px'
                     }} />
@@ -591,7 +593,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             cellDrawInterval *= 2;
         }
         
-        this.setState({cellRadius: radius, cellDrawInterval: cellDrawInterval});
+        this.setState({
+            cellRadius: radius,
+            cellDrawInterval: cellDrawInterval
+        });
     }
     componentDidUpdate(prevProps: IMapViewProps, prevState: IMapViewState) {
         if (prevState.cellRadius != this.state.cellRadius) {
