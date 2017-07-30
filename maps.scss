@@ -17,7 +17,7 @@ $buttonHoverColor: #0af;
   justify-content: space-between;
   align-content: stretch;
 
-  #mapRoot {
+  #mapRoot, #settingsRoot {
     flex-shrink: 1;
     flex-grow: 1;
   }
@@ -264,6 +264,27 @@ $buttonHoverColor: #0af;
       -webkit-animation:spin 3s linear infinite;
       -moz-animation:spin 3s linear infinite;
       animation:spin 3s linear infinite;
+    }
+  }
+}
+
+#settingsRoot {
+  margin: 1em;
+  display: flex;
+  flex-direction: row;
+
+  justify-content: space-around;
+  align-items: flex-start;
+
+  & > * {
+    flex-basis: 1;
+    flex-grow: 1;
+    flex-shrink: 1;
+    
+    &:not(:first-child) {
+      margin-left: 1em;
+      padding-left: 1em;
+      border-left: solid gray 1px;
     }
   }
 }

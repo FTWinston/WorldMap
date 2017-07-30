@@ -8,7 +8,7 @@
   flex-direction: rows;
   justify-content: space-between;
   align-content: stretch; }
-  #worldRoot #mapRoot {
+  #worldRoot #mapRoot, #worldRoot #settingsRoot {
     flex-shrink: 1;
     flex-grow: 1; }
   #worldRoot #editorControls {
@@ -179,6 +179,21 @@
       -webkit-animation: spin 3s linear infinite;
       -moz-animation: spin 3s linear infinite;
       animation: spin 3s linear infinite; }
+
+#settingsRoot {
+  margin: 1em;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: flex-start; }
+  #settingsRoot > * {
+    flex-basis: 1;
+    flex-grow: 1;
+    flex-shrink: 1; }
+    #settingsRoot > *:not(:first-child) {
+      margin-left: 1em;
+      padding-left: 1em;
+      border-left: solid gray 1px; }
 
 @-moz-keyframes spin {
   100% {

@@ -1700,6 +1700,114 @@ var GenerationField = (function (_super) {
     };
     return GenerationField;
 }(React.Component));
+var GenerationSettingsEditor = (function (_super) {
+    __extends(GenerationSettingsEditor, _super);
+    function GenerationSettingsEditor(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
+            selectingHeightGuide: false,
+            selectingTemperatureGuide: false,
+            selectingPrecipitationGuide: false,
+        };
+        return _this;
+    }
+    GenerationSettingsEditor.prototype.render = function () {
+        var height = this.state.selectingHeightGuide
+            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.')
+            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, fixedValue: this.props.settings.fixedHeight, fixedScale: this.props.settings.heightScaleFixed, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
+        var temperature = this.state.selectingTemperatureGuide
+            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.')
+            : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, fixedValue: this.props.settings.fixedTemperature, fixedScale: this.props.settings.temperatureScaleFixed, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
+        var precipitation = this.state.selectingPrecipitationGuide
+            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.')
+            : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, fixedValue: this.props.settings.fixedPrecipitation, fixedScale: this.props.settings.precipitationScaleFixed, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
+        return React.createElement("div", { id: "settingsRoot" },
+            height,
+            temperature,
+            precipitation);
+    };
+    GenerationSettingsEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, intro) {
+        return React.createElement("div", null,
+            React.createElement("p", null, intro),
+            React.createElement("div", { className: "palleteList" }, Guides.scalarGuides.map(function (guide, id) {
+                var classes = guide == selectedValue ? 'selected' : undefined;
+                return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: onSelected });
+            })));
+    };
+    GenerationSettingsEditor.prototype.showHeightGuideSelection = function (guide) {
+        this.setState({
+            selectingHeightGuide: true,
+        });
+    };
+    GenerationSettingsEditor.prototype.heightGuideSelected = function (guide) {
+        this.props.settings.heightGuide = guide;
+        this.props.settingsChanged();
+        this.setState({
+            selectingHeightGuide: false,
+        });
+    };
+    GenerationSettingsEditor.prototype.showTemperatureGuideSelection = function (guide) {
+        this.setState({
+            selectingTemperatureGuide: true,
+        });
+    };
+    GenerationSettingsEditor.prototype.temperatureGuideSelected = function (guide) {
+        this.props.settings.temperatureGuide = guide;
+        this.props.settingsChanged();
+        this.setState({
+            selectingTemperatureGuide: false,
+        });
+    };
+    GenerationSettingsEditor.prototype.showPrecipitationGuideSelection = function (guide) {
+        this.setState({
+            selectingPrecipitationGuide: true,
+        });
+    };
+    GenerationSettingsEditor.prototype.precipitationGuideSelected = function (guide) {
+        this.props.settings.precipitationGuide = guide;
+        this.props.settingsChanged();
+        this.setState({
+            selectingPrecipitationGuide: false,
+        });
+    };
+    GenerationSettingsEditor.prototype.heightChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.props.settings;
+        settings.fixedHeight = fixedValue;
+        settings.heightScaleFixed = fixedScale;
+        settings.heightScaleGuide = guideScale;
+        settings.heightScaleLowFreq = lowFreqScale;
+        settings.heightScaleHighFreq = highFreqScale;
+        this.props.settingsChanged();
+        this.setState({
+            selectingHeightGuide: false,
+        });
+    };
+    GenerationSettingsEditor.prototype.temperatureChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.props.settings;
+        settings.fixedTemperature = fixedValue;
+        settings.temperatureScaleFixed = fixedScale;
+        settings.temperatureScaleGuide = guideScale;
+        settings.temperatureScaleLowFreq = lowFreqScale;
+        settings.temperatureScaleHighFreq = highFreqScale;
+        this.props.settingsChanged();
+        this.setState({
+            selectingTemperatureGuide: false,
+        });
+    };
+    GenerationSettingsEditor.prototype.precipitationChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+        var settings = this.props.settings;
+        settings.fixedPrecipitation = fixedValue;
+        settings.precipitationScaleFixed = fixedScale;
+        settings.precipitationScaleGuide = guideScale;
+        settings.precipitationScaleLowFreq = lowFreqScale;
+        settings.precipitationScaleHighFreq = highFreqScale;
+        this.props.settingsChanged();
+        this.setState({
+            selectingPrecipitationGuide: false,
+        });
+    };
+    return GenerationSettingsEditor;
+}(React.Component));
 var DownloadEditor = (function (_super) {
     __extends(DownloadEditor, _super);
     function DownloadEditor(props) {
@@ -2788,124 +2896,39 @@ var LocationsEditor = (function (_super) {
 }(React.Component));
 var GenerationEditor = (function (_super) {
     __extends(GenerationEditor, _super);
-    function GenerationEditor(props) {
-        var _this = _super.call(this, props) || this;
-        _this.state = {
-            selectingHeightGuide: false,
-            selectingTemperatureGuide: false,
-            selectingPrecipitationGuide: false,
-        };
-        return _this;
+    function GenerationEditor() {
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     GenerationEditor.prototype.render = function () {
-        if (this.state.selectingHeightGuide)
-            return this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.');
-        if (this.state.selectingTemperatureGuide)
-            return this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.');
-        if (this.state.selectingPrecipitationGuide)
-            return this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.');
+        var showHide = this.props.showingSettings
+            ? React.createElement("button", { type: "button", onClick: this.showSettings.bind(this, false) }, "Close settings")
+            : React.createElement("button", { type: "button", onClick: this.showSettings.bind(this, true) }, "Edit settings");
         return React.createElement("form", { onSubmit: this.generate.bind(this) },
-            React.createElement("p", null, "Each cell type has value for its associated height, temperature and precipitation. Ensure you're happy with these before continuing."),
-            React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, fixedValue: this.props.settings.fixedHeight, fixedScale: this.props.settings.heightScaleFixed, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) }),
-            React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, fixedValue: this.props.settings.fixedTemperature, fixedScale: this.props.settings.temperatureScaleFixed, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) }),
-            React.createElement("hr", null),
-            React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, fixedValue: this.props.settings.fixedPrecipitation, fixedScale: this.props.settings.precipitationScaleFixed, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) }),
-            React.createElement("hr", null),
-            React.createElement("p", null, "Later in development, you'll choose a wind guide instead of precipitation, and preciptation will be entirely calculated."),
-            React.createElement("p", null, "For now the whole map will be generated, but you might want to only generate over empty cells."),
-            React.createElement("div", { role: "group" },
-                React.createElement("button", { type: "submit" }, "Generate"),
-                React.createElement("button", { type: "button", onClick: this.randomizeSettings.bind(this) }, "Randomize settings")));
+            React.createElement("p", null, "Each cell type has value for its associated height, temperature and precipitation. These are used to decide what type to use for each cell."),
+            React.createElement("p", null, "A number of settings are available to control the height, temperature and precipitation of the generated map."),
+            React.createElement("p", null, "For now the whole map will be generated, but in the future you might be able to only generate over empty cells."),
+            React.createElement("div", { role: "group", className: "vertical" },
+                showHide,
+                React.createElement("button", { type: "submit" }, "Generate map using settings"),
+                React.createElement("button", { type: "button", onClick: this.randomizeSettings.bind(this) }, "Randomize settings & generate")));
     };
-    GenerationEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, intro) {
-        return React.createElement("form", null,
-            React.createElement("p", null, intro),
-            React.createElement("div", { className: "palleteList" }, Guides.scalarGuides.map(function (guide, id) {
-                var classes = guide == selectedValue ? 'selected' : undefined;
-                return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: onSelected });
-            })));
+    GenerationEditor.prototype.componentWillUnmount = function () {
+        this.props.showSettings(false);
     };
-    GenerationEditor.prototype.showHeightGuideSelection = function (guide) {
-        this.setState({
-            selectingHeightGuide: true,
-        });
-    };
-    GenerationEditor.prototype.heightGuideSelected = function (guide) {
-        this.props.settings.heightGuide = guide;
-        this.props.settingsChanged();
-        this.setState({
-            selectingHeightGuide: false,
-        });
-    };
-    GenerationEditor.prototype.showTemperatureGuideSelection = function (guide) {
-        this.setState({
-            selectingTemperatureGuide: true,
-        });
-    };
-    GenerationEditor.prototype.temperatureGuideSelected = function (guide) {
-        this.props.settings.temperatureGuide = guide;
-        this.props.settingsChanged();
-        this.setState({
-            selectingTemperatureGuide: false,
-        });
-    };
-    GenerationEditor.prototype.showPrecipitationGuideSelection = function (guide) {
-        this.setState({
-            selectingPrecipitationGuide: true,
-        });
-    };
-    GenerationEditor.prototype.precipitationGuideSelected = function (guide) {
-        this.props.settings.precipitationGuide = guide;
-        this.props.settingsChanged();
-        this.setState({
-            selectingPrecipitationGuide: false,
-        });
-    };
-    GenerationEditor.prototype.heightChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
-        var settings = this.props.settings;
-        settings.fixedHeight = fixedValue;
-        settings.heightScaleFixed = fixedScale;
-        settings.heightScaleGuide = guideScale;
-        settings.heightScaleLowFreq = lowFreqScale;
-        settings.heightScaleHighFreq = highFreqScale;
-        this.props.settingsChanged();
-        this.setState({
-            selectingHeightGuide: false,
-        });
-    };
-    GenerationEditor.prototype.temperatureChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
-        var settings = this.props.settings;
-        settings.fixedTemperature = fixedValue;
-        settings.temperatureScaleFixed = fixedScale;
-        settings.temperatureScaleGuide = guideScale;
-        settings.temperatureScaleLowFreq = lowFreqScale;
-        settings.temperatureScaleHighFreq = highFreqScale;
-        this.props.settingsChanged();
-        this.setState({
-            selectingTemperatureGuide: false,
-        });
-    };
-    GenerationEditor.prototype.precipitationChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
-        var settings = this.props.settings;
-        settings.fixedPrecipitation = fixedValue;
-        settings.precipitationScaleFixed = fixedScale;
-        settings.precipitationScaleGuide = guideScale;
-        settings.precipitationScaleLowFreq = lowFreqScale;
-        settings.precipitationScaleHighFreq = highFreqScale;
-        this.props.settingsChanged();
-        this.setState({
-            selectingPrecipitationGuide: false,
-        });
+    GenerationEditor.prototype.showSettings = function (show) {
+        this.props.showSettings(show);
     };
     GenerationEditor.prototype.randomizeSettings = function () {
         this.props.settings.randomize();
         this.props.settingsChanged();
+        this.generateMap();
     };
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
-        // to start with, just generate a "height" simplex noise of the same size as the map, and allocate cell types based on that.
+        this.generateMap();
+    };
+    GenerationEditor.prototype.generateMap = function () {
+        // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
         var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
         var settings = this.props.settings;
         var heightGuide = settings.heightGuide.generation;
@@ -3301,6 +3324,7 @@ var WorldMap = (function (_super) {
         _this.state = {
             map: new MapData(0, 0),
             generationSettings: new GenerationSettings(),
+            showGenerationSettings: false,
         };
         return _this;
     }
@@ -3332,13 +3356,15 @@ var WorldMap = (function (_super) {
         var _this = this;
         if (this.state.map === undefined)
             return React.createElement("div", { id: "worldRoot" });
-        var map = React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { if (c !== null)
-                _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
+        var mapOrSettings = this.state.showGenerationSettings
+            ? React.createElement(GenerationSettingsEditor, { settings: this.state.generationSettings, settingsChanged: this.generationSettingsChanged.bind(this) })
+            : React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { if (c !== null)
+                    _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
         if (!this.props.editable)
-            return React.createElement("div", { id: "worldRoot" }, map);
+            return React.createElement("div", { id: "worldRoot" }, mapOrSettings);
         var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return React.createElement("div", { id: "worldRoot" },
-            map,
+            mapOrSettings,
             React.createElement(EditorControls, { activeEditor: this.state.activeEditor, editorSelected: this.selectEditor.bind(this) }),
             React.createElement("div", { id: "editor" },
                 React.createElement("h1", null, this.state.editorHeading),
@@ -3367,7 +3393,7 @@ var WorldMap = (function (_super) {
             case 5 /* Locations */:
                 return React.createElement(LocationsEditor, __assign({}, props, { locations: this.state.map.locations, locationTypes: this.state.map.locationTypes, locationsChanged: this.updateLocations.bind(this), typesChanged: this.updateLocationTypes.bind(this) }));
             case 6 /* Generation */:
-                return React.createElement(GenerationEditor, __assign({}, props, { map: this.state.map, settings: this.state.generationSettings, mapChanged: this.mapGenerated.bind(this), settingsChanged: this.generationSettingsChanged.bind(this) }));
+                return React.createElement(GenerationEditor, __assign({}, props, { map: this.state.map, settings: this.state.generationSettings, mapChanged: this.mapGenerated.bind(this), settingsChanged: this.generationSettingsChanged.bind(this), showingSettings: this.state.showGenerationSettings, showSettings: this.showGenerationSettings.bind(this) }));
         }
     };
     WorldMap.prototype.cellMouseDown = function (cell) {
@@ -3471,6 +3497,11 @@ var WorldMap = (function (_super) {
     WorldMap.prototype.generationSettingsChanged = function () {
         this.setState({
             generationSettings: this.state.generationSettings,
+        });
+    };
+    WorldMap.prototype.showGenerationSettings = function (show) {
+        this.setState({
+            showGenerationSettings: show,
         });
     };
     WorldMap.prototype.replaceMap = function (map) {

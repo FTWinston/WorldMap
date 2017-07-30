@@ -27,6 +27,7 @@ interface IWorldMapState {
     editorHeading?: string;
     selectedLine?: MapLine;
     generationSettings: GenerationSettings;
+    showGenerationSettings: boolean;
 }
 
 class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
@@ -44,6 +45,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.state = {
             map: new MapData(0, 0),
             generationSettings: new GenerationSettings(),
+            showGenerationSettings: false,
         };
     }
 
@@ -76,19 +78,21 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         if (this.state.map === undefined)
             return <div id="worldRoot" />;
 
-        let map = <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => { if (c !== null) this.mapView = c}}
+        let mapOrSettings = this.state.showGenerationSettings
+            ? <GenerationSettingsEditor settings={this.state.generationSettings} settingsChanged={this.generationSettingsChanged.bind(this)} />
+            : <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => { if (c !== null) this.mapView = c}}
                     editor={this.state.activeEditor} selectedLine={this.state.selectedLine}
                     cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)}
                     cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />;
 
         if (!this.props.editable)
             return <div id="worldRoot">
-            {map}
+            {mapOrSettings}
         </div>
 
         let activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
         return <div id="worldRoot">
-            {map}
+            {mapOrSettings}
             <EditorControls activeEditor={this.state.activeEditor} editorSelected={this.selectEditor.bind(this)} />
             <div id="editor">
                 <h1>{this.state.editorHeading}</h1>
@@ -119,7 +123,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Locations:
                 return <LocationsEditor {...props} locations={this.state.map.locations} locationTypes={this.state.map.locationTypes} locationsChanged={this.updateLocations.bind(this)} typesChanged={this.updateLocationTypes.bind(this)} />;
             case EditorType.Generation:
-                return <GenerationEditor {...props} map={this.state.map} settings={this.state.generationSettings} mapChanged={this.mapGenerated.bind(this)} settingsChanged={this.generationSettingsChanged.bind(this)} />;
+                return <GenerationEditor {...props} map={this.state.map} settings={this.state.generationSettings} mapChanged={this.mapGenerated.bind(this)} settingsChanged={this.generationSettingsChanged.bind(this)} showingSettings={this.state.showGenerationSettings} showSettings={this.showGenerationSettings.bind(this)} />;
         }
     }
     private activeEditor?: IMapEditor;
@@ -225,6 +229,11 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     private generationSettingsChanged() {
         this.setState({
             generationSettings: this.state.generationSettings,
+        })
+    }
+    private showGenerationSettings(show: boolean) {
+        this.setState({
+            showGenerationSettings: show,
         })
     }
     private replaceMap(map: MapData){

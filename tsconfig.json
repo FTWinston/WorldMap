@@ -32,6 +32,7 @@
         "controls/MapView.tsx",
         "controls/GuideView.tsx",
         "controls/GenerationField.tsx",
+        "controls/GenerationSettingsEditor.tsx",
 
         "editors/DownloadEditor.tsx",
         "editors/OverviewEditor.tsx",
