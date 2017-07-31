@@ -22,17 +22,17 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
 
     render() {
         let height = this.state.selectingHeightGuide
-            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Select an elevation guide, which controls the overall shape of generated terrain.')
+            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
             : <GenerationField name="Height" guide={this.props.settings.heightGuide} fixedValue={this.props.settings.fixedHeight} fixedScale={this.props.settings.heightScaleFixed}
                 guideScale={this.props.settings.heightScaleGuide} lowFreqScale={this.props.settings.heightScaleLowFreq} highFreqScale={this.props.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />;
 
         let temperature = this.state.selectingTemperatureGuide
-            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Select a temperature guide, which controls the overall temperature of generated terrain.')
+            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
             : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} fixedValue={this.props.settings.fixedTemperature} fixedScale={this.props.settings.temperatureScaleFixed}
                 guideScale={this.props.settings.temperatureScaleGuide} lowFreqScale={this.props.settings.temperatureScaleLowFreq} highFreqScale={this.props.settings.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />;
 
         let precipitation = this.state.selectingPrecipitationGuide
-            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Select a precipitation guide, which controls the overall rainfall / humidity of generated terrain.')
+            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
             : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} fixedValue={this.props.settings.fixedPrecipitation} fixedScale={this.props.settings.precipitationScaleFixed}
                 guideScale={this.props.settings.precipitationScaleGuide} lowFreqScale={this.props.settings.precipitationScaleLowFreq} highFreqScale={this.props.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />;
 
@@ -43,8 +43,11 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
         </div>
     }
 
-    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, intro: string) {
+    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, propertyName: string, propertyEffects: string = propertyName) {
+        let intro = `Select a ${propertyName.toLowerCase()} guide, which controls the overall ${propertyEffects} of generated terrain.`;
+        
         return <div>
+            <h2>{propertyName}</h2>
             <p>{intro}</p>
             <div className="palleteList">
                 {Guides.scalarGuides.map(function(guide, id) {

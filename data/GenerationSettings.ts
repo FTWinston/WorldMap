@@ -23,8 +23,8 @@ class GenerationSettings {
 
     constructor() {
         this.heightGuide = Guides.scalarGuides[0],
-        this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-        this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+        this.temperatureGuide = Guides.scalarGuides[3],
+        this.precipitationGuide = Guides.scalarGuides[2],
 
         this.fixedHeight = 0;
         this.heightScaleFixed = 0.15;

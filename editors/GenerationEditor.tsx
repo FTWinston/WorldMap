@@ -43,11 +43,13 @@ class GenerationEditor extends React.Component<IGenerationEditorProps, {}> imple
         this.props.settings.randomize();
         this.props.settingsChanged();
         this.generateMap();
+        this.props.showSettings(false);
     }
 
     private generate(e: Event) {
         e.preventDefault();
         this.generateMap();
+        this.props.showSettings(false);
     }
 
     private generateMap() {

@@ -44,17 +44,6 @@ $buttonHoverColor: #0af;
       margin-top: 0;
       margin-bottom: 0.5em;
     }
-
-    h2 {
-      margin-top: 0;
-      margin-bottom: 0;
-    }
-    h2 + div[role="group"] {
-      margin-top: 0;
-      & > p:first-child {
-        margin-top: 0.5em;
-      }
-    }
   }
 }
 
@@ -189,28 +178,28 @@ $buttonHoverColor: #0af;
       flex-basis: 0;
     }
   }
+}
 
-  .palleteList {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: stretch;
-    align-content: flex-start;
+.palleteList {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  align-content: flex-start;
 
-    > * {
-      margin: 0.2em; padding: 0.35em 0.5em;
-      border: solid black 1px;
-      color: black;
-      border-radius: 0.2em;
-      text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
-      cursor: pointer;
+  > * {
+    margin: 0.2em; padding: 0.35em 0.5em;
+    border: solid black 1px;
+    color: black;
+    border-radius: 0.2em;
+    text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
+    cursor: pointer;
 
-      &.selected {
-        border-color: white;
-        color: white;
-        text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 2px black, 0 0 2px black;
-        outline: solid black 2px;
-      }
+    &.selected {
+      border-color: white;
+      color: white;
+      text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 2px black, 0 0 2px black;
+      outline: solid black 2px;
     }
   }
 }
@@ -277,7 +266,7 @@ $buttonHoverColor: #0af;
   align-items: flex-start;
 
   & > * {
-    flex-basis: 1;
+    flex-basis: 0;
     flex-grow: 1;
     flex-shrink: 1;
     

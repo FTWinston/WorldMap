@@ -26,13 +26,6 @@
     #worldRoot #editor h1 {
       margin-top: 0;
       margin-bottom: 0.5em; }
-    #worldRoot #editor h2 {
-      margin-top: 0;
-      margin-bottom: 0; }
-    #worldRoot #editor h2 + div[role="group"] {
-      margin-top: 0; }
-      #worldRoot #editor h2 + div[role="group"] > p:first-child {
-        margin-top: 0.5em; }
 
 #editorControls {
   display: flex;
@@ -121,25 +114,26 @@
       flex-direction: row;
       flex-grow: 1;
       flex-basis: 0; }
-  #editor .palleteList {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: stretch;
-    align-content: flex-start; }
-    #editor .palleteList > * {
-      margin: 0.2em;
-      padding: 0.35em 0.5em;
-      border: solid black 1px;
-      color: black;
-      border-radius: 0.2em;
-      text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
-      cursor: pointer; }
-      #editor .palleteList > *.selected {
-        border-color: white;
-        color: white;
-        text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 2px black, 0 0 2px black;
-        outline: solid black 2px; }
+
+.palleteList {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  align-content: flex-start; }
+  .palleteList > * {
+    margin: 0.2em;
+    padding: 0.35em 0.5em;
+    border: solid black 1px;
+    color: black;
+    border-radius: 0.2em;
+    text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white;
+    cursor: pointer; }
+    .palleteList > *.selected {
+      border-color: white;
+      color: white;
+      text-shadow: 0 0 5px black, 0 0 5px black, 0 0 5px black, 0 0 2px black, 0 0 2px black;
+      outline: solid black 2px; }
 
 #undoRedo {
   align-self: center;
@@ -187,7 +181,7 @@
   justify-content: space-around;
   align-items: flex-start; }
   #settingsRoot > * {
-    flex-basis: 1;
+    flex-basis: 0;
     flex-grow: 1;
     flex-shrink: 1; }
     #settingsRoot > *:not(:first-child) {

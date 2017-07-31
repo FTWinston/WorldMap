@@ -32,7 +32,6 @@
         "controls/MapView.tsx",
         "controls/GuideView.tsx",
         "controls/GenerationField.tsx",
-        "controls/GenerationSettingsEditor.tsx",
 
         "editors/DownloadEditor.tsx",
         "editors/OverviewEditor.tsx",
@@ -46,6 +45,7 @@
         "editors/LocationEditor.tsx",
         "editors/LocationsEditor.tsx",
         "editors/GenerationEditor.tsx",
+        "editors/GenerationSettingsEditor.tsx",
 
         "tools/SaveLoad.ts",
         "tools/Random.ts",
