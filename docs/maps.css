@@ -178,12 +178,12 @@
   margin: 1em;
   display: flex;
   flex-direction: row;
-  justify-content: space-around;
-  align-items: flex-start; }
+  justify-content: space-around; }
   #settingsRoot > * {
     flex-basis: 0;
     flex-grow: 1;
-    flex-shrink: 1; }
+    flex-shrink: 1;
+    overflow-y: scroll; }
     #settingsRoot > *:not(:first-child) {
       margin-left: 1em;
       padding-left: 1em;

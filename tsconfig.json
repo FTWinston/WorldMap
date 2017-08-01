@@ -51,6 +51,7 @@
         "tools/Random.ts",
         "tools/Simplex.ts",
         "tools/kdTree.ts",
+        "tools/MapGenerator.ts",
         
         "WorldMap.tsx"
     ]

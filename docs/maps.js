@@ -2813,87 +2813,15 @@ var GenerationEditor = (function (_super) {
     GenerationEditor.prototype.randomizeSettings = function () {
         this.props.settings.randomize();
         this.props.settingsChanged();
-        this.generateMap();
+        MapGenerator.generate(this.props.map, this.props.settings);
+        this.props.mapChanged();
         this.props.showSettings(false);
     };
     GenerationEditor.prototype.generate = function (e) {
         e.preventDefault();
-        this.generateMap();
-        this.props.showSettings(false);
-    };
-    GenerationEditor.prototype.generateMap = function () {
-        // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
-        var cellTypeLookup = GenerationEditor.constructCellTypeTree(this.props.map.cellTypes);
-        var settings = this.props.settings;
-        var heightGuide = settings.heightGuide.generation;
-        var lowFreqHeightNoise = new SimplexNoise();
-        var highFreqHeightNoise = new SimplexNoise();
-        var temperatureGuide = settings.temperatureGuide.generation;
-        var lowFreqTemperatureNoise = new SimplexNoise();
-        var highFreqTemperatureNoise = new SimplexNoise();
-        var precipitationGuide = settings.precipitationGuide.generation;
-        var lowFreqPrecipitationNoise = new SimplexNoise();
-        var highFreqPrecipitationNoise = new SimplexNoise();
-        var heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
-        if (heightScaleTot == 0)
-            heightScaleTot = 1;
-        var fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
-        var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
-        var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
-        var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
-        var temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
-        if (temperatureScaleTot == 0)
-            temperatureScaleTot = 1;
-        var fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
-        var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
-        var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
-        var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
-        var precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
-        if (precipitationScaleTot == 0)
-            precipitationScaleTot = 1;
-        var fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
-        var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
-        var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
-        var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
-        var maxX = this.props.map.width * MapData.packedWidthRatio;
-        var maxY = this.props.map.height * MapData.packedHeightRatio;
-        for (var _i = 0, _a = this.props.map.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
-            if (cell === null)
-                continue;
-            var height = fixedHeightScale
-                + highFreqHeightScale * highFreqHeightNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var temper = fixedTemperatureScale
-                + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var precip = fixedPrecipitationScale
-                + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var nearestType = cellTypeLookup.nearest({
-                genHeight: height,
-                genTemperature: temper,
-                genPrecipitation: precip,
-            });
-            if (nearestType !== undefined)
-                cell.cellType = nearestType;
-        }
+        MapGenerator.generate(this.props.map, this.props.settings);
         this.props.mapChanged();
-        this.cellTypeLookup = cellTypeLookup;
-    };
-    GenerationEditor.cellTypeDistanceMetric = function (a, b) {
-        var heightDif = (a.genHeight - b.genHeight) * 5;
-        var tempDif = a.genTemperature - b.genTemperature;
-        var precDif = a.genPrecipitation - b.genPrecipitation;
-        return Math.sqrt(heightDif * heightDif +
-            tempDif * tempDif +
-            precDif * precDif);
-    };
-    GenerationEditor.constructCellTypeTree = function (cellTypes) {
-        return new kdTree(cellTypes, GenerationEditor.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+        this.props.showSettings(false);
     };
     return GenerationEditor;
 }(React.Component));
@@ -3313,6 +3241,82 @@ var kdTree = (function () {
         return height(this.root) / (Math.log(count(this.root)) / Math.log(2));
     };
     return kdTree;
+}());
+var MapGenerator = (function () {
+    function MapGenerator() {
+    }
+    MapGenerator.generate = function (map, settings) {
+        // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
+        var cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
+        var heightGuide = settings.heightGuide.generation;
+        var lowFreqHeightNoise = new SimplexNoise();
+        var highFreqHeightNoise = new SimplexNoise();
+        var temperatureGuide = settings.temperatureGuide.generation;
+        var lowFreqTemperatureNoise = new SimplexNoise();
+        var highFreqTemperatureNoise = new SimplexNoise();
+        var precipitationGuide = settings.precipitationGuide.generation;
+        var lowFreqPrecipitationNoise = new SimplexNoise();
+        var highFreqPrecipitationNoise = new SimplexNoise();
+        var heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
+        if (heightScaleTot == 0)
+            heightScaleTot = 1;
+        var fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
+        var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
+        var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
+        var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
+        var temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
+        if (temperatureScaleTot == 0)
+            temperatureScaleTot = 1;
+        var fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
+        var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
+        var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
+        var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
+        var precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
+        if (precipitationScaleTot == 0)
+            precipitationScaleTot = 1;
+        var fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
+        var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
+        var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
+        var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
+        var maxX = map.width * MapData.packedWidthRatio;
+        var maxY = map.height * MapData.packedHeightRatio;
+        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell === null)
+                continue;
+            var height = fixedHeightScale
+                + highFreqHeightScale * highFreqHeightNoise.noise(cell.xPos, cell.yPos)
+                + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var temper = fixedTemperatureScale
+                + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
+                + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var precip = fixedPrecipitationScale
+                + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
+                + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
+                + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var nearestType = cellTypeLookup.nearest({
+                genHeight: height,
+                genTemperature: temper,
+                genPrecipitation: precip,
+            });
+            if (nearestType !== undefined)
+                cell.cellType = nearestType;
+        }
+    };
+    MapGenerator.cellTypeDistanceMetric = function (a, b) {
+        var heightDif = (a.genHeight - b.genHeight) * 5;
+        var tempDif = a.genTemperature - b.genTemperature;
+        var precDif = a.genPrecipitation - b.genPrecipitation;
+        return Math.sqrt(heightDif * heightDif +
+            tempDif * tempDif +
+            precDif * precDif);
+    };
+    MapGenerator.constructCellTypeTree = function (cellTypes) {
+        return new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+    };
+    return MapGenerator;
 }());
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {
