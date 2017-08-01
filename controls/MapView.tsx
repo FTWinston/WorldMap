@@ -290,41 +290,50 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         }
 
         if (fillContent) {
-            let cellType = cell.cellType;
+            let vegetationType = cell.vegetation;
 
-            if (cellType == null)
+            if (vegetationType == null)
                 ctx.fillStyle = '#666';
             else
-                ctx.fillStyle = cell.cellType.color;
+                ctx.fillStyle = vegetationType.color;
 
             ctx.fill();
 
-            if (cellType.texturePattern !== undefined) {
-                let scale = cellType.noiseScale;
+            if (vegetationType.texturePattern !== undefined) {
+                let scale = vegetationType.noiseScale;
 
                 ctx.scale(scale, scale);
-                ctx.fillStyle = cellType.texturePattern;
+                ctx.fillStyle = vegetationType.texturePattern;
                 ctx.fill();
                 ctx.scale(1/scale, 1/scale);
             }
 
-            if (cellType.detail !== undefined
-             && cellType.detailColor !== undefined
-             && cellType.detailNumberPerCell !== undefined
-             && cellType.detailSize !== undefined) {
-                this.drawCellPattern(cellType, randomSeed, radius);
+            if (cell.terrain !== undefined)
+                this.drawCellPattern(cell.terrain, randomSeed, radius);
+
+            if (vegetationType.detail !== undefined
+             && vegetationType.detailColor !== undefined
+             && vegetationType.detailNumberPerCell !== undefined
+             && vegetationType.detailSize !== undefined) {
+                this.drawCellPattern(vegetationType, randomSeed, radius);
             }
         }
     }
-    private drawCellPattern(cellType: CellType, randomSeed: number, cellRadius: number) {
+    private drawCellPattern(detail: IDetail, randomSeed: number, cellRadius: number) {
+        if (detail.detail === undefined
+         || detail.detailColor === undefined
+         || detail.detailNumberPerCell === undefined
+         || detail.detailSize === undefined)
+            return;
+
         let ctx = this.ctx;
         let random = new Random(randomSeed);
-        let pattern = MapCell.details[cellType.detail as string];
-        let numToDraw = cellType.detailNumberPerCell as number;
-        let patternSize = cellType.detailSize as number;
+        let pattern = MapCell.details[detail.detail];
+        let numToDraw = detail.detailNumberPerCell as number;
+        let patternSize = detail.detailSize as number;
 
         ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.detailColor as string;
+        ctx.strokeStyle = detail.detailColor as string;
         
         // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
         let halfCellWidth = cellRadius * 0.855;

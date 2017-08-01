@@ -20,6 +20,9 @@
         "typings/hammer.d.ts",
 
         "data/MapData.ts",
+        "data/Drawing.ts",
+        "data/TerrainType.ts",
+        "data/VegetationType.ts",
         "data/Cells.ts",
         "data/Locations.ts",
         "data/Lines.ts",

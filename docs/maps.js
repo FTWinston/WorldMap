@@ -5,7 +5,8 @@ var MapData = (function () {
         this.width = width;
         this.height = height;
         this.cells = new Array(this.underlyingWidth * this.height);
-        this.cellTypes = [CellType.empty];
+        this.terrainTypes = [];
+        this.vegetationTypes = [];
         this.name = '';
         this.description = '';
         this.locationTypes = [];
@@ -13,11 +14,14 @@ var MapData = (function () {
         this.lineTypes = [];
         this.lines = [];
         if (createCells !== false) {
-            for (var i = 0; i < this.cells.length; i++)
-                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
-            CellType.createDefaults(this.cellTypes);
+            TerrainType.createDefaults(this.terrainTypes);
+            VegetationType.createDefaults(this.vegetationTypes);
             LocationType.createDefaults(this.locationTypes);
             LineType.createDefaults(this.lineTypes);
+            var terrain = this.terrainTypes[0];
+            var vegetation = this.vegetationTypes[0];
+            for (var i = 0; i < this.cells.length; i++)
+                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, terrain, vegetation) : null;
             this.positionCells();
         }
     }
@@ -115,8 +119,10 @@ var MapData = (function () {
                     rowInsertIndex = Math.floor((this.height - row - 1) / 2);
                 var rowStart = row * this.underlyingWidth;
                 var insertPos = rowStart + rowInsertIndex + overallDelta;
+                var terrain = this.terrainTypes[0];
+                var vegetation = this.vegetationTypes[0];
                 for (var i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, terrain, vegetation));
                 overallDelta += delta;
             }
         }
@@ -143,12 +149,14 @@ var MapData = (function () {
     };
     MapData.prototype.performHeightChange = function (delta, topEdgeFixed) {
         if (delta > 0) {
+            var terrain = this.terrainTypes[0];
+            var vegetation = this.vegetationTypes[0];
             var diff = delta * this.underlyingWidth;
             for (var i = 0; i < diff; i++) {
                 if (this.cells.length + 1 > this.underlyingWidth * this.height)
                     this.height++;
                 var globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, terrain, vegetation) : null);
             }
         }
         else if (delta < 0) {
@@ -157,11 +165,18 @@ var MapData = (function () {
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
     };
-    MapData.prototype.replaceCellType = function (find, replace) {
+    MapData.prototype.replaceTerrainType = function (find, replace) {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
-            if (cell !== null && cell.cellType === find)
-                cell.cellType = replace;
+            if (cell !== null && cell.terrain === find)
+                cell.terrain = replace;
+        }
+    };
+    MapData.prototype.replaceVegetationType = function (find, replace) {
+        for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell !== null && cell.vegetation === find)
+                cell.vegetation = replace;
         }
     };
     MapData.prototype.replaceLocationType = function (find, replace) {
@@ -181,8 +196,10 @@ var MapData = (function () {
     MapData.prototype.saveToJSON = function () {
         for (var _i = 0, _a = this.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
-            if (cell !== null)
-                cell.typeID = this.cellTypes.indexOf(cell.cellType);
+            if (cell !== null) {
+                cell.terrainID = this.terrainTypes.indexOf(cell.terrain);
+                cell.vegetationID = this.vegetationTypes.indexOf(cell.vegetation);
+            }
         }
         for (var _b = 0, _c = this.locations; _b < _c.length; _b++) {
             var location_1 = _c[_b];
@@ -200,9 +217,9 @@ var MapData = (function () {
         var map = this;
         var json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
-                || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop'
-                || key == 'textureCanvas' || key == 'texturePattern')
+                || key == 'map' || key == 'terrain' || key == 'vegetation' || key == 'underlyingWidth'
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints'
+                || key == 'isLoop' || key == 'textureCanvas' || key == 'texturePattern')
                 return undefined;
             return value;
         });
@@ -213,22 +230,17 @@ var MapData = (function () {
         var map = new MapData(data.width, data.height, false);
         map.name = data.name;
         map.description = data.description;
-        if (data.cellTypes !== undefined)
-            map.cellTypes = data.cellTypes.map(function (type) {
-                var genHeight = type.genHeight === undefined ? 0.5 : type.genHeight;
-                var genTemperature = type.genTemperature === undefined ? 0.5 : type.genTemperature;
-                var genPrecipitation = type.genPrecipitation === undefined ? 0.5 : type.genPrecipitation;
-                var noiseScale = type.noiseScale === undefined ? 1 : type.noiseScale;
-                var noiseIntensity = type.noiseIntensity === undefined ? 0 : type.noiseIntensity;
-                var noiseDensity = type.noiseDensity === undefined ? 0 : type.noiseDensity;
-                return new CellType(type.name, type.color, genHeight, genTemperature, genPrecipitation, noiseScale, noiseIntensity, noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize);
-            });
+        if (data.terrainTypes !== undefined)
+            map.terrainTypes = data.terrainTypes.map(function (type) { return new TerrainType(type.name, type.height, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize); });
+        if (data.vegetationTypes !== undefined)
+            map.vegetationTypes = data.vegetationTypes.map(function (type) { return new VegetationType(type.name, type.isLand, type.temperature, type.precipitation, type.color, type.noiseScale, type.noiseIntensity, type.noiseDensity, type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize); });
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
                 if (cell == null)
                     return null;
-                var cellType = map.cellTypes[cell.typeID == -1 ? 0 : cell.typeID];
-                return new MapCell(map, cellType);
+                var terrain = map.terrainTypes[cell.terrainID == -1 ? 0 : cell.terrainID];
+                var vegetation = map.vegetationTypes[cell.vegetationID == -1 ? 0 : cell.vegetationID];
+                return new MapCell(map, terrain, vegetation);
             });
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
@@ -267,13 +279,30 @@ var MapData = (function () {
 }());
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
-var CellType = (function () {
-    function CellType(name, color, genHeight, genTemperature, genPrecipitation, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
+var TerrainType = (function () {
+    function TerrainType(name, height, detail, detailColor, detailNumberPerCell, detailSize) {
         this.name = name;
+        this.height = height;
+        this.detail = detail;
+        this.detailColor = detailColor;
+        this.detailNumberPerCell = detailNumberPerCell;
+        this.detailSize = detailSize;
+    }
+    TerrainType.createDefaults = function (types) {
+        types.push(new TerrainType('Water', 0));
+        types.push(new TerrainType('Flat', 0.2));
+        types.push(new TerrainType('Hills', 0.6, 'Hill', '#607860', 1, 0.75));
+        types.push(new TerrainType('Mountain', 0.9, 'Mountain', '#565B42', 1, 0.8));
+    };
+    return TerrainType;
+}());
+var VegetationType = (function () {
+    function VegetationType(name, isLand, temperature, precipitation, color, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
+        this.name = name;
+        this.isLand = isLand;
+        this.temperature = temperature;
+        this.precipitation = precipitation;
         this.color = color;
-        this.genHeight = genHeight;
-        this.genTemperature = genTemperature;
-        this.genPrecipitation = genPrecipitation;
         this.noiseScale = noiseScale;
         this.noiseIntensity = noiseIntensity;
         this.noiseDensity = noiseDensity;
@@ -283,7 +312,7 @@ var CellType = (function () {
         this.detailSize = detailSize;
         this.updateTexture();
     }
-    CellType.prototype.updateTexture = function () {
+    VegetationType.prototype.updateTexture = function () {
         if (this.noiseIntensity <= 0) {
             this.textureCanvas = undefined;
             this.texturePattern = undefined;
@@ -312,25 +341,23 @@ var CellType = (function () {
         // Note: pattern isn't being created in the destination context. Does that work in all browsers?
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
-    CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 0.15, 0.5, 1.0, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
-        types.push(new CellType('Grass', '#a1e94d', 0.4, 0.55, 0.35, 2, 0.1, 0.8));
-        types.push(new CellType('Forest', '#189b11', 0.4, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Forest Hills', '#189b11', 0.70, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
-        types.push(new CellType('Hills', '#7bac46', 0.70, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 0.9, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 0.4, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+    VegetationType.createDefaults = function (types) {
+        types.push(new VegetationType('Water', false, 0.5, 1.0, '#179ce6', 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
+        types.push(new VegetationType('Grass', true, 0.55, 0.35, '#a1e94d', 2, 0.1, 0.8));
+        types.push(new VegetationType('Forest', true, 0.3, 0.5, '#189b11', 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new VegetationType('Marsh', true, 0.4, 0.7, '#7bac46', 10, 0.3, 0.2, 'Marsh', '#607860', 6, 0.2));
+        types.push(new VegetationType('Desert', true, 0.8, 0, '#ebd178', 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
-    return CellType;
+    return VegetationType;
 }());
-CellType.empty = new CellType('Empty', '#ffffff', -1, -1, -1, 1, 0, 0);
 var MapCell = (function () {
-    function MapCell(map, cellType) {
+    function MapCell(map, terrain, vegetation) {
         this.map = map;
-        this.cellType = cellType;
+        this.terrain = terrain;
+        this.vegetation = vegetation;
     }
-    MapCell.addDetail = function (pattern) {
-        MapCell.details[pattern.name] = pattern;
+    MapCell.addDetail = function (detail) {
+        MapCell.details[detail.name] = detail;
     };
     return MapCell;
 }());
@@ -1229,35 +1256,42 @@ var MapView = (function (_super) {
             ctx.stroke();
         }
         if (fillContent) {
-            var cellType = cell.cellType;
-            if (cellType == null)
+            var vegetationType = cell.vegetation;
+            if (vegetationType == null)
                 ctx.fillStyle = '#666';
             else
-                ctx.fillStyle = cell.cellType.color;
+                ctx.fillStyle = vegetationType.color;
             ctx.fill();
-            if (cellType.texturePattern !== undefined) {
-                var scale = cellType.noiseScale;
+            if (vegetationType.texturePattern !== undefined) {
+                var scale = vegetationType.noiseScale;
                 ctx.scale(scale, scale);
-                ctx.fillStyle = cellType.texturePattern;
+                ctx.fillStyle = vegetationType.texturePattern;
                 ctx.fill();
                 ctx.scale(1 / scale, 1 / scale);
             }
-            if (cellType.detail !== undefined
-                && cellType.detailColor !== undefined
-                && cellType.detailNumberPerCell !== undefined
-                && cellType.detailSize !== undefined) {
-                this.drawCellPattern(cellType, randomSeed, radius);
+            if (cell.terrain !== undefined)
+                this.drawCellPattern(cell.terrain, randomSeed, radius);
+            if (vegetationType.detail !== undefined
+                && vegetationType.detailColor !== undefined
+                && vegetationType.detailNumberPerCell !== undefined
+                && vegetationType.detailSize !== undefined) {
+                this.drawCellPattern(vegetationType, randomSeed, radius);
             }
         }
     };
-    MapView.prototype.drawCellPattern = function (cellType, randomSeed, cellRadius) {
+    MapView.prototype.drawCellPattern = function (detail, randomSeed, cellRadius) {
+        if (detail.detail === undefined
+            || detail.detailColor === undefined
+            || detail.detailNumberPerCell === undefined
+            || detail.detailSize === undefined)
+            return;
         var ctx = this.ctx;
         var random = new Random(randomSeed);
-        var pattern = MapCell.details[cellType.detail];
-        var numToDraw = cellType.detailNumberPerCell;
-        var patternSize = cellType.detailSize;
+        var pattern = MapCell.details[detail.detail];
+        var numToDraw = detail.detailNumberPerCell;
+        var patternSize = detail.detailSize;
         ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.detailColor;
+        ctx.strokeStyle = detail.detailColor;
         // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
         var halfCellWidth = cellRadius * 0.855;
         var scale = halfCellWidth * patternSize;
@@ -2038,8 +2072,10 @@ var TerrainEditor = (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             isEditingTerrainType: false,
+            isEditingVegetationType: false,
             isDrawingOnMap: false,
-            selectedTerrainType: props.cellTypes[0],
+            selectedTerrainType: props.terrainTypes[0],
+            selectedVegetationType: props.vegetationTypes[0],
         };
         return _this;
     }
@@ -2048,28 +2084,42 @@ var TerrainEditor = (function (_super) {
             this.props.hasDrawn(true);
     };
     TerrainEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (this.state.selectedTerrainType === undefined || this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
-            this.setState(function (prevState) {
-                return {
-                    isEditingTerrainType: false,
-                    isDrawingOnMap: false,
-                    selectedTerrainType: this.props.cellTypes[0],
-                };
+        if (this.state.selectedTerrainType === undefined || this.props.terrainTypes.indexOf(this.state.selectedTerrainType) == -1)
+            this.setState({
+                isEditingTerrainType: false,
+                isDrawingOnMap: false,
+                selectedTerrainType: this.props.terrainTypes[0],
             });
-        }
+        if (this.state.selectedVegetationType === undefined || this.props.vegetationTypes.indexOf(this.state.selectedVegetationType) == -1)
+            this.setState({
+                isEditingVegetationType: false,
+                isDrawingOnMap: false,
+                selectedVegetationType: this.props.vegetationTypes[0],
+            });
     };
     TerrainEditor.prototype.render = function () {
         if (this.state.isEditingTerrainType)
-            return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
+            return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.terrainTypes, updateCellTypes: this.terrainTypesChanged.bind(this) }); // TODO: terrain type editor
+        if (this.state.isEditingVegetationType)
+            return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.terrainTypes, updateCellTypes: this.vegetationTypesChanged.bind(this) }); // TODO: vegetation type editor
         var that = this;
         return React.createElement("form", null,
             React.createElement("p", null, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
-            React.createElement("div", { className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
+            React.createElement("div", { className: "palleteList" }, this.props.terrainTypes.map(function (type, id) {
                 var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
-                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type), onDoubleClick: that.showTerrainEdit.bind(that, type) }, type.name);
+                return React.createElement("div", { key: id.toString(), className: classes, onClick: that.selectTerrainType.bind(that, type), onDoubleClick: that.showTerrainTypeEdit.bind(that, type) }, type.name);
             })),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type")));
+                React.createElement("button", { type: "button", onClick: this.showTerrainTypeEdit.bind(this, undefined) }, "Add new terrain type")),
+            React.createElement("hr", null),
+            React.createElement("p", null, "Select a vegetation type to draw onto the map. Double click/tap on a vegetation type to edit it."),
+            React.createElement("div", { className: "palleteList" }, this.props.vegetationTypes.map(function (type, id) {
+                var classes = type == that.state.selectedVegetationType ? 'selected' : undefined;
+                return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectVegetationType.bind(that, type), onDoubleClick: that.showVegetationTypeEdit.bind(that, type) }, type.name);
+            })),
+            React.createElement("div", { role: "group", className: "vertical" },
+                React.createElement("button", { type: "button", onClick: this.showVegetationTypeEdit.bind(this, undefined) }, "Add new vegetation type")),
+            React.createElement("hr", null));
     };
     TerrainEditor.prototype.selectTerrainType = function (type) {
         this.setState({
@@ -2078,19 +2128,40 @@ var TerrainEditor = (function (_super) {
             selectedTerrainType: type,
         });
     };
-    TerrainEditor.prototype.showTerrainEdit = function (type) {
+    TerrainEditor.prototype.showTerrainTypeEdit = function (type) {
         this.setState({
             isEditingTerrainType: true,
             isDrawingOnMap: false,
             selectedTerrainType: type,
         });
     };
-    TerrainEditor.prototype.cellTypesChanged = function (cellTypes) {
+    TerrainEditor.prototype.selectVegetationType = function (type) {
+        this.setState({
+            isEditingVegetationType: false,
+            isDrawingOnMap: false,
+            selectedVegetationType: type,
+        });
+    };
+    TerrainEditor.prototype.showVegetationTypeEdit = function (type) {
+        this.setState({
+            isEditingVegetationType: true,
+            isDrawingOnMap: false,
+            selectedVegetationType: type,
+        });
+    };
+    TerrainEditor.prototype.terrainTypesChanged = function (terrainTypes) {
         this.setState({
             isEditingTerrainType: false,
             isDrawingOnMap: false,
         });
-        this.props.updateCellTypes(cellTypes);
+        this.props.updateTerrainTypes(terrainTypes);
+    };
+    TerrainEditor.prototype.vegetationTypesChanged = function (vegetationTypes) {
+        this.setState({
+            isEditingVegetationType: false,
+            isDrawingOnMap: false,
+        });
+        this.props.updateVegetationTypes(vegetationTypes);
     };
     TerrainEditor.prototype.mouseDown = function (cell) {
         if (this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
@@ -2098,8 +2169,7 @@ var TerrainEditor = (function (_super) {
         this.setState({
             isDrawingOnMap: true,
         });
-        cell.cellType = this.state.selectedTerrainType;
-        this.props.hasDrawn(false);
+        this.draw(cell);
     };
     TerrainEditor.prototype.mouseUp = function (cell) {
         if (!this.state.isDrawingOnMap)
@@ -2111,23 +2181,41 @@ var TerrainEditor = (function (_super) {
     TerrainEditor.prototype.mouseEnter = function (cell) {
         if (!this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
-        cell.cellType = this.state.selectedTerrainType;
+        this.draw(cell);
+    };
+    TerrainEditor.prototype.draw = function (cell) {
+        if (this.state.selectedTerrainType !== undefined)
+            cell.terrain = this.state.selectedTerrainType;
+        if (this.state.selectedVegetationType !== undefined)
+            cell.vegetation = this.state.selectedVegetationType;
         this.props.hasDrawn(false);
     };
-    TerrainEditor.prototype.replacingMap = function (map) {
-        var cellType;
-        var editingType = this.state.isEditingTerrainType;
+    TerrainEditor.prototype.onReplacingMap = function (map) {
+        var terrainType;
+        var editingTerrainType = this.state.isEditingTerrainType;
         if (this.state.selectedTerrainType !== undefined) {
-            var index = this.props.cellTypes.indexOf(this.state.selectedTerrainType);
-            cellType = map.cellTypes[index];
+            var index = this.props.terrainTypes.indexOf(this.state.selectedTerrainType);
+            terrainType = map.terrainTypes[index];
         }
-        if (cellType === undefined) {
-            cellType = map.cellTypes[0];
-            editingType = false;
+        if (terrainType === undefined) {
+            terrainType = map.terrainTypes[0];
+            editingTerrainType = false;
+        }
+        var vegetationType;
+        var editingVegetationType = this.state.isEditingVegetationType;
+        if (this.state.selectedVegetationType !== undefined) {
+            var index = this.props.vegetationTypes.indexOf(this.state.selectedVegetationType);
+            vegetationType = map.vegetationTypes[index];
+        }
+        if (vegetationType === undefined) {
+            vegetationType = map.vegetationTypes[0];
+            editingVegetationType = false;
         }
         this.setState({
-            isEditingTerrainType: editingType,
-            selectedTerrainType: cellType,
+            isEditingTerrainType: editingTerrainType,
+            isEditingVegetationType: editingVegetationType,
+            selectedTerrainType: terrainType,
+            selectedVegetationType: vegetationType,
             isDrawingOnMap: false,
         });
     };
@@ -3396,7 +3484,7 @@ var WorldMap = (function (_super) {
             case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
             case 3 /* Terrain */:
-                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
+                return React.createElement(TerrainEditor, __assign({}, props, { terrainTypes: this.state.map.terrainTypes, vegetationTypes: this.state.map.vegetationTypes, hasDrawn: this.terrainEdited.bind(this), updateTerrainTypes: this.updateTerrainTypes.bind(this), updateVegetationTypes: this.updateVegetationTypes.bind(this) }));
             case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), selectedLine: this.state.selectedLine, lineSelected: this.lineSelected.bind(this) }));
             case 5 /* Locations */:
@@ -3435,16 +3523,23 @@ var WorldMap = (function (_super) {
         this.mapView.updateSize();
         this.mapChanged();
     };
-    WorldMap.prototype.updateCellTypes = function (cellTypes) {
-        if (cellTypes.length == 0)
+    WorldMap.prototype.checkReplace = function (currentItems, newItems, replace) {
+        if (newItems.length == 0)
             return;
-        // if a cell type is removed from the map, replace it with the "empty" type
-        for (var _i = 0, _a = this.state.map.cellTypes; _i < _a.length; _i++) {
-            var currentType = _a[_i];
-            if (cellTypes.indexOf(currentType) == -1)
-                this.state.map.replaceCellType(currentType, cellTypes[0]);
+        for (var _i = 0, currentItems_1 = currentItems; _i < currentItems_1.length; _i++) {
+            var currentItem = currentItems_1[_i];
+            if (newItems.indexOf(currentItem) == -1)
+                replace(currentItem, newItems[0]);
         }
-        this.state.map.cellTypes = cellTypes;
+    };
+    WorldMap.prototype.updateTerrainTypes = function (types) {
+        this.checkReplace(this.state.map.terrainTypes, types, this.state.map.replaceTerrainType);
+        this.state.map.terrainTypes = types;
+        this.mapChanged();
+    };
+    WorldMap.prototype.updateVegetationTypes = function (types) {
+        this.checkReplace(this.state.map.vegetationTypes, types, this.state.map.replaceVegetationType);
+        this.state.map.vegetationTypes = types;
         this.mapChanged();
     };
     WorldMap.prototype.terrainEdited = function (endOfStroke) {
@@ -3456,14 +3551,7 @@ var WorldMap = (function (_super) {
             this.mapView.redraw();
     };
     WorldMap.prototype.updateLocationTypes = function (types) {
-        if (types.length == 0)
-            return;
-        // if a location type is removed from the map, replace it with the first available type
-        for (var _i = 0, _a = this.state.map.locationTypes; _i < _a.length; _i++) {
-            var currentType = _a[_i];
-            if (types.indexOf(currentType) == -1)
-                this.state.map.replaceLocationType(currentType, types[0]);
-        }
+        this.checkReplace(this.state.map.locationTypes, types, this.state.map.replaceLocationType);
         this.state.map.locationTypes = types;
         this.mapChanged();
     };
@@ -3472,14 +3560,7 @@ var WorldMap = (function (_super) {
         this.mapChanged();
     };
     WorldMap.prototype.updateLineTypes = function (types) {
-        if (types.length == 0)
-            return;
-        // if a location type is removed from the map, replace it with the first available type
-        for (var _i = 0, _a = this.state.map.lineTypes; _i < _a.length; _i++) {
-            var currentType = _a[_i];
-            if (types.indexOf(currentType) == -1)
-                this.state.map.replaceLineType(currentType, types[0]);
-        }
+        this.checkReplace(this.state.map.lineTypes, types, this.state.map.replaceLineType);
         this.state.map.lineTypes = types;
         this.mapChanged();
     };
@@ -3521,8 +3602,8 @@ var WorldMap = (function (_super) {
             selectedLine = map.lines[index];
         }
         // similarly, allow editors to update their selected values to come from the new map
-        if (this.activeEditor !== undefined && this.activeEditor.replacingMap !== undefined)
-            this.activeEditor.replacingMap(map);
+        if (this.activeEditor !== undefined && this.activeEditor.onReplacingMap !== undefined)
+            this.activeEditor.onReplacingMap(map);
         this.setState({
             map: map,
             selectedLine: selectedLine,

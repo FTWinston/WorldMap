@@ -14,7 +14,7 @@ interface IMapEditor {
     mouseUp?: (cell: MapCell) => void;
     mouseEnter?: (cell: MapCell) => void;
     mouseLeave?: (cell: MapCell) => void;
-    replacingMap?: (map: MapData) => void;
+    onReplacingMap?: (map: MapData) => void;
 }
 
 interface IWorldMapProps {
@@ -117,7 +117,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Size:
                 return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
+                return <TerrainEditor {...props} terrainTypes={this.state.map.terrainTypes} vegetationTypes={this.state.map.vegetationTypes} hasDrawn={this.terrainEdited.bind(this)} updateTerrainTypes={this.updateTerrainTypes.bind(this)} updateVegetationTypes={this.updateVegetationTypes.bind(this)} />;
             case EditorType.Lines:
                 return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} selectedLine={this.state.selectedLine} lineSelected={this.lineSelected.bind(this)} />;
             case EditorType.Locations:
@@ -159,16 +159,25 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapView.updateSize();
         this.mapChanged();
     }
-    private updateCellTypes(cellTypes: CellType[]) {
-        if (cellTypes.length == 0)
-            return;
-        
-        // if a cell type is removed from the map, replace it with the "empty" type
-        for (let currentType of this.state.map.cellTypes)
-            if (cellTypes.indexOf(currentType) == -1)
-                this.state.map.replaceCellType(currentType, cellTypes[0]);
 
-        this.state.map.cellTypes = cellTypes;
+    private checkReplace<TItem>(currentItems: TItem[], newItems: TItem[], replace: (find: TItem, replace: TItem) => void) {
+        if (newItems.length == 0)
+            return;
+
+        for (let currentItem of currentItems)
+            if (newItems.indexOf(currentItem) == -1)
+                replace(currentItem, newItems[0]);
+    }
+    private updateTerrainTypes(types: TerrainType[]) {
+        this.checkReplace(this.state.map.terrainTypes, types, this.state.map.replaceTerrainType);
+        this.state.map.terrainTypes = types;
+        
+        this.mapChanged();
+    }
+    private updateVegetationTypes(types: VegetationType[]) {
+        this.checkReplace(this.state.map.vegetationTypes, types, this.state.map.replaceVegetationType);
+        this.state.map.vegetationTypes = types;
+        
         this.mapChanged();
     }
     private terrainEdited(endOfStroke: boolean = true) {
@@ -179,14 +188,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             this.mapView.redraw();
     }
     private updateLocationTypes(types: LocationType[]) {
-        if (types.length == 0)
-            return;
-        
-        // if a location type is removed from the map, replace it with the first available type
-        for (let currentType of this.state.map.locationTypes)
-            if (types.indexOf(currentType) == -1)
-                this.state.map.replaceLocationType(currentType, types[0]);
-
+        this.checkReplace(this.state.map.locationTypes, types, this.state.map.replaceLocationType);
         this.state.map.locationTypes = types;
         this.mapChanged();
     }
@@ -195,14 +197,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.mapChanged();
     }
     private updateLineTypes(types: LineType[]) {
-        if (types.length == 0)
-            return;
-        
-        // if a location type is removed from the map, replace it with the first available type
-        for (let currentType of this.state.map.lineTypes)
-            if (types.indexOf(currentType) == -1)
-                this.state.map.replaceLineType(currentType, types[0]);
-
+        this.checkReplace(this.state.map.lineTypes, types, this.state.map.replaceLineType);
         this.state.map.lineTypes = types;
         this.mapChanged();
     }
@@ -245,8 +240,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         }
 
         // similarly, allow editors to update their selected values to come from the new map
-        if (this.activeEditor !== undefined && this.activeEditor.replacingMap !== undefined)
-            this.activeEditor.replacingMap(map);
+        if (this.activeEditor !== undefined && this.activeEditor.onReplacingMap !== undefined)
+            this.activeEditor.onReplacingMap(map);
 
         this.setState({
             map: map,

@@ -6,7 +6,8 @@ class MapData {
     private underlyingWidth: number;
     width: number;
     height: number;
-    cellTypes: CellType[];
+    terrainTypes: TerrainType[];
+    vegetationTypes: VegetationType[];
     cells: PossibleMapCell[];
     locationTypes: LocationType[];
     locations: MapLocation[];
@@ -18,7 +19,8 @@ class MapData {
         this.width = width;
         this.height = height;
         this.cells = new Array<MapCell>(this.underlyingWidth * this.height);
-        this.cellTypes = [CellType.empty];
+        this.terrainTypes = [];
+        this.vegetationTypes = [];
         this.name = '';
         this.description = '';
         this.locationTypes = [];
@@ -27,12 +29,16 @@ class MapData {
         this.lines = [];
 
         if (createCells !== false) {
-            for (let i = 0; i < this.cells.length; i++)
-                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, CellType.empty) : null;
-
-            CellType.createDefaults(this.cellTypes);
+            TerrainType.createDefaults(this.terrainTypes);
+            VegetationType.createDefaults(this.vegetationTypes);
             LocationType.createDefaults(this.locationTypes);
             LineType.createDefaults(this.lineTypes);
+
+            let terrain = this.terrainTypes[0];
+            let vegetation = this.vegetationTypes[0];
+
+            for (let i = 0; i < this.cells.length; i++)
+                this.cells[i] = this.shouldIndexHaveCell(i) ? new MapCell(this, terrain, vegetation) : null;
             
             this.positionCells();
         }
@@ -143,8 +149,11 @@ class MapData {
                 let rowStart = row * this.underlyingWidth;
                 let insertPos = rowStart + rowInsertIndex + overallDelta;
 
+                let terrain = this.terrainTypes[0];
+                let vegetation = this.vegetationTypes[0];
+
                 for (let i = 0; i < delta; i++)
-                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, CellType.empty));
+                    this.cells.splice(insertPos, 0, forHeightChange ? null : new MapCell(this, terrain, vegetation));
 
                 overallDelta += delta;
             }
@@ -174,13 +183,16 @@ class MapData {
     }
     private performHeightChange(delta: number, topEdgeFixed: boolean) {
         if (delta > 0) {
+            let terrain = this.terrainTypes[0];
+            let vegetation = this.vegetationTypes[0];
+
             let diff = delta * this.underlyingWidth;
             for (let i = 0; i < diff; i++) {
                 if (this.cells.length + 1 > this.underlyingWidth * this.height)
                     this.height++;
 
                 let globalIndex = topEdgeFixed ? this.cells.length : diff - i - 1;
-                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, CellType.empty) : null);
+                this.cells.splice(topEdgeFixed ? this.cells.length : 0, 0, this.shouldIndexHaveCell(globalIndex) ? new MapCell(this, terrain, vegetation) : null);
             }
         }
         else if (delta < 0) {
@@ -189,10 +201,15 @@ class MapData {
             this.cells.splice(topEdgeFixed ? this.cells.length - diff : 0, diff);
         }
     }
-    replaceCellType(find: CellType, replace: CellType) {
+    replaceTerrainType(find: TerrainType, replace: TerrainType) {
         for (let cell of this.cells)
-            if (cell !== null && cell.cellType === find)
-                cell.cellType = replace;
+            if (cell !== null && cell.terrain === find)
+                cell.terrain = replace;
+    }
+    replaceVegetationType(find: VegetationType, replace: VegetationType) {
+        for (let cell of this.cells)
+            if (cell !== null && cell.vegetation === find)
+                cell.vegetation = replace;
     }
     replaceLocationType(find: LocationType, replace: LocationType) {
         for (let loc of this.locations)
@@ -206,8 +223,10 @@ class MapData {
     }
     saveToJSON() {
         for (let cell of this.cells)
-            if (cell !== null)
-                (cell as any).typeID = this.cellTypes.indexOf(cell.cellType);
+            if (cell !== null) {
+                (cell as any).terrainID = this.terrainTypes.indexOf(cell.terrain);
+                (cell as any).vegetationID = this.vegetationTypes.indexOf(cell.vegetation);
+            }
 
         for (let location of this.locations) {
             (location as any).typeID = this.locationTypes.indexOf(location.type);
@@ -225,9 +244,9 @@ class MapData {
         let map = this;
         let json = JSON.stringify(this, function (key, value) {
             if (key == 'row' || key == 'col' || key == 'xPos' || key == 'yPos'
-                || key == 'map' || key == 'cellType' || key == 'underlyingWidth' || key == 'cell'
-                || key == 'keyCells' || key == 'type' || key == 'renderPoints' || key == 'isLoop'
-                || key == 'textureCanvas' || key == 'texturePattern')
+                || key == 'map' || key == 'terrain' || key == 'vegetation' || key == 'underlyingWidth'
+                || key == 'cell' || key == 'keyCells' || key == 'type' || key == 'renderPoints'
+                || key == 'isLoop' || key == 'textureCanvas' || key == 'texturePattern')
                 return undefined;
             return value;
         });
@@ -240,12 +259,17 @@ class MapData {
             height: number;
             name: string;
             description: string;
-            cellTypes: {name: string, color: string,
-                genHeight?: number, genTemperature?: number, genPrecipitation?: number,
-                noiseScale?: number, noiseIntensity?: number, noiseDensity?: number,
+            terrainTypes: {
+                name: string, height: number,
+                detail?: string, detailColor?: string,
+                detailNumberPerCell?: number, detailSize?: number,
+            }[];
+            vegetationTypes: {
+                name: string, isLand: boolean, temperature: number, precipitation: number,
+                color: string, noiseScale: number, noiseIntensity: number, noiseDensity: number,
                 detail?: string, detailColor?: string, detailNumberPerCell?: number, detailSize?: number
             }[];
-            cells: {typeID: number}[];
+            cells: {terrainID: number, vegetationID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
             lineTypes: {name: string, color: string, width: number, startWidth: number, endWidth: number, curviture: number}[];
@@ -256,29 +280,31 @@ class MapData {
         map.name = data.name;
         map.description = data.description;
 
-        if (data.cellTypes !== undefined)
-            map.cellTypes = data.cellTypes.map(function (type) {
-                let genHeight = type.genHeight === undefined ? 0.5 : type.genHeight;
-                let genTemperature = type.genTemperature === undefined ? 0.5 : type.genTemperature;
-                let genPrecipitation = type.genPrecipitation === undefined ? 0.5 : type.genPrecipitation;
-                let noiseScale = type.noiseScale === undefined ? 1 : type.noiseScale;
-                let noiseIntensity = type.noiseIntensity === undefined ? 0 : type.noiseIntensity;
-                let noiseDensity = type.noiseDensity === undefined ? 0 : type.noiseDensity;
+        if (data.terrainTypes !== undefined)
+            map.terrainTypes = data.terrainTypes.map(type => new TerrainType(
+                    type.name, type.height,
+                    type.detail, type.detailColor,
+                    type.detailNumberPerCell, type.detailSize,
+                )
+            );
 
-                return new CellType(type.name, type.color,
-                    genHeight, genTemperature, genPrecipitation,
-                    noiseScale, noiseIntensity, noiseDensity,
+        if (data.vegetationTypes !== undefined)
+            map.vegetationTypes = data.vegetationTypes.map(type => new VegetationType(
+                    type.name, type.isLand,
+                    type.temperature, type.precipitation,
+                    type.color, type.noiseScale, type.noiseIntensity, type.noiseDensity,
                     type.detail, type.detailColor, type.detailNumberPerCell, type.detailSize
-                );
-            });
+                )
+            );
 
         if (data.cells !== undefined)
             map.cells = data.cells.map(function (cell) {
                 if (cell == null)
                     return null;
 
-                let cellType = map.cellTypes[cell.typeID == -1 ? 0 : cell.typeID];
-                return new MapCell(map, cellType);
+                let terrain = map.terrainTypes[cell.terrainID == -1 ? 0 : cell.terrainID];
+                let vegetation = map.vegetationTypes[cell.vegetationID == -1 ? 0 : cell.vegetationID];
+                return new MapCell(map, terrain, vegetation);
             });
 
         if (data.locationTypes !== undefined)
