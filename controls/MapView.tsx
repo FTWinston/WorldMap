@@ -53,9 +53,10 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             scrollbarHeight: scrollSize.height,
         };
     }
+    resizeEvent = this.resize.bind(this);
     componentDidMount() {
         if (this.props.scrollUI)
-            window.addEventListener('resize', this.resize.bind(this));
+            window.addEventListener('resize', this.resizeEvent);
         
         let ctx = this.canvas.getContext('2d');
         if (ctx !== null)
@@ -68,7 +69,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
     }
     componentWillUnmount() {
         if (this.props.scrollUI)
-            window.removeEventListener('resize', this.resize.bind(this));
+            window.removeEventListener('resize', this.resizeEvent);
 
         if (this.hammer !== undefined) {
             this.hammer.destroy();

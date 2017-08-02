@@ -50,7 +50,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
 
     private changes: ChangeHistory;
-    private mapView: MapView;
+    private mapView: MapView | null;
     componentDidMount() {
         SaveLoad.loadData(this.initializeMap.bind(this));
     }
@@ -70,7 +70,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     }
 
     componentDidUpdate(prevProps: IWorldMapProps, prevState: IWorldMapState) {
-        if (prevState.activeEditor != this.state.activeEditor)
+        if (prevState.activeEditor != this.state.activeEditor && this.mapView !== null)
             this.mapView.redraw();
     }
 
@@ -80,7 +80,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
 
         let mapOrSettings = this.state.showGenerationSettings
             ? <GenerationSettingsEditor settings={this.state.generationSettings} settingsChanged={this.generationSettingsChanged.bind(this)} />
-            : <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => { if (c !== null) this.mapView = c}}
+            : <MapView map={this.state.map} scrollUI={true} renderGrid={true} ref={(c) => this.mapView = c}
                     editor={this.state.activeEditor} selectedLine={this.state.selectedLine}
                     cellMouseDown={this.cellMouseDown.bind(this)} cellMouseUp={this.cellMouseUp.bind(this)}
                     cellMouseEnter={this.cellMouseEnter.bind(this)} cellMouseLeave={this.cellMouseLeave.bind(this)} />;
@@ -156,7 +156,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             return;
         
         this.state.map.changeSize(width, height, mode);
-        this.mapView.updateSize();
+        if (this.mapView !== null)
+            this.mapView.updateSize();
         this.mapChanged();
     }
     private updateCellTypes(cellTypes: CellType[]) {
@@ -175,7 +176,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         // batch all "drawing" in the one stroke into a single undo step
         if (endOfStroke)
             this.mapChanged();
-        else
+        else if (this.mapView !== null)
             this.mapView.redraw();
     }
     private updateLocationTypes(types: LocationType[]) {
@@ -210,7 +211,9 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.setState({
             selectedLine: line,
         });
-        this.mapView.redraw();
+
+        if (this.mapView !== null)
+            this.mapView.redraw();
     }
     private updateLines(lines: MapLine[]) {
         this.state.map.lines = lines;
@@ -223,7 +226,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
         this.setState({
             map: this.state.map,
         });
-        this.mapView.redraw();
+        if (this.mapView !== null)
+            this.mapView.redraw();
         this.changes.recordMapChange(this.state.map);
     }
     private generationSettingsChanged() {
@@ -252,7 +256,9 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             map: map,
             selectedLine: selectedLine,
         });
-        this.mapView.redraw();
+
+        if (this.mapView !== null)
+            this.mapView.redraw();
     }
     private selectEditor(editor: EditorType, name: string) {
         this.setState({

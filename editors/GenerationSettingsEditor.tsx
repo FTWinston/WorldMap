@@ -23,7 +23,7 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
     render() {
         let height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight} absMinValue={-1} absMaxValue={1}
+            : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight} absMinValue={-1} absMaxValue={1} heightList="heightMarks"
                 guideScale={this.props.settings.heightScaleGuide} lowFreqScale={this.props.settings.heightScaleLowFreq} highFreqScale={this.props.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />;
 
         let temperature = this.state.selectingTemperatureGuide
@@ -40,6 +40,9 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
             {height}
             {temperature}
             {precipitation}
+            <datalist id="heightMarks">
+                <option value="0" label="sea level" />
+            </datalist>
         </div>
     }
 

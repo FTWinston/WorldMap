@@ -1022,6 +1022,7 @@ var MapView = (function (_super) {
     function MapView(props) {
         var _this = _super.call(this, props) || this;
         _this.backgroundColor = '#ccc';
+        _this.resizeEvent = _this.resize.bind(_this);
         _this.edgePadding = 20; // pixels, regardless of zoom
         _this.redrawing = false;
         _this.resizing = false;
@@ -1040,7 +1041,7 @@ var MapView = (function (_super) {
     }
     MapView.prototype.componentDidMount = function () {
         if (this.props.scrollUI)
-            window.addEventListener('resize', this.resize.bind(this));
+            window.addEventListener('resize', this.resizeEvent);
         var ctx = this.canvas.getContext('2d');
         if (ctx !== null)
             this.ctx = ctx;
@@ -1050,7 +1051,7 @@ var MapView = (function (_super) {
     };
     MapView.prototype.componentWillUnmount = function () {
         if (this.props.scrollUI)
-            window.removeEventListener('resize', this.resize.bind(this));
+            window.removeEventListener('resize', this.resizeEvent);
         if (this.hammer !== undefined) {
             this.hammer.destroy();
             this.hammer = undefined;
@@ -1641,7 +1642,7 @@ var GenerationField = (function (_super) {
     }
     GenerationField.prototype.render = function () {
         var lowerName = this.props.name.toLowerCase();
-        return React.createElement("div", null,
+        return React.createElement("form", { className: "genField" },
             React.createElement("h2", null, this.props.name),
             React.createElement("div", { role: "group", className: "vertical" },
                 React.createElement("p", null,
@@ -1662,30 +1663,25 @@ var GenerationField = (function (_super) {
                 ", and scaling how much this, the ",
                 lowerName,
                 " guide and randomness contribute to the generated map."),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", null,
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" },
                     "Min ",
-                    lowerName,
-                    " ",
-                    React.createElement("input", { type: "range", value: this.props.minValue.toString(), onChange: this.minChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString() }))),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", null,
+                    lowerName),
+                React.createElement("input", { type: "range", value: this.props.minValue.toString(), onChange: this.minChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString(), list: this.props.heightList })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" },
                     "Max ",
-                    lowerName,
-                    " ",
-                    React.createElement("input", { type: "range", value: this.props.maxValue.toString(), onChange: this.maxChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString() }))),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", null,
-                    "Scale: Guide ",
-                    React.createElement("input", { type: "range", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", null,
-                    "Large variations ",
-                    React.createElement("input", { type: "range", value: this.props.lowFreqScale.toString(), onChange: this.lowFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))),
-            React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", null,
-                    "Small variations ",
-                    React.createElement("input", { type: "range", value: this.props.highFreqScale.toString(), onChange: this.highFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))));
+                    lowerName),
+                React.createElement("input", { type: "range", value: this.props.maxValue.toString(), onChange: this.maxChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString(), list: this.props.heightList })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "Scale: Guide"),
+                React.createElement("input", { type: "range", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "Large variations"),
+                React.createElement("input", { type: "range", value: this.props.lowFreqScale.toString(), onChange: this.lowFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "Small variations"),
+                React.createElement("input", { type: "range", value: this.props.highFreqScale.toString(), onChange: this.highFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })));
     };
     GenerationField.prototype.minChanged = function (e) {
         var val = parseFloat(e.target.value);
@@ -2845,7 +2841,7 @@ var GenerationSettingsEditor = (function (_super) {
     GenerationSettingsEditor.prototype.render = function () {
         var height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, absMinValue: -1, absMaxValue: 1, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, absMinValue: -1, absMaxValue: 1, heightList: "heightMarks", guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
         var temperature = this.state.selectingTemperatureGuide
             ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
             : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, minValue: this.props.settings.minTemperature, maxValue: this.props.settings.maxTemperature, absMinValue: 0, absMaxValue: 1, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
@@ -2855,7 +2851,9 @@ var GenerationSettingsEditor = (function (_super) {
         return React.createElement("div", { id: "settingsRoot" },
             height,
             temperature,
-            precipitation);
+            precipitation,
+            React.createElement("datalist", { id: "heightMarks" },
+                React.createElement("option", { value: "0", label: "sea level" })));
     };
     GenerationSettingsEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, propertyName, propertyEffects) {
         if (propertyEffects === void 0) { propertyEffects = propertyName; }
@@ -3366,7 +3364,7 @@ var WorldMap = (function (_super) {
         }
     };
     WorldMap.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (prevState.activeEditor != this.state.activeEditor)
+        if (prevState.activeEditor != this.state.activeEditor && this.mapView !== null)
             this.mapView.redraw();
     };
     WorldMap.prototype.render = function () {
@@ -3375,8 +3373,7 @@ var WorldMap = (function (_super) {
             return React.createElement("div", { id: "worldRoot" });
         var mapOrSettings = this.state.showGenerationSettings
             ? React.createElement(GenerationSettingsEditor, { settings: this.state.generationSettings, settingsChanged: this.generationSettingsChanged.bind(this) })
-            : React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { if (c !== null)
-                    _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
+            : React.createElement(MapView, { map: this.state.map, scrollUI: true, renderGrid: true, ref: function (c) { return _this.mapView = c; }, editor: this.state.activeEditor, selectedLine: this.state.selectedLine, cellMouseDown: this.cellMouseDown.bind(this), cellMouseUp: this.cellMouseUp.bind(this), cellMouseEnter: this.cellMouseEnter.bind(this), cellMouseLeave: this.cellMouseLeave.bind(this) });
         if (!this.props.editable)
             return React.createElement("div", { id: "worldRoot" }, mapOrSettings);
         var activeEditor = this.state.activeEditor === undefined ? undefined : this.renderEditor(this.state.activeEditor);
@@ -3440,7 +3437,8 @@ var WorldMap = (function (_super) {
         if (this.state.map === undefined)
             return;
         this.state.map.changeSize(width, height, mode);
-        this.mapView.updateSize();
+        if (this.mapView !== null)
+            this.mapView.updateSize();
         this.mapChanged();
     };
     WorldMap.prototype.updateCellTypes = function (cellTypes) {
@@ -3460,7 +3458,7 @@ var WorldMap = (function (_super) {
         // batch all "drawing" in the one stroke into a single undo step
         if (endOfStroke)
             this.mapChanged();
-        else
+        else if (this.mapView !== null)
             this.mapView.redraw();
     };
     WorldMap.prototype.updateLocationTypes = function (types) {
@@ -3495,7 +3493,8 @@ var WorldMap = (function (_super) {
         this.setState({
             selectedLine: line,
         });
-        this.mapView.redraw();
+        if (this.mapView !== null)
+            this.mapView.redraw();
     };
     WorldMap.prototype.updateLines = function (lines) {
         this.state.map.lines = lines;
@@ -3508,7 +3507,8 @@ var WorldMap = (function (_super) {
         this.setState({
             map: this.state.map,
         });
-        this.mapView.redraw();
+        if (this.mapView !== null)
+            this.mapView.redraw();
         this.changes.recordMapChange(this.state.map);
     };
     WorldMap.prototype.generationSettingsChanged = function () {
@@ -3535,7 +3535,8 @@ var WorldMap = (function (_super) {
             map: map,
             selectedLine: selectedLine,
         });
-        this.mapView.redraw();
+        if (this.mapView !== null)
+            this.mapView.redraw();
     };
     WorldMap.prototype.selectEditor = function (editor, name) {
         this.setState({

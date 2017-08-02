@@ -115,7 +115,7 @@ $buttonHoverColor: #0af;
 }
 
 // editor tools
-#editor > form {
+form {
   & div[role="group"] {
     display: flex;
     flex-direction: row;
@@ -142,6 +142,16 @@ $buttonHoverColor: #0af;
       flex-shrink: 1;
       width: 10em;
       text-align: center;
+    }
+  }
+
+  &.genField {
+    .fieldLabel {
+      min-width: 8em;
+    }
+
+    input {
+      flex-grow: 1;
     }
   }
 }

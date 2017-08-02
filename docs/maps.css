@@ -73,23 +73,29 @@
     position: absolute;
     touch-action: none; }
 
-#editor > form div[role="group"] {
+form div[role="group"] {
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
   align-content: flex-start; }
-  #editor > form div[role="group"].vertical {
+  form div[role="group"].vertical {
     flex-direction: column; }
-    #editor > form div[role="group"].vertical > p {
+    form div[role="group"].vertical > p {
       margin-bottom: 0; }
-  #editor > form div[role="group"] > label {
+  form div[role="group"] > label {
     min-width: 4em; }
-  #editor > form div[role="group"]:not(:first-child) {
+  form div[role="group"]:not(:first-child) {
     margin-top: 1em; }
-  #editor > form div[role="group"]:not(.vertical) > input {
+  form div[role="group"]:not(.vertical) > input {
     flex-shrink: 1;
     width: 10em;
     text-align: center; }
+
+form.genField .fieldLabel {
+  min-width: 8em; }
+
+form.genField input {
+  flex-grow: 1; }
 
 #editor {
   display: flex;
