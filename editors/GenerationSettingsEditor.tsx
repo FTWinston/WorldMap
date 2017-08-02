@@ -23,17 +23,17 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
     render() {
         let height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : <GenerationField name="Height" guide={this.props.settings.heightGuide} fixedValue={this.props.settings.fixedHeight} fixedScale={this.props.settings.heightScaleFixed}
+            : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight} absMinValue={-1} absMaxValue={1}
                 guideScale={this.props.settings.heightScaleGuide} lowFreqScale={this.props.settings.heightScaleLowFreq} highFreqScale={this.props.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />;
 
         let temperature = this.state.selectingTemperatureGuide
             ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
-            : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} fixedValue={this.props.settings.fixedTemperature} fixedScale={this.props.settings.temperatureScaleFixed}
+            : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} minValue={this.props.settings.minTemperature} maxValue={this.props.settings.maxTemperature} absMinValue={0} absMaxValue={1}
                 guideScale={this.props.settings.temperatureScaleGuide} lowFreqScale={this.props.settings.temperatureScaleLowFreq} highFreqScale={this.props.settings.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />;
 
         let precipitation = this.state.selectingPrecipitationGuide
             ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
-            : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} fixedValue={this.props.settings.fixedPrecipitation} fixedScale={this.props.settings.precipitationScaleFixed}
+            : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} minValue={this.props.settings.minPrecipitation} maxValue={this.props.settings.maxPrecipitation} absMinValue={0} absMaxValue={1}
                 guideScale={this.props.settings.precipitationScaleGuide} lowFreqScale={this.props.settings.precipitationScaleLowFreq} highFreqScale={this.props.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />;
 
         return <div id="settingsRoot">
@@ -97,11 +97,11 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
         });
     }
 
-    private heightChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+    private heightChanged(minValue: number, maxValue: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         let settings = this.props.settings;
 
-        settings.fixedHeight = fixedValue;
-        settings.heightScaleFixed = fixedScale;
+        settings.minHeight = minValue;
+        settings.maxHeight = maxValue;
         settings.heightScaleGuide = guideScale;
         settings.heightScaleLowFreq = lowFreqScale;
         settings.heightScaleHighFreq = highFreqScale;
@@ -112,11 +112,11 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
             selectingHeightGuide: false,
         });
     }
-    private temperatureChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+    private temperatureChanged(minValue: number, maxValue: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         let settings = this.props.settings;
 
-        settings.fixedTemperature = fixedValue;
-        settings.temperatureScaleFixed = fixedScale;
+        settings.minTemperature = minValue;
+        settings.maxTemperature = maxValue;
         settings.temperatureScaleGuide = guideScale;
         settings.temperatureScaleLowFreq = lowFreqScale;
         settings.temperatureScaleHighFreq = highFreqScale;
@@ -127,11 +127,11 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
             selectingTemperatureGuide: false,
         });
     }
-    private precipitationChanged(fixedValue: number, fixedScale: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
+    private precipitationChanged(minValue: number, maxValue: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {
         let settings = this.props.settings;
         
-        settings.fixedPrecipitation = fixedValue;
-        settings.precipitationScaleFixed = fixedScale;
+        settings.minPrecipitation = minValue;
+        settings.maxPrecipitation = maxValue;
         settings.precipitationScaleGuide = guideScale;
         settings.precipitationScaleLowFreq = lowFreqScale;
         settings.precipitationScaleHighFreq = highFreqScale;

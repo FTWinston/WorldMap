@@ -43,7 +43,11 @@ class Random {
     }
 
     static randomIntRange(minInclusive: number, maxExclusive: number) {
-        return Math.floor(minInclusive + Math.random() * (maxExclusive - minInclusive));
+        return Math.floor(Random.randomRange(minInclusive, maxExclusive));
+    }
+
+    static randomRange(minInclusive: number, maxExclusive: number) {
+        return minInclusive + Math.random() * (maxExclusive - minInclusive);
     }
 
     private static mash() {

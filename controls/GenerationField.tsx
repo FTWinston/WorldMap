@@ -1,15 +1,17 @@
 interface IGenerationFieldProps {
     name: string,
     guide: GenerationGuide;
-    fixedValue: number;
-    fixedScale: number;
+    minValue: number;
+    maxValue: number;
+    absMinValue: number;
+    absMaxValue: number;
     guideScale: number;
     highFreqScale: number;
     lowFreqScale: number;
     showGuideSelection: () => void;
     changed: (
-        fixedValue: number,
-        fixedScale: number,
+        minValue: number,
+        maxValue: number,
         guideScale: number,
         lowFreqScale: number,
         highFreqScale: number,
@@ -28,27 +30,29 @@ class GenerationField extends React.Component<IGenerationFieldProps, {}> {
                 </div>
             </div>
             <p>Fine tune the {lowerName} by specifying a "fixed" {lowerName}, and scaling how much this, the {lowerName} guide and randomness contribute to the generated map.</p>
-            <div role="group" className="vertical"><label htmlFor="txtFixedHeight">Fixed {lowerName}</label><input type="range" id="txtFixedHeight" value={this.props.fixedValue.toString()} onChange={this.fixedChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleFixed">Scale: Fixed {lowerName}</label><input type="range" id="txtHeightScaleFixed" value={this.props.fixedScale.toString()} onChange={this.fixedScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleGuide">Scale: Guide</label><input type="range" id="txtHeightScaleGuide" value={this.props.guideScale.toString()} onChange={this.guideScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleLowFreq">Large variations</label><input type="range" id="txtHeightScaleLowFreq" value={this.props.lowFreqScale.toString()} onChange={this.lowFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group" className="vertical"><label htmlFor="txtHeightScaleHighFreq">Small variations</label><input type="range" id="txtHeightScaleHighFreq" value={this.props.highFreqScale.toString()} onChange={this.highFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group" className="vertical"><label>Min {lowerName} <input type="range" value={this.props.minValue.toString()} onChange={this.minChanged.bind(this)} step="0.01" min={this.props.absMinValue.toString()} max={this.props.absMaxValue.toString()} /></label></div>
+            <div role="group" className="vertical"><label>Max {lowerName} <input type="range" value={this.props.maxValue.toString()} onChange={this.maxChanged.bind(this)} step="0.01" min={this.props.absMinValue.toString()} max={this.props.absMaxValue.toString()} /></label></div>
+            <div role="group" className="vertical"><label>Scale: Guide <input type="range" value={this.props.guideScale.toString()} onChange={this.guideScaleChanged.bind(this)} step="0.01" min="0" max="1" /></label></div>
+            <div role="group" className="vertical"><label>Large variations <input type="range" value={this.props.lowFreqScale.toString()} onChange={this.lowFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></label></div>
+            <div role="group" className="vertical"><label>Small variations <input type="range" value={this.props.highFreqScale.toString()} onChange={this.highFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></label></div>
         </div>;
     }
 
-    private fixedChanged(e: any) {
+    private minChanged(e: any) {
+        let val = parseFloat(e.target.value);
         this.props.changed(
-            parseFloat(e.target.value),
-            this.props.fixedScale,
+            val,
+            Math.max(this.props.maxValue, val),
             this.props.guideScale,
             this.props.lowFreqScale,
             this.props.highFreqScale,
         );
     }
-    private fixedScaleChanged(e: any) {
+    private maxChanged(e: any) {
+        let val = parseFloat(e.target.value);
         this.props.changed(
-            this.props.fixedValue,
-            parseFloat(e.target.value),
+            Math.min(this.props.minValue, val),
+            val,
             this.props.guideScale,
             this.props.lowFreqScale,
             this.props.highFreqScale,
@@ -56,8 +60,8 @@ class GenerationField extends React.Component<IGenerationFieldProps, {}> {
     }
     private guideScaleChanged(e: any) {
         this.props.changed(
-            this.props.fixedValue,
-            this.props.fixedScale,
+            this.props.minValue,
+            this.props.maxValue,
             parseFloat(e.target.value),
             this.props.lowFreqScale,
             this.props.highFreqScale,
@@ -65,8 +69,8 @@ class GenerationField extends React.Component<IGenerationFieldProps, {}> {
     }
     private lowFreqScaleChanged(e: any) {
         this.props.changed(
-            this.props.fixedValue,
-            this.props.fixedScale,
+            this.props.minValue,
+            this.props.maxValue,
             this.props.guideScale,
             parseFloat(e.target.value),
             this.props.highFreqScale,
@@ -74,8 +78,8 @@ class GenerationField extends React.Component<IGenerationFieldProps, {}> {
     }
     private highFreqScaleChanged(e: any) {
         this.props.changed(
-            this.props.fixedValue,
-            this.props.fixedScale,
+            this.props.minValue,
+            this.props.maxValue,
             this.props.guideScale,
             this.props.lowFreqScale,
             parseFloat(e.target.value),

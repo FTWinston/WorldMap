@@ -4,38 +4,35 @@ class MapGenerator {
 
         let cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
         
-        let heightGuide = settings.heightGuide.generation;
+        let heightGuide = settings.heightGuide;
         let lowFreqHeightNoise = new SimplexNoise();
         let highFreqHeightNoise = new SimplexNoise();
 
-        let temperatureGuide = settings.temperatureGuide.generation;
+        let temperatureGuide = settings.temperatureGuide;
         let lowFreqTemperatureNoise = new SimplexNoise();
         let highFreqTemperatureNoise = new SimplexNoise();
         
-        let precipitationGuide = settings.precipitationGuide.generation;
+        let precipitationGuide = settings.precipitationGuide;
         let lowFreqPrecipitationNoise = new SimplexNoise();
         let highFreqPrecipitationNoise = new SimplexNoise();
 
-        let heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
+        let heightScaleTot = settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
         if (heightScaleTot == 0)
             heightScaleTot = 1;
-        let fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
         let guideHeightScale = settings.heightScaleGuide / heightScaleTot;
         let lowFreqHeightScale = settings.heightScaleLowFreq/ heightScaleTot;
         let highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
 
-        let temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
+        let temperatureScaleTot = settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
         if (temperatureScaleTot == 0)
             temperatureScaleTot = 1;
-        let fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
         let guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
         let lowFreqTemperatureScale = settings.temperatureScaleLowFreq/ temperatureScaleTot;
         let highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
 
-        let precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
+        let precipitationScaleTot = settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
         if (precipitationScaleTot == 0)
             precipitationScaleTot = 1;
-        let fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
         let guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
         let lowFreqPrecipitationScale = settings.precipitationScaleLowFreq/ precipitationScaleTot;
         let highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
@@ -47,31 +44,54 @@ class MapGenerator {
             if (cell === null)
                 continue;
 
-            let height = fixedHeightScale
-                       + highFreqHeightScale * highFreqHeightNoise.noise(cell.xPos, cell.yPos) 
-                       + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                       + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
+            let height = MapGenerator.determineValue(
+                cell.xPos, cell.yPos, maxX, maxY,
+                guideHeightScale, lowFreqHeightScale, highFreqHeightScale,
+                heightGuide, lowFreqHeightNoise, highFreqHeightNoise,
+                settings.minHeight, settings.maxHeight,
+            );
 
-            let temper = fixedTemperatureScale
-                       + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos) 
-                       + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                       + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
+            if (height <= 0) {
+                cell.cellType = CellType.empty;
+                continue; // height 0 or below is always water
+            }
 
-            let precip = fixedPrecipitationScale
-                       + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos) 
-                       + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                       + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
+            let temperature = MapGenerator.determineValue(
+                cell.xPos, cell.yPos, maxX, maxY,
+                guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale,
+                temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise,
+                settings.minTemperature, settings.maxTemperature,
+            );
+
+            let precipitation = MapGenerator.determineValue(
+                cell.xPos, cell.yPos, maxX, maxY,
+                guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale,
+                precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise,
+                settings.minPrecipitation, settings.maxPrecipitation,
+            );
 
             let nearestType = cellTypeLookup.nearest({
                 genHeight: height,
-                genTemperature: temper,
-                genPrecipitation: precip,
+                genTemperature: temperature,
+                genPrecipitation: precipitation,
             });
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
         }
     }
 
+    private static determineValue(x: number, y: number, maxX: number, maxY: number,
+        guideScale: number, lowFreqScale: number, highFreqScale: number,
+        guide: GenerationGuide, lowFreqNoise: SimplexNoise, highFreqNoise: SimplexNoise,
+        minValue: number, maxValue: number,
+    ) {
+        let value = lowFreqScale * lowFreqNoise.noise(x / 10, y / 10)
+                  + highFreqScale * highFreqNoise.noise(x, y)
+                  + guideScale * guide.generation(x, y, maxX, maxY);
+        let rawRange = lowFreqScale + highFreqScale + guideScale;
+        return minValue + (maxValue - minValue) * value / rawRange;
+    }
+    
     private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: CellType) {
         let heightDif = (a.genHeight - b.genHeight) * 5;
         let tempDif = a.genTemperature - b.genTemperature;

@@ -47,44 +47,40 @@ class CellType {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     }
 
-    public static empty = new CellType('Empty', '#ffffff',
-        -1,-1,-1,
-        1, 0, 0
+    public static empty = new CellType('Water', '#179ce6',
+        -1, 0.5, 1.0,
+        5, 0.1, 0.4,
+        'Wave (large)', '#9fe8ff', 1, 0.5
     );
 
     static createDefaults(types: CellType[]) {
-        types.push(new CellType('Water', '#179ce6',
-            0.15, 0.5, 1.0,
-            5, 0.1, 0.4,
-            'Wave (large)', '#9fe8ff', 1, 0.5
-        ));
         types.push(new CellType('Grass', '#a1e94d',
-            0.4, 0.55, 0.35,
+            0.3, 0.55, 0.35,
             2, 0.1, 0.8
         ));
         types.push(new CellType('Forest', '#189b11',
-            0.4, 0.3, 0.5,
+            0.3, 0.3, 0.5,
             8, 0.4, 0.3,
             'Tree (coniferous)', '#305b09', 4, 0.35
         ));
         types.push(new CellType('Forest Hills', '#189b11',
-            0.70, 0.3, 0.5,
+            0.6, 0.3, 0.5,
             8, 0.4, 0.3,
             'Hill', '#305b09', 1, 0.75
         ));
         types.push(new CellType('Hills', '#7bac46',
-            0.70, 0.55, 0.35,
+            0.6, 0.55, 0.35,
             10, 0.3, 0.2,
             'Hill', '#607860', 1, 0.75
         ));
         types.push(new CellType('Mountain', '#7c7c4b',
-            0.9, 0.25, 0.4,
+            0.85, 0.25, 0.4,
             10, 0.2, 0.3,
             'Mountain', '#565B42', 1, 0.8
         ));
         types.push(new CellType(
             'Desert', '#ebd178',
-            0.4, 0.8, 0,
+            0.3, 0.8, 0,
             1, 0.08, 0.7,
             'Wave (small)', '#e4c045', 3, 0.5
         ));

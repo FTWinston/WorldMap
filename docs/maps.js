@@ -313,17 +313,16 @@ var CellType = (function () {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Water', '#179ce6', 0.15, 0.5, 1.0, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5));
-        types.push(new CellType('Grass', '#a1e94d', 0.4, 0.55, 0.35, 2, 0.1, 0.8));
-        types.push(new CellType('Forest', '#189b11', 0.4, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Forest Hills', '#189b11', 0.70, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
-        types.push(new CellType('Hills', '#7bac46', 0.70, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 0.9, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 0.4, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 0.3, 0.55, 0.35, 2, 0.1, 0.8));
+        types.push(new CellType('Forest', '#189b11', 0.3, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
+        types.push(new CellType('Forest Hills', '#189b11', 0.6, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
+        types.push(new CellType('Hills', '#7bac46', 0.6, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75));
+        types.push(new CellType('Mountain', '#7c7c4b', 0.85, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
+        types.push(new CellType('Desert', '#ebd178', 0.3, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
-CellType.empty = new CellType('Empty', '#ffffff', -1, -1, -1, 1, 0, 0);
+CellType.empty = new CellType('Water', '#179ce6', -1, 0.5, 1.0, 5, 0.1, 0.4, 'Wave (large)', '#9fe8ff', 1, 0.5);
 var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
@@ -716,18 +715,18 @@ var GenerationSettings = (function () {
         this.heightGuide = Guides.scalarGuides[0],
             this.temperatureGuide = Guides.scalarGuides[3],
             this.precipitationGuide = Guides.scalarGuides[2],
-            this.fixedHeight = 0;
-        this.heightScaleFixed = 0.15;
+            this.minHeight = -0.5;
+        this.maxHeight = 1;
         this.heightScaleGuide = 1;
         this.heightScaleLowFreq = 0.40;
         this.heightScaleHighFreq = 0.15;
-        this.fixedTemperature = 0.5;
-        this.temperatureScaleFixed = 0;
+        this.minTemperature = 0;
+        this.maxTemperature = 1;
         this.temperatureScaleGuide = 0.55;
         this.temperatureScaleLowFreq = 0.1;
         this.temperatureScaleHighFreq = 0.35;
-        this.fixedPrecipitation = 0.5;
-        this.precipitationScaleFixed = 0;
+        this.minPrecipitation = 0;
+        this.maxPrecipitation = 1;
         this.precipitationScaleGuide = 0.4;
         this.precipitationScaleLowFreq = 0.5;
         this.precipitationScaleHighFreq = 0.1;
@@ -736,18 +735,18 @@ var GenerationSettings = (function () {
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            this.fixedHeight = Math.random();
-        this.heightScaleFixed = Math.random() * 0.5;
+            this.minHeight = Random.randomRange(-0.7, 0.25);
+        this.maxHeight = Random.randomRange(Math.max(this.minHeight + 0.2, 0.25), 1);
         this.heightScaleGuide = Math.random() * 0.5;
         this.heightScaleLowFreq = Math.random() * 0.5 + 0.2;
         this.heightScaleHighFreq = Math.random() * 0.25;
-        this.fixedTemperature = Math.random();
-        this.temperatureScaleFixed = Math.random() * 0.5;
+        this.minTemperature = Random.randomRange(0, 0.4);
+        this.maxTemperature = Random.randomRange(0.6, 1);
         this.temperatureScaleGuide = Math.random() * 0.5;
         this.temperatureScaleLowFreq = Math.random() * 0.5 + 0.2;
         this.temperatureScaleHighFreq = Math.random() * 0.25;
-        this.fixedPrecipitation = Math.random();
-        this.precipitationScaleFixed = Math.random() * 0.5;
+        this.minPrecipitation = Random.randomRange(0, 0.4);
+        this.maxPrecipitation = Random.randomRange(0.6, 1);
         this.precipitationScaleGuide = Math.random() * 0.5;
         this.precipitationScaleLowFreq = Math.random() * 0.5 + 0.2;
         this.precipitationScaleHighFreq = Math.random() * 0.25;
@@ -1664,39 +1663,46 @@ var GenerationField = (function (_super) {
                 lowerName,
                 " guide and randomness contribute to the generated map."),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtFixedHeight" },
-                    "Fixed ",
-                    lowerName),
-                React.createElement("input", { type: "range", id: "txtFixedHeight", value: this.props.fixedValue.toString(), onChange: this.fixedChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("label", null,
+                    "Min ",
+                    lowerName,
+                    " ",
+                    React.createElement("input", { type: "range", value: this.props.minValue.toString(), onChange: this.minChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString() }))),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleFixed" },
-                    "Scale: Fixed ",
-                    lowerName),
-                React.createElement("input", { type: "range", id: "txtHeightScaleFixed", value: this.props.fixedScale.toString(), onChange: this.fixedScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("label", null,
+                    "Max ",
+                    lowerName,
+                    " ",
+                    React.createElement("input", { type: "range", value: this.props.maxValue.toString(), onChange: this.maxChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString() }))),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleGuide" }, "Scale: Guide"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleGuide", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("label", null,
+                    "Scale: Guide ",
+                    React.createElement("input", { type: "range", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleLowFreq" }, "Large variations"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleLowFreq", value: this.props.lowFreqScale.toString(), onChange: this.lowFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+                React.createElement("label", null,
+                    "Large variations ",
+                    React.createElement("input", { type: "range", value: this.props.lowFreqScale.toString(), onChange: this.lowFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))),
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("label", { htmlFor: "txtHeightScaleHighFreq" }, "Small variations"),
-                React.createElement("input", { type: "range", id: "txtHeightScaleHighFreq", value: this.props.highFreqScale.toString(), onChange: this.highFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })));
+                React.createElement("label", null,
+                    "Small variations ",
+                    React.createElement("input", { type: "range", value: this.props.highFreqScale.toString(), onChange: this.highFreqScaleChanged.bind(this), step: "0.01", min: "0", max: "1" }))));
     };
-    GenerationField.prototype.fixedChanged = function (e) {
-        this.props.changed(parseFloat(e.target.value), this.props.fixedScale, this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
+    GenerationField.prototype.minChanged = function (e) {
+        var val = parseFloat(e.target.value);
+        this.props.changed(val, Math.max(this.props.maxValue, val), this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
     };
-    GenerationField.prototype.fixedScaleChanged = function (e) {
-        this.props.changed(this.props.fixedValue, parseFloat(e.target.value), this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
+    GenerationField.prototype.maxChanged = function (e) {
+        var val = parseFloat(e.target.value);
+        this.props.changed(Math.min(this.props.minValue, val), val, this.props.guideScale, this.props.lowFreqScale, this.props.highFreqScale);
     };
     GenerationField.prototype.guideScaleChanged = function (e) {
-        this.props.changed(this.props.fixedValue, this.props.fixedScale, parseFloat(e.target.value), this.props.lowFreqScale, this.props.highFreqScale);
+        this.props.changed(this.props.minValue, this.props.maxValue, parseFloat(e.target.value), this.props.lowFreqScale, this.props.highFreqScale);
     };
     GenerationField.prototype.lowFreqScaleChanged = function (e) {
-        this.props.changed(this.props.fixedValue, this.props.fixedScale, this.props.guideScale, parseFloat(e.target.value), this.props.highFreqScale);
+        this.props.changed(this.props.minValue, this.props.maxValue, this.props.guideScale, parseFloat(e.target.value), this.props.highFreqScale);
     };
     GenerationField.prototype.highFreqScaleChanged = function (e) {
-        this.props.changed(this.props.fixedValue, this.props.fixedScale, this.props.guideScale, this.props.lowFreqScale, parseFloat(e.target.value));
+        this.props.changed(this.props.minValue, this.props.maxValue, this.props.guideScale, this.props.lowFreqScale, parseFloat(e.target.value));
     };
     return GenerationField;
 }(React.Component));
@@ -2839,13 +2845,13 @@ var GenerationSettingsEditor = (function (_super) {
     GenerationSettingsEditor.prototype.render = function () {
         var height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, fixedValue: this.props.settings.fixedHeight, fixedScale: this.props.settings.heightScaleFixed, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, absMinValue: -1, absMaxValue: 1, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
         var temperature = this.state.selectingTemperatureGuide
             ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
-            : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, fixedValue: this.props.settings.fixedTemperature, fixedScale: this.props.settings.temperatureScaleFixed, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, minValue: this.props.settings.minTemperature, maxValue: this.props.settings.maxTemperature, absMinValue: 0, absMaxValue: 1, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
         var precipitation = this.state.selectingPrecipitationGuide
             ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
-            : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, fixedValue: this.props.settings.fixedPrecipitation, fixedScale: this.props.settings.precipitationScaleFixed, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, minValue: this.props.settings.minPrecipitation, maxValue: this.props.settings.maxPrecipitation, absMinValue: 0, absMaxValue: 1, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
         return React.createElement("div", { id: "settingsRoot" },
             height,
             temperature,
@@ -2898,10 +2904,10 @@ var GenerationSettingsEditor = (function (_super) {
             selectingPrecipitationGuide: false,
         });
     };
-    GenerationSettingsEditor.prototype.heightChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+    GenerationSettingsEditor.prototype.heightChanged = function (minValue, maxValue, guideScale, lowFreqScale, highFreqScale) {
         var settings = this.props.settings;
-        settings.fixedHeight = fixedValue;
-        settings.heightScaleFixed = fixedScale;
+        settings.minHeight = minValue;
+        settings.maxHeight = maxValue;
         settings.heightScaleGuide = guideScale;
         settings.heightScaleLowFreq = lowFreqScale;
         settings.heightScaleHighFreq = highFreqScale;
@@ -2910,10 +2916,10 @@ var GenerationSettingsEditor = (function (_super) {
             selectingHeightGuide: false,
         });
     };
-    GenerationSettingsEditor.prototype.temperatureChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+    GenerationSettingsEditor.prototype.temperatureChanged = function (minValue, maxValue, guideScale, lowFreqScale, highFreqScale) {
         var settings = this.props.settings;
-        settings.fixedTemperature = fixedValue;
-        settings.temperatureScaleFixed = fixedScale;
+        settings.minTemperature = minValue;
+        settings.maxTemperature = maxValue;
         settings.temperatureScaleGuide = guideScale;
         settings.temperatureScaleLowFreq = lowFreqScale;
         settings.temperatureScaleHighFreq = highFreqScale;
@@ -2922,10 +2928,10 @@ var GenerationSettingsEditor = (function (_super) {
             selectingTemperatureGuide: false,
         });
     };
-    GenerationSettingsEditor.prototype.precipitationChanged = function (fixedValue, fixedScale, guideScale, lowFreqScale, highFreqScale) {
+    GenerationSettingsEditor.prototype.precipitationChanged = function (minValue, maxValue, guideScale, lowFreqScale, highFreqScale) {
         var settings = this.props.settings;
-        settings.fixedPrecipitation = fixedValue;
-        settings.precipitationScaleFixed = fixedScale;
+        settings.minPrecipitation = minValue;
+        settings.maxPrecipitation = maxValue;
         settings.precipitationScaleGuide = guideScale;
         settings.precipitationScaleLowFreq = lowFreqScale;
         settings.precipitationScaleHighFreq = highFreqScale;
@@ -3039,7 +3045,10 @@ var Random = (function () {
         return min + this.next() * (max - min);
     };
     Random.randomIntRange = function (minInclusive, maxExclusive) {
-        return Math.floor(minInclusive + Math.random() * (maxExclusive - minInclusive));
+        return Math.floor(Random.randomRange(minInclusive, maxExclusive));
+    };
+    Random.randomRange = function (minInclusive, maxExclusive) {
+        return minInclusive + Math.random() * (maxExclusive - minInclusive);
     };
     Random.mash = function () {
         var n = 0xefc8249d;
@@ -3248,33 +3257,30 @@ var MapGenerator = (function () {
     MapGenerator.generate = function (map, settings) {
         // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
         var cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
-        var heightGuide = settings.heightGuide.generation;
+        var heightGuide = settings.heightGuide;
         var lowFreqHeightNoise = new SimplexNoise();
         var highFreqHeightNoise = new SimplexNoise();
-        var temperatureGuide = settings.temperatureGuide.generation;
+        var temperatureGuide = settings.temperatureGuide;
         var lowFreqTemperatureNoise = new SimplexNoise();
         var highFreqTemperatureNoise = new SimplexNoise();
-        var precipitationGuide = settings.precipitationGuide.generation;
+        var precipitationGuide = settings.precipitationGuide;
         var lowFreqPrecipitationNoise = new SimplexNoise();
         var highFreqPrecipitationNoise = new SimplexNoise();
-        var heightScaleTot = settings.heightScaleFixed + settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
+        var heightScaleTot = settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
         if (heightScaleTot == 0)
             heightScaleTot = 1;
-        var fixedHeightScale = settings.fixedHeight * settings.heightScaleFixed / heightScaleTot;
         var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
         var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
         var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
-        var temperatureScaleTot = settings.temperatureScaleFixed + settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
+        var temperatureScaleTot = settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
         if (temperatureScaleTot == 0)
             temperatureScaleTot = 1;
-        var fixedTemperatureScale = settings.fixedTemperature * settings.temperatureScaleFixed / temperatureScaleTot;
         var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
         var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
         var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
-        var precipitationScaleTot = settings.precipitationScaleFixed + settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
+        var precipitationScaleTot = settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
         if (precipitationScaleTot == 0)
             precipitationScaleTot = 1;
-        var fixedPrecipitationScale = settings.fixedPrecipitation * settings.precipitationScaleFixed / precipitationScaleTot;
         var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
         var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
         var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
@@ -3284,26 +3290,28 @@ var MapGenerator = (function () {
             var cell = _a[_i];
             if (cell === null)
                 continue;
-            var height = fixedHeightScale
-                + highFreqHeightScale * highFreqHeightNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqHeightScale * lowFreqHeightNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guideHeightScale * heightGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var temper = fixedTemperatureScale
-                + highFreqTemperatureScale * highFreqTemperatureNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqTemperatureScale * lowFreqTemperatureNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guideTemperatureScale * temperatureGuide(cell.xPos, cell.yPos, maxX, maxY);
-            var precip = fixedPrecipitationScale
-                + highFreqPrecipitationScale * highFreqPrecipitationNoise.noise(cell.xPos, cell.yPos)
-                + lowFreqPrecipitationScale * lowFreqPrecipitationNoise.noise(cell.xPos / 10, cell.yPos / 10)
-                + guidePrecipitationScale * precipitationGuide(cell.xPos, cell.yPos, maxX, maxY);
+            var height = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
+            if (height <= 0) {
+                cell.cellType = CellType.empty;
+                continue; // height 0 or below is always water
+            }
+            var temperature = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
+            var precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
             var nearestType = cellTypeLookup.nearest({
                 genHeight: height,
-                genTemperature: temper,
-                genPrecipitation: precip,
+                genTemperature: temperature,
+                genPrecipitation: precipitation,
             });
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
         }
+    };
+    MapGenerator.determineValue = function (x, y, maxX, maxY, guideScale, lowFreqScale, highFreqScale, guide, lowFreqNoise, highFreqNoise, minValue, maxValue) {
+        var value = lowFreqScale * lowFreqNoise.noise(x / 10, y / 10)
+            + highFreqScale * highFreqNoise.noise(x, y)
+            + guideScale * guide.generation(x, y, maxX, maxY);
+        var rawRange = lowFreqScale + highFreqScale + guideScale;
+        return minValue + (maxValue - minValue) * value / rawRange;
     };
     MapGenerator.cellTypeDistanceMetric = function (a, b) {
         var heightDif = (a.genHeight - b.genHeight) * 5;
