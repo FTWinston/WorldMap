@@ -53,6 +53,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     private mapView: MapView | null;
     componentDidMount() {
         SaveLoad.loadData(this.initializeMap.bind(this));
+        MapGenerator.constructCellTypeLookup(this.state.map.cellTypes);
     }
     initializeMap(dataJson: string) {
         let map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);    
@@ -171,6 +172,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
 
         this.state.map.cellTypes = cellTypes;
         this.mapChanged();
+        MapGenerator.constructCellTypeLookup(cellTypes);
     }
     private terrainEdited(endOfStroke: boolean = true) {
         // batch all "drawing" in the one stroke into a single undo step

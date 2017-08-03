@@ -72,19 +72,11 @@ class MapGenerator {
         // TODO: add lines, locations
 
         // allocate types to cells based on their generation properties
-        let cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
         for (let cell of map.cells) {
             if (cell === null)
                 continue;
 
-            if (cell.height <= 0) {
-                cell.cellType = CellType.empty;
-                continue; // height 0 or below is always water
-            }
-
-            let nearestType = cellTypeLookup.nearest(cell);
-            if (nearestType !== undefined)
-                cell.cellType = nearestType;
+            MapGenerator.updateCellType(cell);
         }
     }
 
@@ -100,6 +92,17 @@ class MapGenerator {
         return minValue + (maxValue - minValue) * value / rawRange;
     }
 
+    private static cellTypeLookup: kdTree<CellType, MapCell>;
+
+    static updateCellType(cell: MapCell) {
+        let type = cell.height <= 0
+            ? CellType.empty
+            : MapGenerator.cellTypeLookup.nearest(cell);
+
+        if (type !== undefined)
+            cell.cellType = type;
+    }
+
     private static cellTypeDistanceMetric(a: MapCell, b: CellType) {
         let heightDif = (a.height - b.height) * 5;
         let tempDif = a.temperature - b.temperature;
@@ -111,7 +114,7 @@ class MapGenerator {
             precDif * precDif
         );
     }
-    private static constructCellTypeTree(cellTypes: CellType[]) {
-        return new kdTree<CellType, MapCell>(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+    static constructCellTypeLookup(cellTypes: CellType[]) {
+        MapGenerator.cellTypeLookup = new kdTree<CellType, MapCell>(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     }
 }

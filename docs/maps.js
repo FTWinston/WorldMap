@@ -924,22 +924,20 @@ var ChangeHistory = (function (_super) {
         this.changes.push(data);
     };
     ChangeHistory.prototype.undo = function () {
-        if (!this.canUndo())
-            return null;
-        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex - 1]));
-        this.setState(function (prevState) {
-            return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1,
-            };
-        });
+        if (this.canUndo())
+            this.restoreSavedChange(this.state.lastAppliedChangeIndex - 1);
     };
     ChangeHistory.prototype.redo = function () {
-        if (!this.canRedo())
-            return;
-        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex + 1]));
+        if (this.canRedo())
+            this.restoreSavedChange(this.state.lastAppliedChangeIndex + 1);
+    };
+    ChangeHistory.prototype.restoreSavedChange = function (changeIndex) {
+        var map = MapData.loadFromJSON(this.changes[changeIndex]);
+        this.props.updateMap(map);
+        MapGenerator.constructCellTypeLookup(map.cellTypes);
         this.setState(function (prevState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
+                lastAppliedChangeIndex: changeIndex,
             };
         });
     };
@@ -2045,6 +2043,9 @@ var TerrainEditor = (function (_super) {
             isEditingTerrainType: false,
             isDrawingOnMap: false,
             selectedTerrainType: props.cellTypes[0],
+            editorMode: 0 /* CellTypes */,
+            selectedTerrainProperty: 0 /* Height */,
+            selectedTerrainAdjustment: 1,
         };
         return _this;
     }
@@ -2067,20 +2068,51 @@ var TerrainEditor = (function (_super) {
         if (this.state.isEditingTerrainType)
             return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
         var that = this;
-        return React.createElement("form", null,
-            React.createElement("p", null, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
-            React.createElement("div", { className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
+        var propertyAdjustmentScale = 0.1;
+        var editorPallete = this.state.editorMode == 0 /* CellTypes */ ? [
+            React.createElement("p", { key: "prompt" }, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
+            React.createElement("div", { key: "palette", className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
                 var classes = type == that.state.selectedTerrainType ? 'selected' : undefined;
                 return React.createElement("div", { key: id.toString(), className: classes, style: { 'backgroundColor': type.color }, onClick: that.selectTerrainType.bind(that, type), onDoubleClick: that.showTerrainEdit.bind(that, type) }, type.name);
             })),
+            React.createElement("div", { key: "actions", role: "group", className: "vertical" },
+                React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type"))
+        ] : [
+            React.createElement("p", { key: "prompt" }, "Adjust properties of the terrain by drawing on the map. Cells will change their type to keep up to date with their properties."),
+            React.createElement("div", { key: "palette", className: "palleteList" },
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 0 /* Height */ && this.state.selectedTerrainAdjustment == propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 0 /* Height */, propertyAdjustmentScale) }, "Increase height"),
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 0 /* Height */ && this.state.selectedTerrainAdjustment == -propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 0 /* Height */, -propertyAdjustmentScale) }, "Decrease height"),
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 1 /* Temperature */ && this.state.selectedTerrainAdjustment == propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 1 /* Temperature */, propertyAdjustmentScale) }, "Increase temperature"),
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 1 /* Temperature */ && this.state.selectedTerrainAdjustment == -propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 1 /* Temperature */, -propertyAdjustmentScale) }, "Decrease temperature"),
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 2 /* Precipitation */ && this.state.selectedTerrainAdjustment == propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 2 /* Precipitation */, propertyAdjustmentScale) }, "Increase precipitation"),
+                React.createElement("div", { className: this.state.selectedTerrainProperty == 2 /* Precipitation */ && this.state.selectedTerrainAdjustment == -propertyAdjustmentScale ? 'selected' : undefined, onClick: that.selectTerrainProperties.bind(that, 2 /* Precipitation */, -propertyAdjustmentScale) }, "Decrease precipitation")),
+        ];
+        return React.createElement("form", null,
             React.createElement("div", { role: "group", className: "vertical" },
-                React.createElement("button", { type: "button", onClick: this.showTerrainEdit.bind(this, undefined) }, "Add new type")));
+                React.createElement("label", null,
+                    React.createElement("input", { type: "radio", name: "drawMode", checked: this.state.editorMode == 0 /* CellTypes */, onChange: this.setEditorMode.bind(this, 0 /* CellTypes */) }),
+                    " Set cell types"),
+                React.createElement("label", null,
+                    React.createElement("input", { type: "radio", name: "drawMode", checked: this.state.editorMode == 1 /* TerrainProperties */, onChange: this.setEditorMode.bind(this, 1 /* TerrainProperties */) }),
+                    " Adjust terrain properties")),
+            editorPallete);
+    };
+    TerrainEditor.prototype.setEditorMode = function (mode) {
+        this.setState({
+            editorMode: mode,
+        });
     };
     TerrainEditor.prototype.selectTerrainType = function (type) {
         this.setState({
             isEditingTerrainType: false,
             isDrawingOnMap: false,
             selectedTerrainType: type,
+        });
+    };
+    TerrainEditor.prototype.selectTerrainProperties = function (property, adjustment) {
+        this.setState({
+            selectedTerrainProperty: property,
+            selectedTerrainAdjustment: adjustment,
         });
     };
     TerrainEditor.prototype.showTerrainEdit = function (type) {
@@ -2103,7 +2135,7 @@ var TerrainEditor = (function (_super) {
         this.setState({
             isDrawingOnMap: true,
         });
-        cell.cellType = this.state.selectedTerrainType;
+        this.drawOnCell(cell);
         this.props.hasDrawn(false);
     };
     TerrainEditor.prototype.mouseUp = function (cell) {
@@ -2116,8 +2148,28 @@ var TerrainEditor = (function (_super) {
     TerrainEditor.prototype.mouseEnter = function (cell) {
         if (!this.state.isDrawingOnMap || this.state.selectedTerrainType === undefined)
             return;
-        cell.cellType = this.state.selectedTerrainType;
+        this.drawOnCell(cell);
         this.props.hasDrawn(false);
+    };
+    TerrainEditor.prototype.drawOnCell = function (cell) {
+        if (this.state.editorMode == 0 /* CellTypes */) {
+            if (this.state.selectedTerrainType !== undefined)
+                cell.cellType = this.state.selectedTerrainType;
+        }
+        else {
+            switch (this.state.selectedTerrainProperty) {
+                case 0 /* Height */:
+                    cell.height = Math.min(1, Math.max(-1, cell.height + this.state.selectedTerrainAdjustment));
+                    break;
+                case 1 /* Temperature */:
+                    cell.temperature = Math.min(1, Math.max(0, cell.temperature + this.state.selectedTerrainAdjustment));
+                    break;
+                case 2 /* Precipitation */:
+                    cell.precipitation = Math.min(1, Math.max(0, cell.precipitation + this.state.selectedTerrainAdjustment));
+                    break;
+            }
+            MapGenerator.updateCellType(cell);
+        }
     };
     TerrainEditor.prototype.replacingMap = function (map) {
         var cellType;
@@ -3299,18 +3351,11 @@ var MapGenerator = (function () {
         // TODO: calculate wind, use that to modify precipitation and temperature
         // TODO: add lines, locations
         // allocate types to cells based on their generation properties
-        var cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
         for (var _b = 0, _c = map.cells; _b < _c.length; _b++) {
             var cell = _c[_b];
             if (cell === null)
                 continue;
-            if (cell.height <= 0) {
-                cell.cellType = CellType.empty;
-                continue; // height 0 or below is always water
-            }
-            var nearestType = cellTypeLookup.nearest(cell);
-            if (nearestType !== undefined)
-                cell.cellType = nearestType;
+            MapGenerator.updateCellType(cell);
         }
     };
     MapGenerator.determineValue = function (x, y, maxX, maxY, guideScale, lowFreqScale, highFreqScale, guide, lowFreqNoise, highFreqNoise, minValue, maxValue) {
@@ -3320,6 +3365,13 @@ var MapGenerator = (function () {
         var rawRange = lowFreqScale + highFreqScale + guideScale;
         return minValue + (maxValue - minValue) * value / rawRange;
     };
+    MapGenerator.updateCellType = function (cell) {
+        var type = cell.height <= 0
+            ? CellType.empty
+            : MapGenerator.cellTypeLookup.nearest(cell);
+        if (type !== undefined)
+            cell.cellType = type;
+    };
     MapGenerator.cellTypeDistanceMetric = function (a, b) {
         var heightDif = (a.height - b.height) * 5;
         var tempDif = a.temperature - b.temperature;
@@ -3328,8 +3380,8 @@ var MapGenerator = (function () {
             tempDif * tempDif +
             precDif * precDif);
     };
-    MapGenerator.constructCellTypeTree = function (cellTypes) {
-        return new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+    MapGenerator.constructCellTypeLookup = function (cellTypes) {
+        MapGenerator.cellTypeLookup = new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     };
     return MapGenerator;
 }());
@@ -3358,6 +3410,7 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.componentDidMount = function () {
         SaveLoad.loadData(this.initializeMap.bind(this));
+        MapGenerator.constructCellTypeLookup(this.state.map.cellTypes);
     };
     WorldMap.prototype.initializeMap = function (dataJson) {
         var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
@@ -3461,6 +3514,7 @@ var WorldMap = (function (_super) {
         }
         this.state.map.cellTypes = cellTypes;
         this.mapChanged();
+        MapGenerator.constructCellTypeLookup(cellTypes);
     };
     WorldMap.prototype.terrainEdited = function (endOfStroke) {
         if (endOfStroke === void 0) { endOfStroke = true; }

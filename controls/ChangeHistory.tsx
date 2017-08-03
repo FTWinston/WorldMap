@@ -93,26 +93,21 @@ class ChangeHistory extends React.Component<IChangeHistoryProps, IChangeHistoryS
         this.changes.push(data);
     }
     undo() {
-        if (!this.canUndo())
-            return null;
-        
-        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex - 1]));
-        
-        this.setState(function (prevState) {
-            return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex - 1,
-            }
-        });
+        if (this.canUndo())
+            this.restoreSavedChange(this.state.lastAppliedChangeIndex - 1);
     }
     redo() {
-        if (!this.canRedo())
-            return;
+        if (this.canRedo())
+            this.restoreSavedChange(this.state.lastAppliedChangeIndex + 1);
+    }
+    private restoreSavedChange(changeIndex: number) {
+        let map = MapData.loadFromJSON(this.changes[changeIndex]);
+        this.props.updateMap(map);
+        MapGenerator.constructCellTypeLookup(map.cellTypes);
         
-        this.props.updateMap(MapData.loadFromJSON(this.changes[this.state.lastAppliedChangeIndex + 1]));
-
         this.setState(function (prevState) {
             return {
-                lastAppliedChangeIndex: prevState.lastAppliedChangeIndex + 1,
+                lastAppliedChangeIndex: changeIndex,
             }
         });
     }
