@@ -7,12 +7,6 @@ interface IGenerationEditorProps {
     showSettings: (show: boolean) => void;
 }
 
-interface ICellTypeCoordinate {
-    genHeight: number,
-    genTemperature: number,
-    genPrecipitation: number,
-}
-
 class GenerationEditor extends React.Component<IGenerationEditorProps, {}> implements IMapEditor {
     render() {
         let showHide = this.props.showingSettings

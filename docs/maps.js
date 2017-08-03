@@ -268,12 +268,12 @@ var MapData = (function () {
 MapData.packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
 MapData.packedHeightRatio = 1.5;
 var CellType = (function () {
-    function CellType(name, color, genHeight, genTemperature, genPrecipitation, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
+    function CellType(name, color, height, temperature, precipitation, noiseScale, noiseIntensity, noiseDensity, detail, detailColor, detailNumberPerCell, detailSize) {
         this.name = name;
         this.color = color;
-        this.genHeight = genHeight;
-        this.genTemperature = genTemperature;
-        this.genPrecipitation = genPrecipitation;
+        this.height = height;
+        this.temperature = temperature;
+        this.precipitation = precipitation;
         this.noiseScale = noiseScale;
         this.noiseIntensity = noiseIntensity;
         this.noiseDensity = noiseDensity;
@@ -327,6 +327,9 @@ var MapCell = (function () {
     function MapCell(map, cellType) {
         this.map = map;
         this.cellType = cellType;
+        this.height = cellType.height;
+        this.temperature = cellType.temperature;
+        this.precipitation = cellType.precipitation;
     }
     MapCell.addDetail = function (pattern) {
         MapCell.details[pattern.name] = pattern;
@@ -1857,9 +1860,9 @@ var CellTypeEditor = (function (_super) {
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
-                height: this.props.editingType.genHeight,
-                temperature: this.props.editingType.genTemperature,
-                precipitation: this.props.editingType.genPrecipitation,
+                height: this.props.editingType.height,
+                temperature: this.props.editingType.temperature,
+                precipitation: this.props.editingType.precipitation,
                 noiseScale: this.props.editingType.noiseScale,
                 noiseIntensity: this.props.editingType.noiseIntensity,
                 noiseDensity: this.props.editingType.noiseDensity,
@@ -2007,9 +2010,9 @@ var CellTypeEditor = (function (_super) {
         else {
             editType.name = name;
             editType.color = color;
-            editType.genHeight = this.state.height;
-            editType.genTemperature = this.state.temperature;
-            editType.genPrecipitation = this.state.precipitation;
+            editType.height = this.state.height;
+            editType.temperature = this.state.temperature;
+            editType.precipitation = this.state.precipitation;
             editType.noiseScale = this.state.noiseScale;
             editType.noiseIntensity = this.state.noiseIntensity;
             editType.noiseDensity = this.state.noiseDensity;
@@ -3254,7 +3257,6 @@ var MapGenerator = (function () {
     }
     MapGenerator.generate = function (map, settings) {
         // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
-        var cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
         var heightGuide = settings.heightGuide;
         var lowFreqHeightNoise = new SimplexNoise();
         var highFreqHeightNoise = new SimplexNoise();
@@ -3284,22 +3286,29 @@ var MapGenerator = (function () {
         var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
         var maxX = map.width * MapData.packedWidthRatio;
         var maxY = map.height * MapData.packedHeightRatio;
+        // allocate height / temperature / precipitation generation properties to each cell
         for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
                 continue;
-            var height = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
-            if (height <= 0) {
+            cell.height = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
+            cell.temperature = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
+            cell.precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
+            // don't allocate a cell type right away, as wind, lines and locations may change these properties
+        }
+        // TODO: calculate wind, use that to modify precipitation and temperature
+        // TODO: add lines, locations
+        // allocate types to cells based on their generation properties
+        var cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
+        for (var _b = 0, _c = map.cells; _b < _c.length; _b++) {
+            var cell = _c[_b];
+            if (cell === null)
+                continue;
+            if (cell.height <= 0) {
                 cell.cellType = CellType.empty;
                 continue; // height 0 or below is always water
             }
-            var temperature = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
-            var precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
-            var nearestType = cellTypeLookup.nearest({
-                genHeight: height,
-                genTemperature: temperature,
-                genPrecipitation: precipitation,
-            });
+            var nearestType = cellTypeLookup.nearest(cell);
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
         }
@@ -3312,15 +3321,15 @@ var MapGenerator = (function () {
         return minValue + (maxValue - minValue) * value / rawRange;
     };
     MapGenerator.cellTypeDistanceMetric = function (a, b) {
-        var heightDif = (a.genHeight - b.genHeight) * 5;
-        var tempDif = a.genTemperature - b.genTemperature;
-        var precDif = a.genPrecipitation - b.genPrecipitation;
+        var heightDif = (a.height - b.height) * 5;
+        var tempDif = a.temperature - b.temperature;
+        var precDif = a.precipitation - b.precipitation;
         return Math.sqrt(heightDif * heightDif +
             tempDif * tempDif +
             precDif * precDif);
     };
     MapGenerator.constructCellTypeTree = function (cellTypes) {
-        return new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+        return new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     };
     return MapGenerator;
 }());

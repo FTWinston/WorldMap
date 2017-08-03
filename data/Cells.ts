@@ -5,7 +5,7 @@ interface ICellDetail {
 
 class CellType {
     constructor(public name: string, public color: string,
-                public genHeight: number, public genTemperature: number, public genPrecipitation: number,
+                public height: number, public temperature: number, public precipitation: number,
                 public noiseScale: number, public noiseIntensity: number, public noiseDensity: number,
                 public detail?: string, public detailColor?: string, public detailNumberPerCell?: number, public detailSize?: number) {
         this.updateTexture();
@@ -92,8 +92,16 @@ class MapCell {
     col: number;
     xPos: number;
     yPos: number;
+
+    height: number;
+    temperature: number;
+    precipitation: number;
     
-    constructor(readonly map: MapData, public cellType: CellType) {}
+    constructor(readonly map: MapData, public cellType: CellType) {
+        this.height = cellType.height;
+        this.temperature = cellType.temperature;
+        this.precipitation = cellType.precipitation;
+    }
 
     static details: {[key:string]:ICellDetail} = {};
 

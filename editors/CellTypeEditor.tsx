@@ -40,9 +40,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
             this.setState({
                 name: this.props.editingType.name,
                 color: this.props.editingType.color,
-                height: this.props.editingType.genHeight,
-                temperature: this.props.editingType.genTemperature,
-                precipitation: this.props.editingType.genPrecipitation,
+                height: this.props.editingType.height,
+                temperature: this.props.editingType.temperature,
+                precipitation: this.props.editingType.precipitation,
                 noiseScale: this.props.editingType.noiseScale,
                 noiseIntensity: this.props.editingType.noiseIntensity,
                 noiseDensity: this.props.editingType.noiseDensity,
@@ -179,9 +179,9 @@ class CellTypeEditor extends React.Component<ICellTypeEditorProps, ICellTypeEdit
         else {
             editType.name = name;
             editType.color = color;
-            editType.genHeight = this.state.height;
-            editType.genTemperature = this.state.temperature;
-            editType.genPrecipitation = this.state.precipitation;
+            editType.height = this.state.height;
+            editType.temperature = this.state.temperature;
+            editType.precipitation = this.state.precipitation;
             editType.noiseScale = this.state.noiseScale;
             editType.noiseIntensity = this.state.noiseIntensity;
             editType.noiseDensity = this.state.noiseDensity;

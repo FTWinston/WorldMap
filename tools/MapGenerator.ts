@@ -2,8 +2,6 @@ class MapGenerator {
     public static generate(map: MapData, settings: GenerationSettings) {
         // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
 
-        let cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
-        
         let heightGuide = settings.heightGuide;
         let lowFreqHeightNoise = new SimplexNoise();
         let highFreqHeightNoise = new SimplexNoise();
@@ -40,41 +38,51 @@ class MapGenerator {
         let maxX = map.width * MapData.packedWidthRatio;
         let maxY = map.height * MapData.packedHeightRatio;
 
+        // allocate height / temperature / precipitation generation properties to each cell
         for (let cell of map.cells) {
             if (cell === null)
                 continue;
 
-            let height = MapGenerator.determineValue(
+            cell.height = MapGenerator.determineValue(
                 cell.xPos, cell.yPos, maxX, maxY,
                 guideHeightScale, lowFreqHeightScale, highFreqHeightScale,
                 heightGuide, lowFreqHeightNoise, highFreqHeightNoise,
                 settings.minHeight, settings.maxHeight,
             );
 
-            if (height <= 0) {
-                cell.cellType = CellType.empty;
-                continue; // height 0 or below is always water
-            }
-
-            let temperature = MapGenerator.determineValue(
+            cell.temperature = MapGenerator.determineValue(
                 cell.xPos, cell.yPos, maxX, maxY,
                 guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale,
                 temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise,
                 settings.minTemperature, settings.maxTemperature,
             );
 
-            let precipitation = MapGenerator.determineValue(
+            cell.precipitation = MapGenerator.determineValue(
                 cell.xPos, cell.yPos, maxX, maxY,
                 guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale,
                 precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise,
                 settings.minPrecipitation, settings.maxPrecipitation,
             );
 
-            let nearestType = cellTypeLookup.nearest({
-                genHeight: height,
-                genTemperature: temperature,
-                genPrecipitation: precipitation,
-            });
+            // don't allocate a cell type right away, as wind, lines and locations may change these properties
+        }
+        
+        // TODO: calculate wind, use that to modify precipitation and temperature
+
+        // TODO: add lines, locations
+
+        // allocate types to cells based on their generation properties
+        let cellTypeLookup = MapGenerator.constructCellTypeTree(map.cellTypes);
+        for (let cell of map.cells) {
+            if (cell === null)
+                continue;
+
+            if (cell.height <= 0) {
+                cell.cellType = CellType.empty;
+                continue; // height 0 or below is always water
+            }
+
+            let nearestType = cellTypeLookup.nearest(cell);
             if (nearestType !== undefined)
                 cell.cellType = nearestType;
         }
@@ -91,11 +99,11 @@ class MapGenerator {
         let rawRange = lowFreqScale + highFreqScale + guideScale;
         return minValue + (maxValue - minValue) * value / rawRange;
     }
-    
-    private static cellTypeDistanceMetric(a: ICellTypeCoordinate, b: CellType) {
-        let heightDif = (a.genHeight - b.genHeight) * 5;
-        let tempDif = a.genTemperature - b.genTemperature;
-        let precDif = a.genPrecipitation - b.genPrecipitation;
+
+    private static cellTypeDistanceMetric(a: MapCell, b: CellType) {
+        let heightDif = (a.height - b.height) * 5;
+        let tempDif = a.temperature - b.temperature;
+        let precDif = a.precipitation - b.precipitation;
 
         return Math.sqrt(
             heightDif * heightDif +
@@ -104,6 +112,6 @@ class MapGenerator {
         );
     }
     private static constructCellTypeTree(cellTypes: CellType[]) {
-        return new kdTree<CellType, ICellTypeCoordinate>(cellTypes, MapGenerator.cellTypeDistanceMetric, ['genHeight', 'genTemperature', 'genPrecipitation']);
+        return new kdTree<CellType, MapCell>(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     }
 }

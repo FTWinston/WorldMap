@@ -9,7 +9,7 @@ class kdNode<TPoint> {
     right?: kdNode<TPoint>;
 }
 
-class kdTree<TPoint extends TCoord, TCoord> {
+class kdTree<TPoint, TCoord> {
     constructor(public points: TPoint[], public distanceMetric: (from: TCoord, to: TPoint) => number, public dimensions: string[]) {
         this.root = this.buildTree(points, 0) as kdNode<TPoint>;
     }
