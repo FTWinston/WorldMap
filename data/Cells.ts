@@ -103,6 +103,24 @@ class MapCell {
         this.precipitation = cellType.precipitation;
     }
 
+    static orthogonalDirections = [
+        {dCol: +1, dRow: 0}, {dCol: +1, dRow: -1}, {dCol: 0, dRow: -1},
+        {dCol: -1, dRow: 0}, {dCol: -1, dRow: +1}, {dCol: 0, dRow: +1},
+    ];
+
+    static diagonalDirections = [
+        {dCol: +2, dRow: -1}, {dCol: +1, dRow: +1}, {dCol: -1, dRow: +2},
+        {dCol: -2, dRow: +1}, {dCol: -1, dRow: -1}, {dCol: +1, dRow: -2},
+    ];
+
+    distanceTo(other: MapCell) {
+        return (
+            Math.abs(this.col - other.col) 
+          + Math.abs(this.col + this.row - other.col - other.row)
+          + Math.abs(this.row - other.row)
+        ) / 2
+    }
+
     static details: {[key:string]:ICellDetail} = {};
 
     static addDetail(pattern: ICellDetail) {

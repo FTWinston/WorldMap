@@ -67,6 +67,8 @@ class MapGenerator {
             // don't allocate a cell type right away, as wind, lines and locations may change these properties
         }
         
+        // TODO: erosion, mountain ranges, etc
+
         // TODO: calculate wind, use that to modify precipitation and temperature
 
         // TODO: add lines, locations

@@ -45,6 +45,20 @@ var MapData = (function () {
     MapData.prototype.getCellIndex = function (row, col) {
         return col + row * this.underlyingWidth;
     };
+    MapData.prototype.cellsInRange = function (center, distance) {
+        var results = [];
+        var minCol = Math.max(center.col - distance, 0), maxCol = Math.min(center.col + distance, this.underlyingWidth);
+        for (var col = minCol; col <= maxCol; col++) {
+            var minRow = Math.max(Math.max(center.row - distance, center.row - col - distance), 0), maxRow = Math.min(Math.min(center.row + distance, center.row - col + distance), this.height);
+            for (var row = minRow; row <= maxRow; row++) {
+                var index = this.getCellIndex(row, col);
+                var cell = this.cells[index];
+                if (cell !== null)
+                    results.push(cell);
+            }
+        }
+        return results;
+    };
     MapData.prototype.changeSize = function (newWidth, newHeight, mode) {
         var deltaWidth = newWidth - this.width;
         var deltaHeight = newHeight - this.height;
@@ -331,11 +345,24 @@ var MapCell = (function () {
         this.temperature = cellType.temperature;
         this.precipitation = cellType.precipitation;
     }
+    MapCell.prototype.distanceTo = function (other) {
+        return (Math.abs(this.col - other.col)
+            + Math.abs(this.col + this.row - other.col - other.row)
+            + Math.abs(this.row - other.row)) / 2;
+    };
     MapCell.addDetail = function (pattern) {
         MapCell.details[pattern.name] = pattern;
     };
     return MapCell;
 }());
+MapCell.orthogonalDirections = [
+    { dCol: +1, dRow: 0 }, { dCol: +1, dRow: -1 }, { dCol: 0, dRow: -1 },
+    { dCol: -1, dRow: 0 }, { dCol: -1, dRow: +1 }, { dCol: 0, dRow: +1 },
+];
+MapCell.diagonalDirections = [
+    { dCol: +2, dRow: -1 }, { dCol: +1, dRow: +1 }, { dCol: -1, dRow: +2 },
+    { dCol: -2, dRow: +1 }, { dCol: -1, dRow: -1 }, { dCol: +1, dRow: -2 },
+];
 MapCell.details = {};
 MapCell.addDetail({
     name: 'Circle',
@@ -3348,6 +3375,7 @@ var MapGenerator = (function () {
             cell.precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
             // don't allocate a cell type right away, as wind, lines and locations may change these properties
         }
+        // TODO: erosion, mountain ranges, etc
         // TODO: calculate wind, use that to modify precipitation and temperature
         // TODO: add lines, locations
         // allocate types to cells based on their generation properties

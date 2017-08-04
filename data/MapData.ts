@@ -68,6 +68,25 @@ class MapData {
     getCellIndex(row: number, col: number) {
         return col + row * this.underlyingWidth;
     }
+    cellsInRange(center: MapCell, distance: number) {
+        let results: MapCell[] = [];
+
+        let minCol = Math.max(center.col - distance, 0),
+            maxCol = Math.min(center.col + distance, this.underlyingWidth);
+
+        for (let col = minCol; col <= maxCol; col++) {
+            let minRow = Math.max(Math.max(center.row - distance, center.row - col - distance), 0),
+                maxRow = Math.min(Math.min(center.row + distance, center.row - col + distance), this.height);
+
+            for (let row = minRow; row <= maxRow; row++) {
+                let index = this.getCellIndex(row, col);
+                let cell = this.cells[index];
+                if (cell !== null)
+                    results.push(cell);
+            }
+        }
+        return results;
+    }
     changeSize(newWidth: number, newHeight: number, mode: ResizeAnchorMode) {
         let deltaWidth = newWidth - this.width;
         let deltaHeight = newHeight - this.height;
