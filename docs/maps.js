@@ -330,7 +330,7 @@ var CellType = (function () {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Grass', '#a1e94d', 0.3, 0.55, 0.35, 2, 0.1, 0.8), new CellType('Hills', '#7bac46', 0.6, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75), new CellType('Forest', '#189b11', 0.3, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35), new CellType('Forest Hills', '#189b11', 0.6, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75), new CellType('Mountain', '#7c7c4b', 0.85, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8), new CellType('Desert', '#ebd178', 0.3, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 0.3, 0.55, 0.35, 2, 0.1, 0.8), new CellType('Hills', '#7bac46', 0.6, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75), new CellType('Forest', '#189b11', 0.3, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35), new CellType('Forest Hills', '#189b11', 0.6, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75), new CellType('Desert', '#ebd178', 0.3, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5), new CellType('Desert Hills', '#ebd178', 0.6, 0.8, 0, 1, 0.08, 0.7, 'Hill', '#867A23', 1, 0.75), new CellType('Mountain', '#7c7c4b', 0.85, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
     };
     return CellType;
 }());
@@ -2127,7 +2127,7 @@ var TerrainEditor = (function (_super) {
             React.createElement("hr", null),
             React.createElement("p", null, "Select a brush size to draw with:"),
             React.createElement("div", { className: "palleteList horizontal" }, brushSizes.map(function (size, id) {
-                return React.createElement("div", { key: id, className: that.state.brushSize == size ? 'selected' : undefined, onClick: that.selectBrushSize.bind(that, size) }, size);
+                return React.createElement("div", { key: id, className: that.state.brushSize == size ? 'selected' : undefined, onClick: that.selectBrushSize.bind(that, size) }, size * 2 + 1);
             })),
             ",");
     };

@@ -102,7 +102,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             <p>Select a brush size to draw with:</p>
             <div className="palleteList horizontal">
                 {brushSizes.map(function(size, id) {
-                    return <div key={id} className={that.state.brushSize == size ? 'selected' : undefined} onClick={that.selectBrushSize.bind(that, size)}>{size}</div>;
+                    return <div key={id} className={that.state.brushSize == size ? 'selected' : undefined} onClick={that.selectBrushSize.bind(that, size)}>{size * 2 + 1}</div>;
                 })}
             </div>,
         </form>;

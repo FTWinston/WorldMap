@@ -69,15 +69,20 @@ class CellType {
             0.6, 0.3, 0.5,
             8, 0.4, 0.3,
             'Hill', '#305b09', 1, 0.75
-        ), new CellType('Mountain', '#7c7c4b',
-            0.85, 0.25, 0.4,
-            10, 0.2, 0.3,
-            'Mountain', '#565B42', 1, 0.8
         ), new CellType(
             'Desert', '#ebd178',
             0.3, 0.8, 0,
             1, 0.08, 0.7,
             'Wave (small)', '#e4c045', 3, 0.5
+        ), new CellType(
+            'Desert Hills', '#ebd178',
+            0.6, 0.8, 0,
+            1, 0.08, 0.7,
+            'Hill', '#867A23', 1, 0.75
+        ), new CellType('Mountain', '#7c7c4b',
+            0.85, 0.25, 0.4,
+            10, 0.2, 0.3,
+            'Mountain', '#565B42', 1, 0.8
         ));
     }
 }
