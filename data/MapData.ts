@@ -68,16 +68,21 @@ class MapData {
     getCellIndex(row: number, col: number) {
         return col + row * this.underlyingWidth;
     }
-    cellsInRange(center: MapCell, distance: number) {
+    getCellsInRange(center: MapCell, distance: number) {
         let results: MapCell[] = [];
 
-        let minCol = Math.max(center.col - distance, 0),
-            maxCol = Math.min(center.col + distance, this.underlyingWidth);
-
-        for (let col = minCol; col <= maxCol; col++) {
-            let minRow = Math.max(Math.max(center.row - distance, center.row - col - distance), 0),
-                maxRow = Math.min(Math.min(center.row + distance, center.row - col + distance), this.height);
-
+        let minDc = -distance,
+            maxDc = +distance;
+    
+        for (let dc = minDc; dc <= maxDc; dc++) {
+            let col = center.col + dc;
+            
+            if (col < 0 || col >= this.underlyingWidth)
+                continue; // out of bounds
+            
+            let minRow = Math.max(0, center.row + Math.max(-distance, -dc - distance)),
+                maxRow = Math.min(this.height - 1, center.row + Math.min(+distance, -dc + distance));
+            
             for (let row = minRow; row <= maxRow; row++) {
                 let index = this.getCellIndex(row, col);
                 let cell = this.cells[index];

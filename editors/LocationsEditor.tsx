@@ -25,7 +25,7 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
         };
     }
     componentDidUpdate(prevProps: ILocationsEditorProps, prevState: ILocationsEditorState) {
-        if (this.state.selectedLocationType === undefined || this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
+        if (this.state.selectedLocationType !== undefined && this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLocationType: false,
@@ -36,7 +36,7 @@ class LocationsEditor extends React.Component<ILocationsEditorProps, ILocationsE
         }
     }
     componentWillReceiveProps(newProps: ILocationsEditorProps) {
-        if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
+        if (this.state.selectedLocationType !== undefined && newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
                 return {
                     isEditingLocationType: false,

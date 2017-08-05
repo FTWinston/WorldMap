@@ -45,11 +45,14 @@ var MapData = (function () {
     MapData.prototype.getCellIndex = function (row, col) {
         return col + row * this.underlyingWidth;
     };
-    MapData.prototype.cellsInRange = function (center, distance) {
+    MapData.prototype.getCellsInRange = function (center, distance) {
         var results = [];
-        var minCol = Math.max(center.col - distance, 0), maxCol = Math.min(center.col + distance, this.underlyingWidth);
-        for (var col = minCol; col <= maxCol; col++) {
-            var minRow = Math.max(Math.max(center.row - distance, center.row - col - distance), 0), maxRow = Math.min(Math.min(center.row + distance, center.row - col + distance), this.height);
+        var minDc = -distance, maxDc = +distance;
+        for (var dc = minDc; dc <= maxDc; dc++) {
+            var col = center.col + dc;
+            if (col < 0 || col >= this.underlyingWidth)
+                continue; // out of bounds
+            var minRow = Math.max(0, center.row + Math.max(-distance, -dc - distance)), maxRow = Math.min(this.height - 1, center.row + Math.min(+distance, -dc + distance));
             for (var row = minRow; row <= maxRow; row++) {
                 var index = this.getCellIndex(row, col);
                 var cell = this.cells[index];
@@ -2073,6 +2076,7 @@ var TerrainEditor = (function (_super) {
             editorMode: 0 /* CellTypes */,
             selectedTerrainProperty: 0 /* Height */,
             selectedTerrainAdjustment: 1,
+            brushSize: 0,
         };
         return _this;
     }
@@ -2081,7 +2085,8 @@ var TerrainEditor = (function (_super) {
             this.props.hasDrawn(true);
     };
     TerrainEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (this.state.selectedTerrainType === undefined || this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+        if (this.state.selectedTerrainType !== undefined && this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+            console.log('clearing isEditingTerrainType cos selectedTerrainType === undefined');
             this.setState(function (prevState) {
                 return {
                     isEditingTerrainType: false,
@@ -2096,6 +2101,7 @@ var TerrainEditor = (function (_super) {
             return React.createElement(CellTypeEditor, { editingType: this.state.selectedTerrainType, cellTypes: this.props.cellTypes, updateCellTypes: this.cellTypesChanged.bind(this) });
         var that = this;
         var propertyAdjustmentScale = 0.1;
+        var brushSizes = [0, 1, 2, 3, 4];
         var editorPallete = this.state.editorMode == 0 /* CellTypes */ ? [
             React.createElement("p", { key: "prompt" }, "Select a terrain type to draw onto the map. Double click/tap on a terrain type to edit it."),
             React.createElement("div", { key: "palette", className: "palleteList" }, this.props.cellTypes.map(function (type, id) {
@@ -2122,7 +2128,13 @@ var TerrainEditor = (function (_super) {
                 React.createElement("label", null,
                     React.createElement("input", { type: "radio", name: "drawMode", checked: this.state.editorMode == 1 /* TerrainProperties */, onChange: this.setEditorMode.bind(this, 1 /* TerrainProperties */) }),
                     " Adjust terrain properties")),
-            editorPallete);
+            editorPallete,
+            React.createElement("hr", null),
+            React.createElement("p", null, "Select a brush size to draw with:"),
+            React.createElement("div", { className: "palleteList horizontal" }, brushSizes.map(function (size, id) {
+                return React.createElement("div", { key: id, className: that.state.brushSize == size ? 'selected' : undefined, onClick: that.selectBrushSize.bind(that, size) }, size);
+            })),
+            ",");
     };
     TerrainEditor.prototype.setEditorMode = function (mode) {
         this.setState({
@@ -2140,6 +2152,11 @@ var TerrainEditor = (function (_super) {
         this.setState({
             selectedTerrainProperty: property,
             selectedTerrainAdjustment: adjustment,
+        });
+    };
+    TerrainEditor.prototype.selectBrushSize = function (size) {
+        this.setState({
+            brushSize: size,
         });
     };
     TerrainEditor.prototype.showTerrainEdit = function (type) {
@@ -2179,6 +2196,17 @@ var TerrainEditor = (function (_super) {
         this.props.hasDrawn(false);
     };
     TerrainEditor.prototype.drawOnCell = function (cell) {
+        if (this.state.brushSize == 0) {
+            this.modifyCell(cell);
+            return;
+        }
+        var cellsToChange = this.props.findCellsInRange(cell, this.state.brushSize);
+        for (var _i = 0, cellsToChange_1 = cellsToChange; _i < cellsToChange_1.length; _i++) {
+            var cell_1 = cellsToChange_1[_i];
+            this.modifyCell(cell_1);
+        }
+    };
+    TerrainEditor.prototype.modifyCell = function (cell) {
         if (this.state.editorMode == 0 /* CellTypes */) {
             if (this.state.selectedTerrainType !== undefined)
                 cell.cellType = this.state.selectedTerrainType;
@@ -2440,7 +2468,7 @@ var LinesEditor = (function (_super) {
         return _this;
     }
     LinesEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (this.state.selectedLineType === undefined || this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
+        if (this.state.selectedLineType !== undefined && this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,
@@ -2757,7 +2785,7 @@ var LocationsEditor = (function (_super) {
         return _this;
     }
     LocationsEditor.prototype.componentDidUpdate = function (prevProps, prevState) {
-        if (this.state.selectedLocationType === undefined || this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
+        if (this.state.selectedLocationType !== undefined && this.props.locationTypes.indexOf(this.state.selectedLocationType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLocationType: false,
@@ -2768,7 +2796,7 @@ var LocationsEditor = (function (_super) {
         }
     };
     LocationsEditor.prototype.componentWillReceiveProps = function (newProps) {
-        if (this.state.selectedLocationType === undefined || newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
+        if (this.state.selectedLocationType !== undefined && newProps.locationTypes.indexOf(this.state.selectedLocationType) == -1)
             this.setState(function (prevState) {
                 return {
                     isEditingLocationType: false,
@@ -3438,7 +3466,6 @@ var WorldMap = (function (_super) {
     };
     WorldMap.prototype.componentDidMount = function () {
         SaveLoad.loadData(this.initializeMap.bind(this));
-        MapGenerator.constructCellTypeLookup(this.state.map.cellTypes);
     };
     WorldMap.prototype.initializeMap = function (dataJson) {
         var map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);
@@ -3452,6 +3479,7 @@ var WorldMap = (function (_super) {
             else
                 this.changes.recordMapChange(map);
         }
+        MapGenerator.constructCellTypeLookup(map.cellTypes);
     };
     WorldMap.prototype.componentDidUpdate = function (prevProps, prevState) {
         if (prevState.activeEditor != this.state.activeEditor && this.mapView !== null)
@@ -3491,7 +3519,7 @@ var WorldMap = (function (_super) {
             case 2 /* Size */:
                 return React.createElement(SizeEditor, __assign({}, props, { width: this.state.map.width, height: this.state.map.height, changeSize: this.changeSize.bind(this) }));
             case 3 /* Terrain */:
-                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), updateCellTypes: this.updateCellTypes.bind(this) }));
+                return React.createElement(TerrainEditor, __assign({}, props, { cellTypes: this.state.map.cellTypes, hasDrawn: this.terrainEdited.bind(this), findCellsInRange: this.state.map.getCellsInRange.bind(this.state.map), updateCellTypes: this.updateCellTypes.bind(this) }));
             case 4 /* Lines */:
                 return React.createElement(LinesEditor, __assign({}, props, { lines: this.state.map.lines, lineTypes: this.state.map.lineTypes, updateLines: this.updateLines.bind(this), updateLineTypes: this.updateLineTypes.bind(this), selectedLine: this.state.selectedLine, lineSelected: this.lineSelected.bind(this) }));
             case 5 /* Locations */:

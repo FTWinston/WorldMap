@@ -197,6 +197,11 @@ form {
   align-items: stretch;
   align-content: flex-start;
 
+  &.horizontal {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+
   > * {
     margin: 0.2em; padding: 0.35em 0.5em;
     border: solid black 1px;

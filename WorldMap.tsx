@@ -53,7 +53,6 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     private mapView: MapView | null;
     componentDidMount() {
         SaveLoad.loadData(this.initializeMap.bind(this));
-        MapGenerator.constructCellTypeLookup(this.state.map.cellTypes);
     }
     initializeMap(dataJson: string) {
         let map = dataJson === null ? new MapData(25, 25) : MapData.loadFromJSON(dataJson);    
@@ -68,6 +67,8 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             else
                 this.changes.recordMapChange(map);
         }
+        
+        MapGenerator.constructCellTypeLookup(map.cellTypes);
     }
 
     componentDidUpdate(prevProps: IWorldMapProps, prevState: IWorldMapState) {
@@ -118,7 +119,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
             case EditorType.Size:
                 return <SizeEditor {...props} width={this.state.map.width} height={this.state.map.height} changeSize={this.changeSize.bind(this)} />;
             case EditorType.Terrain:
-                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} updateCellTypes={this.updateCellTypes.bind(this)} />;
+                return <TerrainEditor {...props} cellTypes={this.state.map.cellTypes} hasDrawn={this.terrainEdited.bind(this)} findCellsInRange={this.state.map.getCellsInRange.bind(this.state.map)} updateCellTypes={this.updateCellTypes.bind(this)} />;
             case EditorType.Lines:
                 return <LinesEditor {...props} lines={this.state.map.lines} lineTypes={this.state.map.lineTypes} updateLines={this.updateLines.bind(this)} updateLineTypes={this.updateLineTypes.bind(this)} selectedLine={this.state.selectedLine} lineSelected={this.lineSelected.bind(this)} />;
             case EditorType.Locations:

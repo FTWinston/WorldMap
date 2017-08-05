@@ -127,6 +127,9 @@ form.genField input {
   justify-content: space-between;
   align-items: stretch;
   align-content: flex-start; }
+  .palleteList.horizontal {
+    flex-direction: row;
+    justify-content: space-around; }
   .palleteList > * {
     margin: 0.2em;
     padding: 0.35em 0.5em;

@@ -22,7 +22,7 @@ class LinesEditor extends React.Component<ILinesEditorProps, ILinesEditorState> 
         };
     }
     componentDidUpdate(prevProps: ILinesEditorProps, prevState: ILinesEditorState) {
-        if (this.state.selectedLineType === undefined || this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
+        if (this.state.selectedLineType !== undefined && this.props.lineTypes.indexOf(this.state.selectedLineType) == -1) {
             this.setState(function (prevState) {
                 return {
                     isEditingLineType: prevState.isEditingLineType,

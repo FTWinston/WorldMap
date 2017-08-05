@@ -1,5 +1,6 @@
 interface ITerrainEditorProps {
     cellTypes: CellType[];
+    findCellsInRange: (cell: MapCell, range: number) => MapCell[];
     updateCellTypes: (cellTypes: CellType[]) => void;
     hasDrawn: (endOfStroke: boolean) => void;
 }
@@ -22,6 +23,7 @@ interface ITerrainEditorState {
     editorMode: TerrainEditorMode;
     selectedTerrainProperty: TerrainProperty;
     selectedTerrainAdjustment: number;
+    brushSize: number;
 }
 
 class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorState> implements IMapEditor {
@@ -35,6 +37,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             editorMode: TerrainEditorMode.CellTypes,
             selectedTerrainProperty: TerrainProperty.Height,
             selectedTerrainAdjustment: 1,
+            brushSize: 0,
         };
     }
     componentWillUpdate(nextProps: ITerrainEditorProps, nextState: ITerrainEditorState) {
@@ -42,7 +45,8 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
             this.props.hasDrawn(true);
     }
     componentDidUpdate(prevProps: ITerrainEditorProps, prevState: ITerrainEditorState) {
-        if (this.state.selectedTerrainType === undefined || this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+        if (this.state.selectedTerrainType !== undefined && this.props.cellTypes.indexOf(this.state.selectedTerrainType) == -1) {
+            console.log('clearing isEditingTerrainType cos selectedTerrainType === undefined')
             this.setState(function (prevState) {
                 return {
                     isEditingTerrainType: false,
@@ -58,6 +62,7 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
 
         let that = this;
         const propertyAdjustmentScale = 0.1;
+        const brushSizes = [0, 1, 2, 3, 4];
 
         let editorPallete =
             this.state.editorMode == TerrainEditorMode.CellTypes ? [
@@ -93,6 +98,13 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
                 </label>
             </div>
             {editorPallete}
+            <hr/>
+            <p>Select a brush size to draw with:</p>
+            <div className="palleteList horizontal">
+                {brushSizes.map(function(size, id) {
+                    return <div key={id} className={that.state.brushSize == size ? 'selected' : undefined} onClick={that.selectBrushSize.bind(that, size)}>{size}</div>;
+                })}
+            </div>,
         </form>;
     }
     private setEditorMode(mode: TerrainEditorMode) {
@@ -111,6 +123,11 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         this.setState({
             selectedTerrainProperty: property,
             selectedTerrainAdjustment: adjustment,
+        });
+    }
+    private selectBrushSize(size: number) {
+        this.setState({
+            brushSize: size,
         });
     }
     private showTerrainEdit(type?: CellType) {
@@ -153,6 +170,16 @@ class TerrainEditor extends React.Component<ITerrainEditorProps, ITerrainEditorS
         this.props.hasDrawn(false);
     }
     private drawOnCell(cell: MapCell) {
+        if (this.state.brushSize == 0) {
+            this.modifyCell(cell);
+            return;
+        }
+
+        let cellsToChange = this.props.findCellsInRange(cell, this.state.brushSize);
+        for (let cell of cellsToChange)
+            this.modifyCell(cell);
+    }
+    private modifyCell(cell: MapCell) {
         if (this.state.editorMode == TerrainEditorMode.CellTypes) {
             if (this.state.selectedTerrainType !== undefined)
                 cell.cellType = this.state.selectedTerrainType;
