@@ -43,7 +43,7 @@ class WorldMap extends React.Component<IWorldMapProps, IWorldMapState> {
     constructor(props: IWorldMapProps) {
         super(props);
         this.state = {
-            map: new MapData(0, 0),
+            map: new MapData(0, 0, false),
             generationSettings: new GenerationSettings(),
             showGenerationSettings: false,
         };

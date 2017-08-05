@@ -330,12 +330,7 @@ var CellType = (function () {
         this.texturePattern = textureCtx.createPattern(this.textureCanvas, 'repeat');
     };
     CellType.createDefaults = function (types) {
-        types.push(new CellType('Grass', '#a1e94d', 0.3, 0.55, 0.35, 2, 0.1, 0.8));
-        types.push(new CellType('Forest', '#189b11', 0.3, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35));
-        types.push(new CellType('Forest Hills', '#189b11', 0.6, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75));
-        types.push(new CellType('Hills', '#7bac46', 0.6, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75));
-        types.push(new CellType('Mountain', '#7c7c4b', 0.85, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8));
-        types.push(new CellType('Desert', '#ebd178', 0.3, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
+        types.push(new CellType('Grass', '#a1e94d', 0.3, 0.55, 0.35, 2, 0.1, 0.8), new CellType('Hills', '#7bac46', 0.6, 0.55, 0.35, 10, 0.3, 0.2, 'Hill', '#607860', 1, 0.75), new CellType('Forest', '#189b11', 0.3, 0.3, 0.5, 8, 0.4, 0.3, 'Tree (coniferous)', '#305b09', 4, 0.35), new CellType('Forest Hills', '#189b11', 0.6, 0.3, 0.5, 8, 0.4, 0.3, 'Hill', '#305b09', 1, 0.75), new CellType('Mountain', '#7c7c4b', 0.85, 0.25, 0.4, 10, 0.2, 0.3, 'Mountain', '#565B42', 1, 0.8), new CellType('Desert', '#ebd178', 0.3, 0.8, 0, 1, 0.08, 0.7, 'Wave (small)', '#e4c045', 3, 0.5));
     };
     return CellType;
 }());
@@ -3437,7 +3432,7 @@ var MapGenerator = (function () {
             precDif * precDif);
     };
     MapGenerator.constructCellTypeLookup = function (cellTypes) {
-        MapGenerator.cellTypeLookup = new kdTree(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+        MapGenerator.cellTypeLookup = new kdTree(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     };
     return MapGenerator;
 }());
@@ -3454,7 +3449,7 @@ var WorldMap = (function (_super) {
     function WorldMap(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
-            map: new MapData(0, 0),
+            map: new MapData(0, 0, false),
             generationSettings: new GenerationSettings(),
             showGenerationSettings: false,
         };

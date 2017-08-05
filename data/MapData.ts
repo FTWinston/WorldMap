@@ -33,7 +33,7 @@ class MapData {
             CellType.createDefaults(this.cellTypes);
             LocationType.createDefaults(this.locationTypes);
             LineType.createDefaults(this.lineTypes);
-            
+
             this.positionCells();
         }
     }

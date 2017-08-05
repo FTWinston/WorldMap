@@ -117,6 +117,6 @@ class MapGenerator {
         );
     }
     static constructCellTypeLookup(cellTypes: CellType[]) {
-        MapGenerator.cellTypeLookup = new kdTree<CellType, MapCell>(cellTypes, MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+        MapGenerator.cellTypeLookup = new kdTree<CellType, MapCell>(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     }
 }
