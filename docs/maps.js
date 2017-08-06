@@ -45,6 +45,24 @@ var MapData = (function () {
     MapData.prototype.getCellIndex = function (row, col) {
         return col + row * this.underlyingWidth;
     };
+    MapData.prototype.getCellIndexAtPoint = function (mapX, mapY) {
+        var fCol = (mapX * Math.sqrt(3) - mapY) / 3;
+        var fRow = mapY * 2 / 3;
+        var fThirdCoord = -fCol - fRow;
+        var rCol = Math.round(fCol);
+        var rRow = Math.round(fRow);
+        var rThird = Math.round(fThirdCoord);
+        var colDiff = Math.abs(rCol - fCol);
+        var rowDiff = Math.abs(rRow - fRow);
+        var thirdDiff = Math.abs(rThird - fThirdCoord);
+        if (colDiff >= rowDiff) {
+            if (colDiff >= thirdDiff)
+                rCol = -rRow - rThird;
+        }
+        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
+            rRow = -rCol - rThird;
+        return this.getCellIndex(rRow, rCol);
+    };
     MapData.prototype.getCellsInRange = function (center, distance) {
         var results = [];
         var minDc = -distance, maxDc = +distance;
@@ -343,6 +361,69 @@ var MapCell = (function () {
         this.temperature = cellType.temperature;
         this.precipitation = cellType.precipitation;
     }
+    MapCell.prototype.draw = function (ctx, radius, randomSeed, outlineColor, fillContent) {
+        ctx.beginPath();
+        var angle, x, y;
+        for (var point = 0; point < 6; point++) {
+            angle = 2 * Math.PI / 6 * (point + 0.5);
+            x = radius * Math.cos(angle);
+            y = radius * Math.sin(angle);
+            if (point === 0)
+                ctx.moveTo(x, y);
+            else
+                ctx.lineTo(x, y);
+        }
+        if (outlineColor !== undefined) {
+            ctx.strokeStyle = outlineColor;
+            ctx.stroke();
+        }
+        if (fillContent) {
+            var cellType = this.cellType;
+            if (cellType == null)
+                ctx.fillStyle = '#666';
+            else
+                ctx.fillStyle = this.cellType.color;
+            ctx.fill();
+            if (cellType.texturePattern !== undefined) {
+                var scale = cellType.noiseScale;
+                ctx.scale(scale, scale);
+                ctx.fillStyle = cellType.texturePattern;
+                ctx.fill();
+                ctx.scale(1 / scale, 1 / scale);
+            }
+            if (cellType.detail !== undefined
+                && cellType.detailColor !== undefined
+                && cellType.detailNumberPerCell !== undefined
+                && cellType.detailSize !== undefined) {
+                this.drawPattern(ctx, randomSeed, radius);
+            }
+        }
+    };
+    MapCell.prototype.drawPattern = function (ctx, randomSeed, cellRadius) {
+        var cellType = this.cellType;
+        var random = new Random(randomSeed);
+        var pattern = MapCell.details[cellType.detail];
+        var numToDraw = cellType.detailNumberPerCell;
+        var patternSize = cellType.detailSize;
+        ctx.lineWidth = 0.1;
+        ctx.strokeStyle = cellType.detailColor;
+        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+        var halfCellWidth = cellRadius * 0.855;
+        var scale = halfCellWidth * patternSize;
+        // offset so that pattern always fits within the cell radius, based on patternSize.
+        var maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
+        ctx.scale(scale, scale);
+        for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
+            var dist = maxOffset * Math.sqrt(random.next());
+            var angle = Math.PI * 2 * random.next();
+            var xOffset = dist * Math.cos(angle);
+            var yOffset = dist * Math.sin(angle);
+            ctx.translate(xOffset, yOffset);
+            pattern.draw(ctx, random);
+            ctx.translate(-xOffset, -yOffset);
+        }
+        ctx.scale(1 / scale, 1 / scale);
+    };
     MapCell.prototype.distanceTo = function (other) {
         return (Math.abs(this.col - other.col)
             + Math.abs(this.col + this.row - other.col - other.row)
@@ -489,6 +570,18 @@ var MapLocation = (function () {
         this.name = name;
         this.type = type;
     }
+    MapLocation.prototype.draw = function (ctx, markerX, markerY) {
+        ctx.translate(markerX, markerY);
+        MapLocation.icons[this.type.icon].draw(ctx);
+        var labelOffset = this.type.textSize * 1.5;
+        ctx.translate(0, -labelOffset);
+        ctx.fillStyle = this.type.textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = this.type.textSize + 'pt serif';
+        ctx.fillText(this.name, 0, 0);
+        ctx.translate(-markerX, -markerY + labelOffset);
+    };
     MapLocation.getByCell = function (cell, allLocations) {
         for (var _i = 0, allLocations_1 = allLocations; _i < allLocations_1.length; _i++) {
             var location_3 = allLocations_1[_i];
@@ -560,6 +653,71 @@ var MapLine = (function () {
         this.keyCells = [];
         this.isLoop = false;
     }
+    MapLine.prototype.draw = function (ctx, cellRadius, highlightKeyCells) {
+        var type = this.type;
+        if (highlightKeyCells) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (var _i = 0, _a = this.keyCells; _i < _a.length; _i++) {
+                var cell = _a[_i];
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        if (this.keyCells.length == 1) {
+            var cell = this.keyCells[0];
+            var x_1 = cell.xPos * cellRadius + cellRadius;
+            var y_1 = cell.yPos * cellRadius + cellRadius;
+            ctx.fillStyle = type.color;
+            ctx.beginPath();
+            ctx.arc(x_1, y_1, type.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        var points = this.renderPoints;
+        ctx.strokeStyle = type.color;
+        var mainWidthStart = this.isLoop || type.width == type.startWidth ? 2 : 16;
+        var mainWidthEnd = this.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
+        var x = points[0] * cellRadius + cellRadius;
+        var y = points[1] * cellRadius + cellRadius;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        // for the initial line segments, line width changes from startWidth to width
+        for (var i = 2; i < mainWidthStart; i += 2) {
+            ctx.lineCap = 'round';
+            var fraction = i / mainWidthStart;
+            ctx.lineWidth = type.startWidth * (1 - fraction) + type.width * fraction;
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        ctx.lineCap = this.isLoop ? 'butt' : 'round';
+        // for the main segment, its always just width, so can draw them all in a single stroke
+        ctx.lineWidth = type.width;
+        for (var i = mainWidthStart; i < mainWidthEnd; i += 2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
+            ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // for the end line segment, line width changes from width to endWidth
+        for (var i = mainWidthEnd; i < points.length - 1; i += 2) {
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            var fraction = (points.length - i - 2) / (points.length - mainWidthEnd);
+            ctx.lineWidth = type.endWidth * (1 - fraction) + type.width * fraction;
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i + 1] * cellRadius + cellRadius;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        ctx.lineCap = 'butt';
+    };
     MapLine.getByCell = function (cell, lines) {
         for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
             var line = lines_1[_i];
@@ -627,6 +785,33 @@ var MapLine = (function () {
                 this.renderPoints.push(y);
             }
         }
+    };
+    MapLine.dedupe = function (cells) {
+        return cells.filter(function (cell, index, cells) {
+            return index == cells.indexOf(cell);
+        });
+    };
+    MapLine.prototype.getAffectedCells = function (map, includeAdjacent) {
+        var cells = [];
+        for (var i = 1; i < this.renderPoints.length; i += 2) {
+            var cellIndex = map.getCellIndexAtPoint(this.renderPoints[i - 1], this.renderPoints[i]);
+            var cell = map.cells[cellIndex];
+            if (cell !== null)
+                cells.push(cell);
+        }
+        // deduplicate the affected cells
+        cells = MapLine.dedupe(cells);
+        if (includeAdjacent) {
+            var passedThroughCells = cells;
+            cells = []; // getCellsInRange always includes the center cell, so no need to ensure they're already present
+            for (var _i = 0, passedThroughCells_1 = passedThroughCells; _i < passedThroughCells_1.length; _i++) {
+                var cell = passedThroughCells_1[_i];
+                var adjacent = map.getCellsInRange(cell, 1);
+                cells = cells.concat(adjacent);
+            }
+            cells = MapLine.dedupe(cells);
+        }
+        return cells;
     };
     return MapLine;
 }());
@@ -1233,73 +1418,9 @@ var MapView = (function (_super) {
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent);
+            cell.draw(this.ctx, drawCellRadius, iCell, outline ? this.backgroundColor : undefined, fillContent);
             this.ctx.translate(-centerX, -centerY);
         }
-    };
-    MapView.prototype.drawCell = function (cell, radius, randomSeed, outline, fillContent) {
-        var ctx = this.ctx;
-        ctx.beginPath();
-        var angle, x, y;
-        for (var point = 0; point < 6; point++) {
-            angle = 2 * Math.PI / 6 * (point + 0.5);
-            x = radius * Math.cos(angle);
-            y = radius * Math.sin(angle);
-            if (point === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
-        if (outline) {
-            ctx.strokeStyle = this.backgroundColor;
-            ctx.stroke();
-        }
-        if (fillContent) {
-            var cellType = cell.cellType;
-            if (cellType == null)
-                ctx.fillStyle = '#666';
-            else
-                ctx.fillStyle = cell.cellType.color;
-            ctx.fill();
-            if (cellType.texturePattern !== undefined) {
-                var scale = cellType.noiseScale;
-                ctx.scale(scale, scale);
-                ctx.fillStyle = cellType.texturePattern;
-                ctx.fill();
-                ctx.scale(1 / scale, 1 / scale);
-            }
-            if (cellType.detail !== undefined
-                && cellType.detailColor !== undefined
-                && cellType.detailNumberPerCell !== undefined
-                && cellType.detailSize !== undefined) {
-                this.drawCellPattern(cellType, randomSeed, radius);
-            }
-        }
-    };
-    MapView.prototype.drawCellPattern = function (cellType, randomSeed, cellRadius) {
-        var ctx = this.ctx;
-        var random = new Random(randomSeed);
-        var pattern = MapCell.details[cellType.detail];
-        var numToDraw = cellType.detailNumberPerCell;
-        var patternSize = cellType.detailSize;
-        ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.detailColor;
-        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-        var halfCellWidth = cellRadius * 0.855;
-        var scale = halfCellWidth * patternSize;
-        // offset so that pattern always fits within the cell radius, based on patternSize.
-        var maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
-        ctx.scale(scale, scale);
-        for (var iPattern = 0; iPattern < numToDraw; iPattern++) {
-            var dist = maxOffset * Math.sqrt(random.next());
-            var angle = Math.PI * 2 * random.next();
-            var xOffset = dist * Math.cos(angle);
-            var yOffset = dist * Math.sin(angle);
-            ctx.translate(xOffset, yOffset);
-            pattern.draw(ctx, random);
-            ctx.translate(-xOffset, -yOffset);
-        }
-        ctx.scale(1 / scale, 1 / scale);
     };
     MapView.prototype.getCellDisplayX = function (cell) {
         return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
@@ -1321,21 +1442,8 @@ var MapView = (function (_super) {
             var centerY = loc.cell.yPos * cellRadius + cellRadius;
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
-            this.drawLocation(loc, centerX, centerY);
+            loc.draw(this.ctx, centerX, centerY);
         }
-    };
-    MapView.prototype.drawLocation = function (loc, markerX, markerY) {
-        var ctx = this.ctx;
-        ctx.translate(markerX, markerY);
-        MapLocation.icons[loc.type.icon].draw(ctx);
-        var labelOffset = loc.type.textSize * 1.5;
-        ctx.translate(0, -labelOffset);
-        ctx.fillStyle = loc.type.textColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = loc.type.textSize + 'pt serif';
-        ctx.fillText(loc.name, 0, 0);
-        ctx.translate(-markerX, -markerY + labelOffset);
     };
     MapView.prototype.drawLines = function () {
         var cellRadius = this.state.cellRadius;
@@ -1365,74 +1473,8 @@ var MapView = (function (_super) {
             maxY = maxY * cellRadius + cellRadius;
             if (maxY < drawExtent.minY || minY > drawExtent.maxY)
                 continue;
-            this.drawLine(line, cellRadius);
+            line.draw(this.ctx, cellRadius, this.props.editor == 4 /* Lines */ && (this.props.selectedLine === undefined || this.props.selectedLine == line));
         }
-    };
-    MapView.prototype.drawLine = function (line, cellRadius) {
-        var ctx = this.ctx;
-        var type = line.type;
-        if (this.props.editor == 4 /* Lines */ && (this.props.selectedLine === undefined || this.props.selectedLine == line)) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2;
-            for (var _i = 0, _a = line.keyCells; _i < _a.length; _i++) {
-                var cell = _a[_i];
-                ctx.beginPath();
-                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
-        if (line.keyCells.length == 1) {
-            var cell = line.keyCells[0];
-            var x_1 = cell.xPos * cellRadius + cellRadius;
-            var y_1 = cell.yPos * cellRadius + cellRadius;
-            ctx.fillStyle = type.color;
-            ctx.beginPath();
-            ctx.arc(x_1, y_1, type.width / 2, 0, Math.PI * 2);
-            ctx.fill();
-            return;
-        }
-        var points = line.renderPoints;
-        ctx.strokeStyle = type.color;
-        var mainWidthStart = line.isLoop || type.width == type.startWidth ? 2 : 16;
-        var mainWidthEnd = line.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
-        var x = points[0] * cellRadius + cellRadius;
-        var y = points[1] * cellRadius + cellRadius;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        // for the initial line segments, line width changes from startWidth to width
-        for (var i = 2; i < mainWidthStart; i += 2) {
-            ctx.lineCap = 'round';
-            var fraction = i / mainWidthStart;
-            ctx.lineWidth = type.startWidth * (1 - fraction) + type.width * fraction;
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i + 1] * cellRadius + cellRadius;
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        }
-        ctx.lineCap = line.isLoop ? 'butt' : 'round';
-        // for the main segment, its always just width, so can draw them all in a single stroke
-        ctx.lineWidth = type.width;
-        for (var i = mainWidthStart; i < mainWidthEnd; i += 2) {
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i + 1] * cellRadius + cellRadius;
-            ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        // for the end line segment, line width changes from width to endWidth
-        for (var i = mainWidthEnd; i < points.length - 1; i += 2) {
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            var fraction = (points.length - i - 2) / (points.length - mainWidthEnd);
-            ctx.lineWidth = type.endWidth * (1 - fraction) + type.width * fraction;
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i + 1] * cellRadius + cellRadius;
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-        ctx.lineCap = 'butt';
     };
     MapView.prototype.resize = function () {
         if (this.resizing)
@@ -1563,22 +1605,7 @@ var MapView = (function (_super) {
             return -1;
         var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.state.cellRadius - this.edgePadding;
         var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.state.cellRadius - this.edgePadding;
-        var fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
-        var fRow = mapY * 2 / 3 / this.state.cellRadius;
-        var fThirdCoord = -fCol - fRow;
-        var rCol = Math.round(fCol);
-        var rRow = Math.round(fRow);
-        var rThird = Math.round(fThirdCoord);
-        var colDiff = Math.abs(rCol - fCol);
-        var rowDiff = Math.abs(rRow - fRow);
-        var thirdDiff = Math.abs(rThird - fThirdCoord);
-        if (colDiff >= rowDiff) {
-            if (colDiff >= thirdDiff)
-                rCol = -rRow - rThird;
-        }
-        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
-            rRow = -rCol - rThird;
-        return this.props.map.getCellIndex(rRow, rCol);
+        return this.props.map.getCellIndexAtPoint(mapX / this.state.cellRadius, mapY / this.state.cellRadius);
     };
     MapView.prototype.getScrollbarSize = function () {
         var outer = document.createElement('div');

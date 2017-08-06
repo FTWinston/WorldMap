@@ -265,90 +265,9 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
                 continue;
 
             this.ctx.translate(centerX, centerY);
-            this.drawCell(cell, drawCellRadius, iCell, outline, fillContent);
+            cell.draw(this.ctx, drawCellRadius, iCell, outline ? this.backgroundColor : undefined, fillContent);
             this.ctx.translate(-centerX, -centerY);
         }
-    }
-    private drawCell(cell: MapCell, radius: number, randomSeed: number, outline: boolean, fillContent: boolean) {
-        let ctx = this.ctx;
-        ctx.beginPath();
-
-        let angle, x, y;
-        for (let point = 0; point < 6; point++) {
-            angle = 2 * Math.PI / 6 * (point + 0.5);
-            x = radius * Math.cos(angle);
-            y = radius * Math.sin(angle);
-
-            if (point === 0)
-                ctx.moveTo(x, y);
-            else
-                ctx.lineTo(x, y);
-        }
-
-        if (outline) {
-            ctx.strokeStyle = this.backgroundColor;
-            ctx.stroke();
-        }
-
-        if (fillContent) {
-            let cellType = cell.cellType;
-
-            if (cellType == null)
-                ctx.fillStyle = '#666';
-            else
-                ctx.fillStyle = cell.cellType.color;
-
-            ctx.fill();
-
-            if (cellType.texturePattern !== undefined) {
-                let scale = cellType.noiseScale;
-
-                ctx.scale(scale, scale);
-                ctx.fillStyle = cellType.texturePattern;
-                ctx.fill();
-                ctx.scale(1/scale, 1/scale);
-            }
-
-            if (cellType.detail !== undefined
-             && cellType.detailColor !== undefined
-             && cellType.detailNumberPerCell !== undefined
-             && cellType.detailSize !== undefined) {
-                this.drawCellPattern(cellType, randomSeed, radius);
-            }
-        }
-    }
-    private drawCellPattern(cellType: CellType, randomSeed: number, cellRadius: number) {
-        let ctx = this.ctx;
-        let random = new Random(randomSeed);
-        let pattern = MapCell.details[cellType.detail as string];
-        let numToDraw = cellType.detailNumberPerCell as number;
-        let patternSize = cellType.detailSize as number;
-
-        ctx.lineWidth = 0.1;
-        ctx.strokeStyle = cellType.detailColor as string;
-        
-        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
-        let halfCellWidth = cellRadius * 0.855;
-        let scale = halfCellWidth * patternSize;
-
-        // offset so that pattern always fits within the cell radius, based on patternSize.
-        let maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
-
-        ctx.scale(scale, scale);
-
-        for (let iPattern=0; iPattern<numToDraw; iPattern++) {
-            let dist = maxOffset * Math.sqrt(random.next());
-            
-            let angle = Math.PI * 2 * random.next();
-            let xOffset = dist * Math.cos(angle);
-            let yOffset = dist * Math.sin(angle);
-
-            ctx.translate(xOffset, yOffset);
-            pattern.draw(ctx, random);
-            ctx.translate(-xOffset, -yOffset);
-        }
-        
-        ctx.scale(1/scale, 1/scale);
     }
     private getCellDisplayX(cell: MapCell) {
         return cell.col + 2 + Math.floor((cell.row - this.props.map.height) / 2);
@@ -373,25 +292,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             if (centerY < drawExtent.minY || centerY > drawExtent.maxY)
                 continue;
 
-            this.drawLocation(loc, centerX, centerY);
+            loc.draw(this.ctx, centerX, centerY);
         }
-    }
-    private drawLocation(loc: MapLocation, markerX: number, markerY: number) {
-        let ctx = this.ctx;
-
-        ctx.translate(markerX, markerY);
-        MapLocation.icons[loc.type.icon].draw(ctx);
-
-        let labelOffset = loc.type.textSize * 1.5;
-        ctx.translate(0, -labelOffset);
-
-        ctx.fillStyle = loc.type.textColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = loc.type.textSize + 'pt serif';
-        ctx.fillText(loc.name, 0, 0);
-
-        ctx.translate(-markerX, -markerY + labelOffset);
     }
     private drawLines() {
         let cellRadius = this.state.cellRadius;
@@ -426,91 +328,8 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
             if (maxY < drawExtent.minY || minY > drawExtent.maxY)
                 continue;
 
-            this.drawLine(line, cellRadius);
+            line.draw(this.ctx, cellRadius, this.props.editor == EditorType.Lines && (this.props.selectedLine === undefined || this.props.selectedLine == line));
         }
-    }
-    private drawLine(line: MapLine, cellRadius: number) {
-        let ctx = this.ctx;
-        let type = line.type;
-
-        if (this.props.editor == EditorType.Lines && (this.props.selectedLine === undefined || this.props.selectedLine == line)) {
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2;
-
-            for (let cell of line.keyCells) {
-                ctx.beginPath();
-                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
-
-        if (line.keyCells.length == 1) {
-            let cell = line.keyCells[0];
-            let x = cell.xPos * cellRadius + cellRadius;
-            let y = cell.yPos * cellRadius + cellRadius;
-
-            ctx.fillStyle = type.color;
-            ctx.beginPath();
-            ctx.arc(x, y, type.width / 2, 0, Math.PI * 2);
-            ctx.fill();
-            return;
-        }
-        
-        let points = line.renderPoints;
-        ctx.strokeStyle = type.color;
-
-        let mainWidthStart = line.isLoop || type.width == type.startWidth ? 2 : 16;
-        let mainWidthEnd = line.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
-        let x = points[0] * cellRadius + cellRadius;
-        let y = points[1] * cellRadius + cellRadius;
-        
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        
-        // for the initial line segments, line width changes from startWidth to width
-        for (let i=2; i<mainWidthStart; i+=2) {
-            ctx.lineCap = 'round';
-            let fraction = i / mainWidthStart;
-            ctx.lineWidth = type.startWidth * (1-fraction) + type.width * fraction;
-
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i+1] * cellRadius + cellRadius;
-
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        }
-
-        ctx.lineCap = line.isLoop ? 'butt' : 'round';
-
-        // for the main segment, its always just width, so can draw them all in a single stroke
-        ctx.lineWidth = type.width;
-        for (let i = mainWidthStart; i<mainWidthEnd; i+=2) {
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i+1] * cellRadius + cellRadius;
-            ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // for the end line segment, line width changes from width to endWidth
-        for (let i=mainWidthEnd; i < points.length - 1; i+=2) {
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-
-            let fraction = (points.length - i - 2)  / (points.length - mainWidthEnd);
-            ctx.lineWidth = type.endWidth * (1-fraction) + type.width * fraction;
-            
-            x = points[i] * cellRadius + cellRadius;
-            y = points[i+1] * cellRadius + cellRadius;
-
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-
-        ctx.lineCap = 'butt';
     }
 
     private resizing: boolean = false;
@@ -664,26 +483,7 @@ class MapView extends React.Component<IMapViewProps, IMapViewState> {
         let mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.state.cellRadius - this.edgePadding;
         let mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.state.cellRadius - this.edgePadding;
 
-        let fCol = (mapX * Math.sqrt(3) - mapY) / 3 / this.state.cellRadius;
-        let fRow = mapY * 2 / 3 / this.state.cellRadius;
-        let fThirdCoord = - fCol - fRow;
-
-        let rCol = Math.round(fCol);
-        let rRow = Math.round(fRow);
-        let rThird = Math.round(fThirdCoord);
-
-        let colDiff = Math.abs(rCol - fCol);
-        let rowDiff = Math.abs(rRow - fRow);
-        let thirdDiff = Math.abs(rThird - fThirdCoord);
-
-        if (colDiff >= rowDiff) {
-            if (colDiff >= thirdDiff)
-                rCol = - rRow - rThird;
-        }
-        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
-            rRow = - rCol - rThird;
-
-        return this.props.map.getCellIndex(rRow, rCol);
+        return this.props.map.getCellIndexAtPoint(mapX / this.state.cellRadius, mapY / this.state.cellRadius);
     }
     private getScrollbarSize() {
         let outer = document.createElement('div');

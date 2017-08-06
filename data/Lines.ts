@@ -24,6 +24,89 @@ class MapLine {
         this.isLoop = false;
     }
 
+    draw(ctx: CanvasRenderingContext2D, cellRadius: number, highlightKeyCells: boolean) {
+        let type = this.type;
+
+        if (highlightKeyCells) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+
+            for (let cell of this.keyCells) {
+                ctx.beginPath();
+                ctx.arc(cell.xPos * cellRadius + cellRadius, cell.yPos * cellRadius + cellRadius, cellRadius * 0.65, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        if (this.keyCells.length == 1) {
+            let cell = this.keyCells[0];
+            let x = cell.xPos * cellRadius + cellRadius;
+            let y = cell.yPos * cellRadius + cellRadius;
+
+            ctx.fillStyle = type.color;
+            ctx.beginPath();
+            ctx.arc(x, y, type.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        
+        let points = this.renderPoints;
+        ctx.strokeStyle = type.color;
+
+        let mainWidthStart = this.isLoop || type.width == type.startWidth ? 2 : 16;
+        let mainWidthEnd = this.isLoop || type.width == type.endWidth ? points.length - 1 : points.length - 16;
+        let x = points[0] * cellRadius + cellRadius;
+        let y = points[1] * cellRadius + cellRadius;
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        
+        // for the initial line segments, line width changes from startWidth to width
+        for (let i=2; i<mainWidthStart; i+=2) {
+            ctx.lineCap = 'round';
+            let fraction = i / mainWidthStart;
+            ctx.lineWidth = type.startWidth * (1-fraction) + type.width * fraction;
+
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        ctx.lineCap = this.isLoop ? 'butt' : 'round';
+
+        // for the main segment, its always just width, so can draw them all in a single stroke
+        ctx.lineWidth = type.width;
+        for (let i = mainWidthStart; i<mainWidthEnd; i+=2) {
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
+            ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // for the end line segment, line width changes from width to endWidth
+        for (let i=mainWidthEnd; i < points.length - 1; i+=2) {
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            let fraction = (points.length - i - 2)  / (points.length - mainWidthEnd);
+            ctx.lineWidth = type.endWidth * (1-fraction) + type.width * fraction;
+            
+            x = points[i] * cellRadius + cellRadius;
+            y = points[i+1] * cellRadius + cellRadius;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        ctx.lineCap = 'butt';
+    }
+
     static getByCell(cell: MapCell, lines: MapLine[]) {
         for (let line of lines)
             for (let testCell of line.keyCells)
@@ -107,5 +190,39 @@ class MapLine {
                 this.renderPoints.push(y);
             }
         }
+    }
+
+    private static dedupe(cells: MapCell[]) {
+        return cells.filter(function(cell: MapCell, index: number, cells: MapCell[]) {
+            return index == cells.indexOf(cell);
+        });
+    }
+
+    getAffectedCells(map: MapData, includeAdjacent: boolean) {
+        let cells: MapCell[] = [];
+
+        for (let i=1; i<this.renderPoints.length; i+=2) {
+            let cellIndex = map.getCellIndexAtPoint(this.renderPoints[i-1], this.renderPoints[i]);
+            let cell = map.cells[cellIndex];
+            if (cell !== null)
+                cells.push(cell);
+        }
+
+        // deduplicate the affected cells
+        cells = MapLine.dedupe(cells);
+
+        if (includeAdjacent) {
+            let passedThroughCells = cells;
+            cells = []; // getCellsInRange always includes the center cell, so no need to ensure they're already present
+
+            for (let cell of passedThroughCells) {
+                let adjacent = map.getCellsInRange(cell, 1);
+                cells = cells.concat(adjacent);
+            }
+
+            cells = MapLine.dedupe(cells);
+        }
+
+        return cells;
     }
 }

@@ -25,6 +25,22 @@ class MapLocation {
         public type: LocationType,
     ) { }
 
+    draw(ctx: CanvasRenderingContext2D, markerX: number, markerY: number) {
+        ctx.translate(markerX, markerY);
+        MapLocation.icons[this.type.icon].draw(ctx);
+
+        let labelOffset = this.type.textSize * 1.5;
+        ctx.translate(0, -labelOffset);
+
+        ctx.fillStyle = this.type.textColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = this.type.textSize + 'pt serif';
+        ctx.fillText(this.name, 0, 0);
+
+        ctx.translate(-markerX, -markerY + labelOffset);
+    }
+
     static getByCell(cell: MapCell, allLocations: MapLocation[]) {
         for (let location of allLocations)
             if (location.cell == cell)

@@ -103,6 +103,89 @@ class MapCell {
         this.precipitation = cellType.precipitation;
     }
 
+    
+    draw(ctx: CanvasRenderingContext2D, radius: number, randomSeed: number, outlineColor: string | undefined, fillContent: boolean) {
+        ctx.beginPath();
+
+        let angle, x, y;
+        for (let point = 0; point < 6; point++) {
+            angle = 2 * Math.PI / 6 * (point + 0.5);
+            x = radius * Math.cos(angle);
+            y = radius * Math.sin(angle);
+
+            if (point === 0)
+                ctx.moveTo(x, y);
+            else
+                ctx.lineTo(x, y);
+        }
+
+        if (outlineColor !== undefined) {
+            ctx.strokeStyle = outlineColor;
+            ctx.stroke();
+        }
+
+        if (fillContent) {
+            let cellType = this.cellType;
+
+            if (cellType == null)
+                ctx.fillStyle = '#666';
+            else
+                ctx.fillStyle = this.cellType.color;
+
+            ctx.fill();
+
+            if (cellType.texturePattern !== undefined) {
+                let scale = cellType.noiseScale;
+
+                ctx.scale(scale, scale);
+                ctx.fillStyle = cellType.texturePattern;
+                ctx.fill();
+                ctx.scale(1/scale, 1/scale);
+            }
+
+            if (cellType.detail !== undefined
+             && cellType.detailColor !== undefined
+             && cellType.detailNumberPerCell !== undefined
+             && cellType.detailSize !== undefined) {
+                this.drawPattern(ctx, randomSeed, radius);
+            }
+        }
+    }
+
+    private drawPattern(ctx: CanvasRenderingContext2D, randomSeed: number, cellRadius: number) {
+        let cellType = this.cellType;
+        let random = new Random(randomSeed);
+        let pattern = MapCell.details[cellType.detail as string];
+        let numToDraw = cellType.detailNumberPerCell as number;
+        let patternSize = cellType.detailSize as number;
+
+        ctx.lineWidth = 0.1;
+        ctx.strokeStyle = cellType.detailColor as string;
+        
+        // all patterns are drawn in the range -1 to 1, for x & y. Scale of 1 is exactly the width of a cell.
+        let halfCellWidth = cellRadius * 0.855;
+        let scale = halfCellWidth * patternSize;
+
+        // offset so that pattern always fits within the cell radius, based on patternSize.
+        let maxOffset = (halfCellWidth - halfCellWidth * patternSize) / scale;
+
+        ctx.scale(scale, scale);
+
+        for (let iPattern=0; iPattern<numToDraw; iPattern++) {
+            let dist = maxOffset * Math.sqrt(random.next());
+            
+            let angle = Math.PI * 2 * random.next();
+            let xOffset = dist * Math.cos(angle);
+            let yOffset = dist * Math.sin(angle);
+
+            ctx.translate(xOffset, yOffset);
+            pattern.draw(ctx, random);
+            ctx.translate(-xOffset, -yOffset);
+        }
+        
+        ctx.scale(1/scale, 1/scale);
+    }
+
     static orthogonalDirections = [
         {dCol: +1, dRow: 0}, {dCol: +1, dRow: -1}, {dCol: 0, dRow: -1},
         {dCol: -1, dRow: 0}, {dCol: -1, dRow: +1}, {dCol: 0, dRow: +1},

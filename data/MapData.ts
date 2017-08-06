@@ -65,8 +65,30 @@ class MapData {
             return false; // chop right to get square edge
         return true;
     }
-    getCellIndex(row: number, col: number) {
+    private getCellIndex(row: number, col: number) {
         return col + row * this.underlyingWidth;
+    }
+    getCellIndexAtPoint(mapX: number, mapY: number) {
+        let fCol = (mapX * Math.sqrt(3) - mapY) / 3;
+        let fRow = mapY * 2 / 3;
+        let fThirdCoord = - fCol - fRow;
+
+        let rCol = Math.round(fCol);
+        let rRow = Math.round(fRow);
+        let rThird = Math.round(fThirdCoord);
+
+        let colDiff = Math.abs(rCol - fCol);
+        let rowDiff = Math.abs(rRow - fRow);
+        let thirdDiff = Math.abs(rThird - fThirdCoord);
+
+        if (colDiff >= rowDiff) {
+            if (colDiff >= thirdDiff)
+                rCol = - rRow - rThird;
+        }
+        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
+            rRow = - rCol - rThird;
+
+        return this.getCellIndex(rRow, rCol);
     }
     getCellsInRange(center: MapCell, distance: number) {
         let results: MapCell[] = [];
