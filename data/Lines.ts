@@ -1,3 +1,10 @@
+const enum LinePositionMode {
+    Random,
+    HighToLow,
+    BetweenLocations,
+}
+
+
 class LineType {
     constructor(
         public name: string,
@@ -6,16 +13,21 @@ class LineType {
         public startWidth: number,
         public endWidth: number,
         public curviture: number,
+
+        public erosionAmount: number,
+        public adjacentErosionDistance: number,
+        public canErodeBelowSeaLevel: boolean,
+        public positionMode: LinePositionMode,
     ) {}
 
     static createDefaults(types: LineType[]) {
-        types.push(new LineType('River', '#179ce6', 6, 0, 9, 1));
-        types.push(new LineType('Road', '#bbad65', 4, 4, 4, 0.5));
+        types.push(new LineType('River', '#179ce6', 6, 0, 9, 1, 0.2, 0, false, LinePositionMode.HighToLow));
+        types.push(new LineType('Road', '#bbad65', 4, 4, 4, 0.5, 0, 0, false, LinePositionMode.BetweenLocations));
     }
 }
 
 class MapLine {
-    readonly keyCells: MapCell[];
+    keyCells: MapCell[];
     renderPoints: number[];
     isLoop: boolean;
 
@@ -198,7 +210,7 @@ class MapLine {
         });
     }
 
-    getAffectedCells(map: MapData, includeAdjacent: boolean) {
+    getErosionAffectedCells(map: MapData) {
         let cells: MapCell[] = [];
 
         for (let i=1; i<this.renderPoints.length; i+=2) {
@@ -211,12 +223,12 @@ class MapLine {
         // deduplicate the affected cells
         cells = MapLine.dedupe(cells);
 
-        if (includeAdjacent) {
+        if (this.type.adjacentErosionDistance > 0) {
             let passedThroughCells = cells;
             cells = []; // getCellsInRange always includes the center cell, so no need to ensure they're already present
 
             for (let cell of passedThroughCells) {
-                let adjacent = map.getCellsInRange(cell, 1);
+                let adjacent = map.getCellsInRange(cell, this.type.adjacentErosionDistance);
                 cells = cells.concat(adjacent);
             }
 

@@ -45,6 +45,18 @@ var MapData = (function () {
     MapData.prototype.getCellIndex = function (row, col) {
         return col + row * this.underlyingWidth;
     };
+    MapData.prototype.getRandomCell = function (aboveSeaLevel, attempts) {
+        if (attempts === void 0) { attempts = 100; }
+        do {
+            var index = Random.randomIntRange(0, this.cells.length);
+            var cell = this.cells[index];
+            if (cell !== null) {
+                if (!aboveSeaLevel || cell.height > 0)
+                    return cell;
+            }
+        } while (--attempts > 0);
+        return undefined;
+    };
     MapData.prototype.getCellIndexAtPoint = function (mapX, mapY) {
         var fCol = (mapX * Math.sqrt(3) - mapY) / 3;
         var fRow = mapY * 2 / 3;
@@ -279,7 +291,7 @@ var MapData = (function () {
             }
         if (data.lineTypes !== undefined)
             map.lineTypes = data.lineTypes.map(function (type) {
-                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
+                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture, type.erosionAmount, type.adjacentErosionDistance, type.canErodeToSeaLevel, type.positionMode);
             });
         map.positionCells();
         if (data.lines !== undefined)
@@ -633,17 +645,21 @@ MapLocation.icons['lgWhite'] = {
     draw: function (ctx) { MapLocation.setLightColors(ctx); MapLocation.drawDot(ctx, 10); }
 };
 var LineType = (function () {
-    function LineType(name, color, width, startWidth, endWidth, curviture) {
+    function LineType(name, color, width, startWidth, endWidth, curviture, erosionAmount, adjacentErosionDistance, canErodeBelowSeaLevel, positionMode) {
         this.name = name;
         this.color = color;
         this.width = width;
         this.startWidth = startWidth;
         this.endWidth = endWidth;
         this.curviture = curviture;
+        this.erosionAmount = erosionAmount;
+        this.adjacentErosionDistance = adjacentErosionDistance;
+        this.canErodeBelowSeaLevel = canErodeBelowSeaLevel;
+        this.positionMode = positionMode;
     }
     LineType.createDefaults = function (types) {
-        types.push(new LineType('River', '#179ce6', 6, 0, 9, 1));
-        types.push(new LineType('Road', '#bbad65', 4, 4, 4, 0.5));
+        types.push(new LineType('River', '#179ce6', 6, 0, 9, 1, 0.2, 0, false, 1 /* HighToLow */));
+        types.push(new LineType('Road', '#bbad65', 4, 4, 4, 0.5, 0, 0, false, 2 /* BetweenLocations */));
     };
     return LineType;
 }());
@@ -791,7 +807,7 @@ var MapLine = (function () {
             return index == cells.indexOf(cell);
         });
     };
-    MapLine.prototype.getAffectedCells = function (map, includeAdjacent) {
+    MapLine.prototype.getErosionAffectedCells = function (map) {
         var cells = [];
         for (var i = 1; i < this.renderPoints.length; i += 2) {
             var cellIndex = map.getCellIndexAtPoint(this.renderPoints[i - 1], this.renderPoints[i]);
@@ -801,12 +817,12 @@ var MapLine = (function () {
         }
         // deduplicate the affected cells
         cells = MapLine.dedupe(cells);
-        if (includeAdjacent) {
+        if (this.type.adjacentErosionDistance > 0) {
             var passedThroughCells = cells;
             cells = []; // getCellsInRange always includes the center cell, so no need to ensure they're already present
             for (var _i = 0, passedThroughCells_1 = passedThroughCells; _i < passedThroughCells_1.length; _i++) {
                 var cell = passedThroughCells_1[_i];
-                var adjacent = map.getCellsInRange(cell, 1);
+                var adjacent = map.getCellsInRange(cell, this.type.adjacentErosionDistance);
                 cells = cells.concat(adjacent);
             }
             cells = MapLine.dedupe(cells);
@@ -3385,7 +3401,51 @@ var MapGenerator = (function () {
     function MapGenerator() {
     }
     MapGenerator.generate = function (map, settings) {
-        // to start with, just generate height, temperate and precipitation simplex noise of the same size as the map, and allocate cell types based on those.
+        // clear down all lines and locations
+        map.lines = [];
+        map.locations = [];
+        // to start with, generate height, temperate and precipitation values for all map cells
+        MapGenerator.allocateCellProperties(map, settings);
+        // generate mountain ranges, but don't add these to the map. Just use them for (negative) erosion.
+        var mountains = new LineType('Mountains', '#000000', 1, 1, 1, 1, -0.4, 1, true, 0 /* Random */);
+        MapGenerator.generateLines(map, mountains);
+        // create river lines and allow them to erode the map.
+        for (var _i = 0, _a = map.lineTypes; _i < _a.length; _i++) {
+            var lineType = _a[_i];
+            if (lineType.positionMode === 2 /* BetweenLocations */)
+                continue;
+            var lines = MapGenerator.generateLines(map, lineType);
+            map.lines = map.lines.concat(lines);
+        }
+        // create locations, which currently all prefer the lowest nearby point
+        for (var _b = 0, _c = map.locationTypes; _b < _c.length; _b++) {
+            var locationType = _c[_b];
+            var onePerNCells = 50; // TODO: to be specified per location type. Make this only consider LAND cells?
+            var numLocations = Math.round(map.width * map.height / onePerNCells);
+            for (var iLoc = 0; iLoc < numLocations; iLoc++) {
+                var loc = MapGenerator.generateLocation(map, locationType);
+                if (loc === undefined)
+                    continue;
+                map.locations.push(loc);
+            }
+        }
+        // create roads, only once locations are in place
+        for (var _d = 0, _e = map.lineTypes; _d < _e.length; _d++) {
+            var lineType = _e[_d];
+            if (lineType.positionMode !== 2 /* BetweenLocations */)
+                continue;
+            MapGenerator.generateLinesBetweenLocations(map, lineType);
+        }
+        // TODO: calculate wind, use that to modify precipitation and temperature
+        // finally, allocate types to cells based on their generation properties
+        for (var _f = 0, _g = map.cells; _f < _g.length; _f++) {
+            var cell = _g[_f];
+            if (cell === null)
+                continue;
+            MapGenerator.updateCellType(cell);
+        }
+    };
+    MapGenerator.allocateCellProperties = function (map, settings) {
         var heightGuide = settings.heightGuide;
         var lowFreqHeightNoise = new SimplexNoise();
         var highFreqHeightNoise = new SimplexNoise();
@@ -3423,17 +3483,7 @@ var MapGenerator = (function () {
             cell.height = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
             cell.temperature = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
             cell.precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
-            // don't allocate a cell type right away, as wind, lines and locations may change these properties
-        }
-        // TODO: erosion, mountain ranges, etc
-        // TODO: calculate wind, use that to modify precipitation and temperature
-        // TODO: add lines, locations
-        // allocate types to cells based on their generation properties
-        for (var _b = 0, _c = map.cells; _b < _c.length; _b++) {
-            var cell = _c[_b];
-            if (cell === null)
-                continue;
-            MapGenerator.updateCellType(cell);
+            // don't allocate a cell type right away, as later steps may change these properties
         }
     };
     MapGenerator.determineValue = function (x, y, maxX, maxY, guideScale, lowFreqScale, highFreqScale, guide, lowFreqNoise, highFreqNoise, minValue, maxValue) {
@@ -3460,6 +3510,131 @@ var MapGenerator = (function () {
     };
     MapGenerator.constructCellTypeLookup = function (cellTypes) {
         MapGenerator.cellTypeLookup = new kdTree(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+    };
+    MapGenerator.generateLocation = function (map, locationType) {
+        var cell = map.getRandomCell(true);
+        if (cell === undefined)
+            return undefined;
+        // TODO: Give each location type a "minimum distance" from other named locations. Don't let them generate closer than this.
+        cell = MapGenerator.pickLowestCell(map.getCellsInRange(cell, 2), true);
+        if (cell.height <= 0)
+            console.log('generating underwater city');
+        var location = new MapLocation(cell, locationType.name, locationType);
+        return location;
+    };
+    MapGenerator.generateLines = function (map, lineType) {
+        var lines = [];
+        var onePerNCells = 80; // TODO: Make this configurable, ideally in generation settings.
+        var numLines = Math.round(map.width * map.height / onePerNCells);
+        for (var iLine = 0; iLine < numLines; iLine++) {
+            var cells = void 0;
+            switch (lineType.positionMode) {
+                case 0 /* Random */:
+                    cells = MapGenerator.pickRandomLineCells(map, lineType);
+                    break;
+                case 1 /* HighToLow */:
+                    cells = MapGenerator.pickHighToLowLineCells(map, lineType);
+                    break;
+                default:
+                    continue;
+            }
+            if (cells.length <= 1)
+                continue;
+            var line = MapGenerator.generateLine(map, lineType, cells);
+            lines.push(line);
+        }
+        return lines;
+    };
+    MapGenerator.generateLinesBetweenLocations = function (map, lineType) {
+        // TODO: use something like an Urquhart graph per landmass to decide which pairs of location to draw lines between
+        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
+            var location_4 = _a[_i];
+            var index = Random.randomIntRange(0, map.locations.length);
+            var other = map.locations[index];
+            if (other === location_4 || Math.random() < 0.85)
+                continue;
+            // TODO: plot a path between locations, don't just go straight
+            var cells = [location_4.cell, other.cell];
+            var line = MapGenerator.generateLine(map, lineType, cells);
+            map.lines.push(line);
+        }
+    };
+    MapGenerator.generateLine = function (map, lineType, cells) {
+        // create line
+        var line = new MapLine(lineType);
+        line.keyCells = cells;
+        line.updateRenderPoints();
+        // erode the terrain this line passes through, if needed
+        if (lineType.erosionAmount != 0) {
+            var erosionAmount = line.type.erosionAmount;
+            var cellsToErode = line.getErosionAffectedCells(map);
+            for (var _i = 0, cellsToErode_1 = cellsToErode; _i < cellsToErode_1.length; _i++) {
+                var cell = cellsToErode_1[_i];
+                cell.height -= erosionAmount;
+            }
+        }
+        return line;
+    };
+    MapGenerator.pickRandomLineCells = function (map, lineType) {
+        // TODO: plot a path between these two points, not just a straight line
+        var cellA = map.getRandomCell(true), cellB = map.getRandomCell(true);
+        if (cellA === undefined || cellB === undefined)
+            return [];
+        return [cellA, cellB];
+    };
+    MapGenerator.pickHighToLowLineCells = function (map, lineType) {
+        // start with a random cell
+        var genStartCell = map.getRandomCell(!lineType.canErodeBelowSeaLevel);
+        if (genStartCell === undefined)
+            return [];
+        var highestCell = genStartCell;
+        var lowestCell = genStartCell;
+        var cells = [genStartCell];
+        // "flow" downwards through adjacent cells until we reach a "lowest" point or go below sea level
+        // TODO: local minima above sea level shouldn't just terminate a river. They should flow over that, possibly making a lake in the process. Right?
+        while (true) {
+            var testCell = MapGenerator.pickLowestCell(map.getCellsInRange(lowestCell, 1));
+            if (testCell === lowestCell)
+                break;
+            cells.push(testCell);
+            lowestCell = testCell;
+            if (!lineType.canErodeBelowSeaLevel && lowestCell.height <= 0)
+                break; // some line types (rivers!) don't want us to keep eroding once we reach the seabed
+        }
+        // also "flow" upwards until we reach a highest point
+        // TODO: upward flow should stop if an existing river is reached, to prevent rivers from "branching" implausibly
+        while (true) {
+            var testCell = MapGenerator.pickHighestCell(map.getCellsInRange(highestCell, 1));
+            if (testCell === highestCell)
+                break;
+            cells.unshift(testCell);
+            highestCell = testCell;
+        }
+        cells.shift(); // always remove first cell, or most rivers will start on the same mountain
+        // TODO: as we don't want a key cell EVERY cell, remove every N cells or something ... start from the end, so the river still ends in the right place
+        return cells;
+    };
+    MapGenerator.pickHighestCell = function (cells) {
+        var returnCell = cells[0];
+        for (var i = 1; i < cells.length; i++) {
+            var testCell = cells[i];
+            if (testCell.height > returnCell.height)
+                returnCell = testCell;
+        }
+        return returnCell;
+    };
+    MapGenerator.pickLowestCell = function (cells, mustBeAboveSeaLevel) {
+        if (mustBeAboveSeaLevel === void 0) { mustBeAboveSeaLevel = false; }
+        var returnCell = cells[0];
+        var bestHeight = Number.MAX_VALUE;
+        for (var i = 0; i < cells.length; i++) {
+            var testCell = cells[i];
+            if (testCell.height < bestHeight && (!mustBeAboveSeaLevel || testCell.height > 0)) {
+                returnCell = testCell;
+                bestHeight = testCell.height;
+            }
+        }
+        return returnCell;
     };
     return MapGenerator;
 }());

@@ -68,6 +68,19 @@ class MapData {
     private getCellIndex(row: number, col: number) {
         return col + row * this.underlyingWidth;
     }
+    getRandomCell(aboveSeaLevel: boolean, attempts: number = 100) {
+        do {
+            let index = Random.randomIntRange(0, this.cells.length);
+            let cell = this.cells[index];
+
+            if (cell !== null) {
+                if (!aboveSeaLevel || cell.height > 0)
+                    return cell;
+            }
+        } while (--attempts > 0);
+
+        return undefined;
+    }
     getCellIndexAtPoint(mapX: number, mapY: number) {
         let fCol = (mapX * Math.sqrt(3) - mapY) / 3;
         let fRow = mapY * 2 / 3;
@@ -294,7 +307,9 @@ class MapData {
             cells: {typeID: number}[];
             locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
             locations: {cellID: number, typeID: number, name: string}[];
-            lineTypes: {name: string, color: string, width: number, startWidth: number, endWidth: number, curviture: number}[];
+            lineTypes: {
+                name: string, color: string, width: number, startWidth: number, endWidth: number, curviture: number,
+                erosionAmount: number, adjacentErosionDistance: number, canErodeToSeaLevel: boolean, positionMode: number}[];
             lines: {typeID: number, cellIDs: number[]}[];
         } = JSON.parse(json);
 
@@ -342,7 +357,10 @@ class MapData {
 
         if (data.lineTypes !== undefined)
             map.lineTypes = data.lineTypes.map(function (type) {
-                return new LineType(type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture);
+                return new LineType(
+                    type.name, type.color, type.width, type.startWidth, type.endWidth, type.curviture,
+                    type.erosionAmount, type.adjacentErosionDistance, type.canErodeToSeaLevel, type.positionMode
+                );
             });
 
         map.positionCells();
