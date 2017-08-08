@@ -9,12 +9,13 @@ class LocationType {
         public textSize: number,
         public textColor: string,
         public icon: string,
+        public minDistanceToOther: number,
         public minDrawCellRadius?: number,
     ) {}
 
     static createDefaults(types: LocationType[]) {
-        types.push(new LocationType('Town', 16, '#000000', 'smBlack', 10));
-        types.push(new LocationType('City', 24, '#000000', 'lgBlack'));
+        types.push(new LocationType('Town', 16, '#000000', 'smBlack', 3, 10));
+        types.push(new LocationType('City', 24, '#000000', 'lgBlack', 5));
     }
 }
 

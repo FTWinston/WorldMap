@@ -279,7 +279,7 @@ var MapData = (function () {
             });
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
-                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDrawCellRadius);
+                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDistanceToOther, type.minDrawCellRadius);
             });
         if (data.locations !== undefined)
             for (var _i = 0, _a = data.locations; _i < _a.length; _i++) {
@@ -563,16 +563,17 @@ MapCell.addDetail({
     }
 });
 var LocationType = (function () {
-    function LocationType(name, textSize, textColor, icon, minDrawCellRadius) {
+    function LocationType(name, textSize, textColor, icon, minDistanceToOther, minDrawCellRadius) {
         this.name = name;
         this.textSize = textSize;
         this.textColor = textColor;
         this.icon = icon;
+        this.minDistanceToOther = minDistanceToOther;
         this.minDrawCellRadius = minDrawCellRadius;
     }
     LocationType.createDefaults = function (types) {
-        types.push(new LocationType('Town', 16, '#000000', 'smBlack', 10));
-        types.push(new LocationType('City', 24, '#000000', 'lgBlack'));
+        types.push(new LocationType('Town', 16, '#000000', 'smBlack', 3, 10));
+        types.push(new LocationType('City', 24, '#000000', 'lgBlack', 5));
     };
     return LocationType;
 }());
@@ -2382,7 +2383,8 @@ var LineTypeEditor = (function (_super) {
         var editType = this.props.editingType;
         var lineTypes = this.props.lineTypes.slice();
         if (editType === undefined) {
-            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture));
+            var erosionAmount = 0.2, adjacentErosionDistance = 1, canErodeBelowSeaLevel = false, positionMode = 0 /* Random */; // TODO: allow editing these
+            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture, erosionAmount, adjacentErosionDistance, canErodeBelowSeaLevel, positionMode));
         }
         else {
             if (editType.curviture != this.state.curviture)
@@ -2708,7 +2710,8 @@ var LocationTypeEditor = (function (_super) {
         var editType = this.props.editingType;
         var locationTypes = this.props.locationTypes.slice();
         if (editType === undefined) {
-            locationTypes.push(new LocationType(name, textSize, textColor, icon, minDrawRadius));
+            var minDistanceToOther = 3; // TODO: allow editing of this
+            locationTypes.push(new LocationType(name, textSize, textColor, icon, minDistanceToOther, minDrawRadius));
         }
         else {
             editType.name = name;
@@ -3515,10 +3518,13 @@ var MapGenerator = (function () {
         var cell = map.getRandomCell(true);
         if (cell === undefined)
             return undefined;
-        // TODO: Give each location type a "minimum distance" from other named locations. Don't let them generate closer than this.
         cell = MapGenerator.pickLowestCell(map.getCellsInRange(cell, 2), true);
-        if (cell.height <= 0)
-            console.log('generating underwater city');
+        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
+            var other = _a[_i];
+            var minDist = Math.min(locationType.minDistanceToOther, other.type.minDistanceToOther);
+            if (cell.distanceTo(other.cell) < minDist)
+                return undefined;
+        }
         var location = new MapLocation(cell, locationType.name, locationType);
         return location;
     };

@@ -104,7 +104,8 @@ class LocationTypeEditor extends React.Component<ILocationTypeEditorProps, ILoca
         let editType = this.props.editingType;
         let locationTypes = this.props.locationTypes.slice();
         if (editType === undefined) {
-            locationTypes.push(new LocationType(name, textSize, textColor, icon, minDrawRadius));
+            let minDistanceToOther = 3; // TODO: allow editing of this
+            locationTypes.push(new LocationType(name, textSize, textColor, icon, minDistanceToOther, minDrawRadius));
         }
         else {
             editType.name = name;

@@ -163,12 +163,12 @@ class MapGenerator {
         if (cell === undefined)
             return undefined;
         
-        // TODO: Give each location type a "minimum distance" from other named locations. Don't let them generate closer than this.
-
         cell = MapGenerator.pickLowestCell(map.getCellsInRange(cell, 2), true);
-
-        if (cell.height <= 0)
-            console.log('generating underwater city');
+        for (let other of map.locations) {
+            let minDist = Math.min(locationType.minDistanceToOther, other.type.minDistanceToOther);
+            if (cell.distanceTo(other.cell) < minDist)
+                return undefined;
+        }
 
         let location = new MapLocation(cell, locationType.name, locationType);
         return location;

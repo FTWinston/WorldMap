@@ -105,7 +105,12 @@ class LineTypeEditor extends React.Component<ILineTypeEditorProps, ILineTypeEdit
         let editType = this.props.editingType;
         let lineTypes = this.props.lineTypes.slice();
         if (editType === undefined) {
-            lineTypes.push(new LineType(name, color, this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture));
+            let erosionAmount = 0.2, adjacentErosionDistance = 1, canErodeBelowSeaLevel = false, positionMode = LinePositionMode.Random; // TODO: allow editing these
+            lineTypes.push(new LineType(
+                name, color,
+                this.state.width, this.state.startWidth, this.state.endWidth, this.state.curviture,
+                erosionAmount, adjacentErosionDistance, canErodeBelowSeaLevel, positionMode
+            ));
         }
         else {
             if (editType.curviture != this.state.curviture)

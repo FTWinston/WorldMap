@@ -305,11 +305,15 @@ class MapData {
                 detail?: string, detailColor?: string, detailNumberPerCell?: number, detailSize?: number
             }[];
             cells: {typeID: number}[];
-            locationTypes: {name: string, textSize: number, textColor: string, icon: string, minDrawCellRadius?: number}[];
+            locationTypes: {
+                name: string, textSize: number, textColor: string, icon: string,
+                minDistanceToOther: number, minDrawCellRadius?: number
+            }[];
             locations: {cellID: number, typeID: number, name: string}[];
             lineTypes: {
                 name: string, color: string, width: number, startWidth: number, endWidth: number, curviture: number,
-                erosionAmount: number, adjacentErosionDistance: number, canErodeToSeaLevel: boolean, positionMode: number}[];
+                erosionAmount: number, adjacentErosionDistance: number, canErodeToSeaLevel: boolean, positionMode: number
+            }[];
             lines: {typeID: number, cellIDs: number[]}[];
         } = JSON.parse(json);
 
@@ -344,7 +348,7 @@ class MapData {
 
         if (data.locationTypes !== undefined)
             map.locationTypes = data.locationTypes.map(function (type) {
-                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDrawCellRadius);
+                return new LocationType(type.name, type.textSize, type.textColor, type.icon, type.minDistanceToOther, type.minDrawCellRadius);
             });
 
         if (data.locations !== undefined)
