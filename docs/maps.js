@@ -3580,7 +3580,7 @@ var MapGenerator = (function () {
             for (var _b = 0, groups_1 = groups; _b < groups_1.length; _b++) {
                 var testGroup = groups_1[_b];
                 var firstInGroup = testGroup[0];
-                if (MapGenerator.canCellsConnect(map, location_4.cell, firstInGroup.cell)) {
+                if (MapGenerator.getConnectionPath(map, location_4.cell, firstInGroup.cell) !== null) {
                     testGroup.push(location_4);
                     foundGroup = true;
                     break;
@@ -3591,54 +3591,60 @@ var MapGenerator = (function () {
         }
         return groups;
     };
-    MapGenerator.canCellsConnect = function (map, from, to) {
+    MapGenerator.getConnectionPath = function (map, from, to) {
         var colMul = map.height;
         var visited = {};
         visited[from.row + from.col * colMul] = true;
-        var prevFringe = [from];
+        var prevFringe = [[from]];
         var nextFringe = [];
         while (prevFringe.length > 0) {
             for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
-                var fringeCell = prevFringe_1[_i];
+                var fringePath = prevFringe_1[_i];
+                var fringeCell = fringePath[fringePath.length - 1];
                 for (var _a = 0, _b = map.getNeighbours(fringeCell); _a < _b.length; _a++) {
                     var testCell = _b[_a];
                     var testIndex = testCell.row + testCell.col * colMul;
                     if (visited[testIndex] === true)
                         continue;
+                    var path = fringePath.slice();
+                    path.push(testCell);
                     if (testCell === to)
-                        return true;
+                        return path;
                     visited[testIndex] = true;
                     if (testCell.height > 0 && testCell.height < 0.75)
-                        nextFringe.push(testCell);
+                        nextFringe.push(path);
                 }
             }
             prevFringe = nextFringe;
             nextFringe = [];
         }
-        return false;
+        return null;
     };
     MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
-        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... we don't keep
-        for (var _i = 0, locations_1 = locations; _i < locations_1.length; _i++) {
-            var from = locations_1[_i];
-            for (var _a = 0, locations_2 = locations; _a < locations_2.length; _a++) {
-                var to = locations_2[_a];
-                var distance = from.cell.distanceTo(to.cell); // TODO: distances should account for obstacles (terrain that is too high or too low)
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        for (var i = 0; i < locations.length; i++) {
+            var from = locations[i];
+            for (var j = i + 1; j < locations.length; j++) {
+                var to = locations[j];
+                var path = MapGenerator.getConnectionPath(map, from.cell, to.cell);
+                if (path === null)
+                    continue;
                 var anyCloser = false;
-                for (var _b = 0, locations_3 = locations; _b < locations_3.length; _b++) {
-                    var test = locations_3[_b];
-                    var dist1 = from.cell.distanceTo(test.cell);
-                    var dist2 = to.cell.distanceTo(test.cell);
-                    if (dist1 < distance && dist2 < distance) {
+                for (var _i = 0, locations_1 = locations; _i < locations_1.length; _i++) {
+                    var test = locations_1[_i];
+                    var dist1 = MapGenerator.getConnectionPath(map, from.cell, test.cell);
+                    var dist2 = MapGenerator.getConnectionPath(map, to.cell, test.cell);
+                    if (dist1 === null || dist2 === null)
+                        continue;
+                    if (dist1.length < path.length && dist2.length < path.length) {
                         anyCloser = true;
                         break;
                     }
                 }
                 if (!anyCloser) {
-                    // TODO: plot a path between locations, don't just go straight
-                    var cells = [from.cell, to.cell];
-                    var line = MapGenerator.generateLine(map, lineType, cells);
+                    // TODO: delete every 2nd (and maybe 3rd) cell, apart from the ends
+                    var line = MapGenerator.generateLine(map, lineType, path);
                     map.lines.push(line);
                 }
             }

@@ -215,7 +215,7 @@ class MapGenerator {
             let foundGroup = false;
             for (let testGroup of groups) {
                 let firstInGroup = testGroup[0];
-                if (MapGenerator.canCellsConnect(map, location.cell, firstInGroup.cell)) {
+                if (MapGenerator.getConnectionPath(map, location.cell, firstInGroup.cell) !== null) {
                     testGroup.push(location);
                     foundGroup = true;
                     break;
@@ -229,28 +229,32 @@ class MapGenerator {
         return groups;
     }
 
-    private static canCellsConnect(map: MapData, from: MapCell, to: MapCell) {
+    private static getConnectionPath(map: MapData, from: MapCell, to: MapCell) {
         let colMul = map.height;
         let visited: {[key:number]:boolean} = {};
         visited[from.row + from.col * colMul] = true;
         
-        let prevFringe = [from];
-        let nextFringe: MapCell[] = [];
+        let prevFringe = [[from]];
+        let nextFringe: MapCell[][] = [];
 
         while (prevFringe.length > 0) {
-            for (let fringeCell of prevFringe) {
+            for (let fringePath of prevFringe) {
+                let fringeCell = fringePath[fringePath.length - 1];
                 for (let testCell of map.getNeighbours(fringeCell)) {
                     let testIndex = testCell.row + testCell.col * colMul;
                     if (visited[testIndex] === true)
                         continue;
 
+                    let path = fringePath.slice();
+                    path.push(testCell);
+
                     if (testCell === to)
-                        return true;
+                        return path;
 
                     visited[testIndex] = true;
 
                     if (testCell.height > 0 && testCell.height < 0.75) // TODO: these height limits should probably come from line type
-                        nextFringe.push(testCell);
+                        nextFringe.push(path);
                 }
             }
 
@@ -258,34 +262,43 @@ class MapGenerator {
             nextFringe = [];
         }
 
-        return false;
+        return null;
     }
 
     private static generateLinesForLocationGroup(map: MapData, locations: MapLocation[], lineType: LineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
-        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... we don't keep
-        for (let from of locations)
-            for (let to of locations) {
-                let distance = from.cell.distanceTo(to.cell); // TODO: distances should account for obstacles (terrain that is too high or too low)
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        for (let i=0; i<locations.length; i++) {
+            let from = locations[i];
+            for (let j=i+1; j<locations.length; j++) {
+                let to = locations[j];
+
+                let path = MapGenerator.getConnectionPath(map, from.cell, to.cell);
+                if (path === null)
+                    continue;
+
                 let anyCloser = false;
 
                 for (let test of locations) {
-                    let dist1 = from.cell.distanceTo(test.cell);
-                    let dist2 = to.cell.distanceTo(test.cell);
+                    let dist1 = MapGenerator.getConnectionPath(map, from.cell, test.cell);
+                    let dist2 = MapGenerator.getConnectionPath(map, to.cell, test.cell);
 
-                    if (dist1 < distance && dist2 < distance) {
+                    if (dist1 === null || dist2 === null)
+                        continue;
+
+                    if (dist1.length < path.length && dist2.length < path.length) {
                         anyCloser = true;
                         break;
                     }
                 }
 
                 if (!anyCloser) {
-                    // TODO: plot a path between locations, don't just go straight
-                    let cells = [from.cell, to.cell];
-                    let line = MapGenerator.generateLine(map, lineType, cells);
+                    // TODO: delete every 2nd (and maybe 3rd) cell, apart from the ends
+                    let line = MapGenerator.generateLine(map, lineType, path);
                     map.lines.push(line);
                 }
             }
+        }
     }
 
     private static generateLine(map: MapData, lineType: LineType, cells: MapCell[]) {
