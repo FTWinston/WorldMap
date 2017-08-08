@@ -3643,12 +3643,26 @@ var MapGenerator = (function () {
                     }
                 }
                 if (!anyCloser) {
-                    // TODO: delete every 2nd (and maybe 3rd) cell, apart from the ends
+                    path = MapGenerator.removeSuperfluousLineCells(path);
                     var line = MapGenerator.generateLine(map, lineType, path);
                     map.lines.push(line);
                 }
             }
         }
+    };
+    MapGenerator.removeSuperfluousLineCells = function (input) {
+        var mid = Math.ceil(input.length / 2);
+        var output = [];
+        var i;
+        for (i = 0; i < mid; i++)
+            output.push(input[i]);
+        i = mid;
+        if (input.length % 2 == 0)
+            i++;
+        for (i; i < input.length; i++)
+            output.push(input[i]);
+        ;
+        return output;
     };
     MapGenerator.generateLine = function (map, lineType, cells) {
         // create line
@@ -3702,7 +3716,7 @@ var MapGenerator = (function () {
             highestCell = testCell;
         }
         cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        // TODO: as we don't want a key cell EVERY cell, remove every N cells or something ... start from the end, so the river still ends in the right place
+        cells = MapGenerator.removeSuperfluousLineCells(cells);
         return cells;
     };
     MapGenerator.pickHighestCell = function (cells) {

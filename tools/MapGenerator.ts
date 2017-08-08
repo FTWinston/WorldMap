@@ -293,12 +293,30 @@ class MapGenerator {
                 }
 
                 if (!anyCloser) {
-                    // TODO: delete every 2nd (and maybe 3rd) cell, apart from the ends
+                    path = MapGenerator.removeSuperfluousLineCells(path);
                     let line = MapGenerator.generateLine(map, lineType, path);
                     map.lines.push(line);
                 }
             }
         }
+    }
+
+    private static removeSuperfluousLineCells(input: MapCell[]) {
+        let mid = Math.ceil(input.length / 2);
+        let output = [];
+        let i;
+
+        for (i=0; i<mid; i++)
+            output.push(input[i]);
+
+        i = mid;
+        if (input.length % 2 == 0)
+            i++;
+
+        for (i; i<input.length; i++)
+            output.push(input[i]);;
+
+        return output;
     }
 
     private static generateLine(map: MapData, lineType: LineType, cells: MapCell[]) {
@@ -364,7 +382,7 @@ class MapGenerator {
         }
 
         cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        // TODO: as we don't want a key cell EVERY cell, remove every N cells or something ... start from the end, so the river still ends in the right place
+        cells = MapGenerator.removeSuperfluousLineCells(cells);
 
         return cells;
     }
