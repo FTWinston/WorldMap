@@ -201,19 +201,91 @@ class MapGenerator {
     }
 
     private static generateLinesBetweenLocations(map: MapData, lineType: LineType) {
-        // TODO: use something like an Urquhart graph per landmass to decide which pairs of location to draw lines between
-        for (let location of map.locations) {
-            let index = Random.randomIntRange(0, map.locations.length);
-            let other = map.locations[index];
-
-            if (other === location || Math.random() < 0.85) // TODO: no random failure chance, or at least a very small one
-                continue;
-
-            // TODO: plot a path between locations, don't just go straight
-            let cells = [location.cell, other.cell];
-            let line = MapGenerator.generateLine(map, lineType, cells);
-            map.lines.push(line);
+        let locationGroups = MapGenerator.groupConnectableLocations(map, map.locations);
+        
+        for (let group of locationGroups) {
+            MapGenerator.generateLinesForLocationGroup(map, group, lineType);
         }
+    }
+
+    private static groupConnectableLocations(map: MapData, locations: MapLocation[]) {
+        let groups: Array<MapLocation>[] = [];
+
+        for (let location of locations.slice()) {
+            let foundGroup = false;
+            for (let testGroup of groups) {
+                let firstInGroup = testGroup[0];
+                if (MapGenerator.canCellsConnect(map, location.cell, firstInGroup.cell)) {
+                    testGroup.push(location);
+                    foundGroup = true;
+                    break;
+                }
+            }
+
+            if (!foundGroup)
+                groups.push([location]);
+        }
+
+        return groups;
+    }
+
+    private static canCellsConnect(map: MapData, from: MapCell, to: MapCell) {
+        let colMul = map.height;
+        let visited: {[key:number]:boolean} = {};
+        visited[from.row + from.col * colMul] = true;
+        
+        let prevFringe = [from];
+        let nextFringe: MapCell[] = [];
+
+        while (prevFringe.length > 0) {
+            for (let fringeCell of prevFringe) {
+                for (let testCell of map.getNeighbours(fringeCell)) {
+                    let testIndex = testCell.row + testCell.col * colMul;
+                    if (visited[testIndex] === true)
+                        continue;
+
+                    if (testCell === to)
+                        return true;
+
+                    visited[testIndex] = true;
+
+                    if (testCell.height > 0 && testCell.height < 0.75) // TODO: these height limits should probably come from line type
+                        nextFringe.push(testCell);
+                }
+            }
+
+            prevFringe = nextFringe;
+            nextFringe = [];
+        }
+
+        return false;
+    }
+
+    private static generateLinesForLocationGroup(map: MapData, locations: MapLocation[], lineType: LineType) {
+        // connect every pair of locations in the group for which there isn't another location closer to both of them
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... we don't keep
+        for (let from of locations)
+            for (let to of locations) {
+                let distance = from.cell.distanceTo(to.cell); // TODO: distances should account for obstacles (terrain that is too high or too low)
+                let anyCloser = false;
+
+                for (let test of locations) {
+                    let dist1 = from.cell.distanceTo(test.cell);
+                    let dist2 = to.cell.distanceTo(test.cell);
+
+                    if (dist1 < distance && dist2 < distance) {
+                        anyCloser = true;
+                        break;
+                    }
+                }
+
+                if (!anyCloser) {
+                    // TODO: plot a path between locations, don't just go straight
+                    let cells = [from.cell, to.cell];
+                    let line = MapGenerator.generateLine(map, lineType, cells);
+                    map.lines.push(line);
+                }
+            }
     }
 
     private static generateLine(map: MapData, lineType: LineType, cells: MapCell[]) {

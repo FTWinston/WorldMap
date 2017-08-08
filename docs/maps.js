@@ -75,6 +75,20 @@ var MapData = (function () {
             rRow = -rCol - rThird;
         return this.getCellIndex(rRow, rCol);
     };
+    MapData.prototype.getNeighbours = function (cell) {
+        var neighbours = [];
+        for (var _i = 0, _a = MapCell.orthogonalDirections; _i < _a.length; _i++) {
+            var offset = _a[_i];
+            var row = cell.row + offset.dRow;
+            var col = cell.col + offset.dCol;
+            if (row >= 0 && row < this.height && col >= 0 && col <= this.underlyingWidth) {
+                var cell_1 = this.cells[this.getCellIndex(row, col)];
+                if (cell_1 !== null)
+                    neighbours.push(cell_1);
+            }
+        }
+        return neighbours;
+    };
     MapData.prototype.getCellsInRange = function (center, distance) {
         var results = [];
         var minDc = -distance, maxDc = +distance;
@@ -2241,8 +2255,8 @@ var TerrainEditor = (function (_super) {
         }
         var cellsToChange = this.props.findCellsInRange(cell, this.state.brushSize);
         for (var _i = 0, cellsToChange_1 = cellsToChange; _i < cellsToChange_1.length; _i++) {
-            var cell_1 = cellsToChange_1[_i];
-            this.modifyCell(cell_1);
+            var cell_2 = cellsToChange_1[_i];
+            this.modifyCell(cell_2);
         }
     };
     TerrainEditor.prototype.modifyCell = function (cell) {
@@ -3552,17 +3566,82 @@ var MapGenerator = (function () {
         return lines;
     };
     MapGenerator.generateLinesBetweenLocations = function (map, lineType) {
-        // TODO: use something like an Urquhart graph per landmass to decide which pairs of location to draw lines between
-        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
+        var locationGroups = MapGenerator.groupConnectableLocations(map, map.locations);
+        for (var _i = 0, locationGroups_1 = locationGroups; _i < locationGroups_1.length; _i++) {
+            var group = locationGroups_1[_i];
+            MapGenerator.generateLinesForLocationGroup(map, group, lineType);
+        }
+    };
+    MapGenerator.groupConnectableLocations = function (map, locations) {
+        var groups = [];
+        for (var _i = 0, _a = locations.slice(); _i < _a.length; _i++) {
             var location_4 = _a[_i];
-            var index = Random.randomIntRange(0, map.locations.length);
-            var other = map.locations[index];
-            if (other === location_4 || Math.random() < 0.85)
-                continue;
-            // TODO: plot a path between locations, don't just go straight
-            var cells = [location_4.cell, other.cell];
-            var line = MapGenerator.generateLine(map, lineType, cells);
-            map.lines.push(line);
+            var foundGroup = false;
+            for (var _b = 0, groups_1 = groups; _b < groups_1.length; _b++) {
+                var testGroup = groups_1[_b];
+                var firstInGroup = testGroup[0];
+                if (MapGenerator.canCellsConnect(map, location_4.cell, firstInGroup.cell)) {
+                    testGroup.push(location_4);
+                    foundGroup = true;
+                    break;
+                }
+            }
+            if (!foundGroup)
+                groups.push([location_4]);
+        }
+        return groups;
+    };
+    MapGenerator.canCellsConnect = function (map, from, to) {
+        var colMul = map.height;
+        var visited = {};
+        visited[from.row + from.col * colMul] = true;
+        var prevFringe = [from];
+        var nextFringe = [];
+        while (prevFringe.length > 0) {
+            for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
+                var fringeCell = prevFringe_1[_i];
+                for (var _a = 0, _b = map.getNeighbours(fringeCell); _a < _b.length; _a++) {
+                    var testCell = _b[_a];
+                    var testIndex = testCell.row + testCell.col * colMul;
+                    if (visited[testIndex] === true)
+                        continue;
+                    if (testCell === to)
+                        return true;
+                    visited[testIndex] = true;
+                    if (testCell.height > 0 && testCell.height < 0.75)
+                        nextFringe.push(testCell);
+                }
+            }
+            prevFringe = nextFringe;
+            nextFringe = [];
+        }
+        return false;
+    };
+    MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
+        // connect every pair of locations in the group for which there isn't another location closer to both of them
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... we don't keep
+        for (var _i = 0, locations_1 = locations; _i < locations_1.length; _i++) {
+            var from = locations_1[_i];
+            for (var _a = 0, locations_2 = locations; _a < locations_2.length; _a++) {
+                var to = locations_2[_a];
+                var distance = from.cell.distanceTo(to.cell); // TODO: distances should account for obstacles (terrain that is too high or too low)
+                var anyCloser = false;
+                for (var _b = 0, locations_3 = locations; _b < locations_3.length; _b++) {
+                    var test = locations_3[_b];
+                    var dist1 = from.cell.distanceTo(test.cell);
+                    var dist2 = to.cell.distanceTo(test.cell);
+                    if (dist1 < distance && dist2 < distance) {
+                        anyCloser = true;
+                        break;
+                    }
+                }
+                if (!anyCloser) {
+                    // TODO: plot a path between locations, don't just go straight
+                    var cells = [from.cell, to.cell];
+                    var line = MapGenerator.generateLine(map, lineType, cells);
+                    map.lines.push(line);
+                }
+            }
         }
     };
     MapGenerator.generateLine = function (map, lineType, cells) {

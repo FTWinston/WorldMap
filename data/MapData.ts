@@ -103,6 +103,20 @@ class MapData {
 
         return this.getCellIndex(rRow, rCol);
     }
+    getNeighbours(cell: MapCell) {
+        let neighbours = [];
+        for (let offset of MapCell.orthogonalDirections) {
+            let row = cell.row + offset.dRow;
+            let col = cell.col + offset.dCol;
+
+            if (row >= 0 && row < this.height && col >= 0 && col <= this.underlyingWidth) {
+                let cell = this.cells[this.getCellIndex(row, col)];
+                if (cell !== null)
+                    neighbours.push(cell);
+            }
+        }
+        return neighbours;
+    }
     getCellsInRange(center: MapCell, distance: number) {
         let results: MapCell[] = [];
 
