@@ -193,7 +193,9 @@ class MapGenerator {
             if (cells.length <= 1)
                 continue;
 
-            let line = MapGenerator.generateLine(map, lineType, cells);
+            let line = new MapLine(lineType);
+            line.keyCells = cells;
+            MapGenerator.renderAndErodeLine(map, line);
             lines.push(line);
         }
 
@@ -267,6 +269,7 @@ class MapGenerator {
 
     private static generateLinesForLocationGroup(map: MapData, locations: MapLocation[], lineType: LineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
+        let groupLines = [];
         // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
         for (let i=0; i<locations.length; i++) {
             let from = locations[i];
@@ -293,40 +296,182 @@ class MapGenerator {
                 }
 
                 if (!anyCloser) {
-                    path = MapGenerator.removeSuperfluousLineCells(path);
-                    let line = MapGenerator.generateLine(map, lineType, path);
-                    map.lines.push(line);
+                    let line = new MapLine(lineType);
+                    line.keyCells = path;
+                    groupLines.push(line);
                 }
+            }
+        }
+
+        // for each line, remove any overlap with another by removing "overlapping" key cells
+        MapGenerator.removeOverlap(groupLines);
+
+        // where exactly two lines end on the same cell, combine them into one line
+        MapGenerator.combineLines(groupLines);
+
+        for (let line of groupLines) {
+            MapGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
+            MapGenerator.renderAndErodeLine(map, line);
+            map.lines.push(line);
+        }
+    }
+
+    private static removeOverlap(lines: MapLine[]) {
+        for (let line of lines) {
+            // find all lines that share a terminus with this line.
+            let startLines = [], endLines = [];
+            let firstCell = line.keyCells[0], lastCell = line.keyCells[line.keyCells.length - 1];
+            for (let otherLine of lines) {
+                if (otherLine === line)
+                    continue;
+                
+                let otherFirst = otherLine.keyCells[0], otherLast = otherLine.keyCells[otherLine.keyCells.length - 1];
+                if (otherFirst === firstCell || otherLast === firstCell)
+                    startLines.push(otherLine);
+                if (otherFirst === lastCell || otherLast === lastCell)
+                    endLines.push(otherLine);
+            }
+
+            // remove key cells from the start of this line until only the "first" remaining key cell touches any of startLines
+            while (line.keyCells.length > 1) {
+                firstCell = line.keyCells[1];
+                
+                let anyTouching = false;
+                for (let otherLine of startLines)
+                    for (let cell of otherLine.keyCells)
+                        if (cell === firstCell) {
+                            anyTouching = true;
+                            break;
+                        }
+
+                if (!anyTouching)
+                    break;
+                
+                line.keyCells.shift();
+            }
+
+            // remove key cells from the end of this line until only the "last" remaining key cell touches any of endLines
+            while (line.keyCells.length > 1) {
+                lastCell = line.keyCells[line.keyCells.length - 2];
+                
+                let anyTouching = false;
+                for (let otherLine of endLines)
+                    for (let cell of otherLine.keyCells)
+                        if (cell === lastCell) {
+                            anyTouching = true;
+                            break;
+                        }
+
+                if (!anyTouching)
+                    break;
+                
+                line.keyCells.pop();
             }
         }
     }
 
-    private static removeSuperfluousLineCells(input: MapCell[]) {
-        let mid = Math.ceil(input.length / 2);
-        let output = [];
-        let i;
+    private static combineLines(lines: MapLine[]) {
+        for (let i=0; i<lines.length; i++) {
+            let line = lines[i];
+            let start = line.getStartCell(), end = line.getEndCell();
+            let hasMerged = false;
+            let startLines: [MapLine, boolean, number][] = [];
+            let endLines: [MapLine, boolean, number][] = [];
 
-        for (i=0; i<mid; i++)
-            output.push(input[i]);
+            for (let j=0; j<lines.length; j++) {
+                if (j == i)
+                    continue;
+                let other = lines[j];
+                let otherStart = other.getStartCell();
+                let otherEnd = other.getEndCell();
 
-        i = mid;
-        if (input.length % 2 == 0)
-            i++;
+                if (otherStart == end)
+                    endLines.push([other, false, j]);
+                else if (otherEnd == end)
+                    endLines.push([other, true, j]);
 
-        for (i; i<input.length; i++)
-            output.push(input[i]);;
+                if (otherStart == start)
+                    startLines.push([other, false, j]);
+                else if (otherEnd == start)
+                    startLines.push([other, true, j]);
+            }
 
-        return output;
+            // if there is exactly one line with an end on this line's start point
+            let removedIndex;
+            if (startLines.length == 1) {
+                let info = startLines[0];
+                let cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+
+                for (let cell of cells)
+                    line.keyCells.unshift(cell);
+
+                removedIndex = info[2];
+                lines.splice(removedIndex, 1);
+                hasMerged = true;
+            }
+            else
+                removedIndex = Number.MAX_VALUE;
+
+            // if there is exactly one line with an end on this line's end point
+            if (endLines.length == 1) {
+                let info = endLines[0];
+                let cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+
+                for (let cell of cells)
+                    line.keyCells.push(cell);
+
+                let indexToRemove = info[2];
+                if (indexToRemove > removedIndex)
+                    indexToRemove --; // ensure we remove the right line if another has already been removed
+
+                lines.splice(indexToRemove, 1);
+                hasMerged = true;
+            }
+
+            if (hasMerged)
+                i--; // if this line has new ends, they still need tested
+        }
     }
 
-    private static generateLine(map: MapData, lineType: LineType, cells: MapCell[]) {
-        // create line
-        let line = new MapLine(lineType);
-        line.keyCells = cells;
+    private static removeSuperfluousLineCells(cells: MapCell[], linesToKeepJunctionsWith: MapLine[] = []) {
+        if (cells.length <= 3)
+            return;
+
+        let first = cells[0];
+        let last = cells[cells.length - 1];
+
+        let canRemove = false;
+        for (let i=1; i<cells.length - 1; i++) {
+            canRemove = !canRemove;
+            if (!canRemove)
+                continue; // keep alternate cells
+            
+            // don't remove a key cell if another line ends there
+            let cell = cells[i];
+            for (let line of linesToKeepJunctionsWith)
+                if (line.keyCells === cells)
+                    continue;
+                else if (cell == line.getStartCell() || cell == line.getEndCell()) {
+                    canRemove = false;
+                    break;
+                }
+
+            if (canRemove) {
+                cells.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    private static renderAndErodeLine(map: MapData, line: MapLine) {
         line.updateRenderPoints();
 
         // erode the terrain this line passes through, if needed
-        if (lineType.erosionAmount != 0) {
+        if (line.type.erosionAmount != 0) {
             let erosionAmount = line.type.erosionAmount;
             let cellsToErode = line.getErosionAffectedCells(map);
             for (let cell of cellsToErode)
@@ -382,7 +527,7 @@ class MapGenerator {
         }
 
         cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        cells = MapGenerator.removeSuperfluousLineCells(cells);
+        MapGenerator.removeSuperfluousLineCells(cells);
 
         return cells;
     }

@@ -36,6 +36,14 @@ class MapLine {
         this.isLoop = false;
     }
 
+    getStartCell() {
+        return this.keyCells[0];
+    }
+    
+    getEndCell() {
+        return this.keyCells[this.keyCells.length - 1];
+    }
+
     draw(ctx: CanvasRenderingContext2D, cellRadius: number, highlightKeyCells: boolean) {
         let type = this.type;
 

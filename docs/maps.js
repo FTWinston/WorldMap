@@ -684,6 +684,12 @@ var MapLine = (function () {
         this.keyCells = [];
         this.isLoop = false;
     }
+    MapLine.prototype.getStartCell = function () {
+        return this.keyCells[0];
+    };
+    MapLine.prototype.getEndCell = function () {
+        return this.keyCells[this.keyCells.length - 1];
+    };
     MapLine.prototype.draw = function (ctx, cellRadius, highlightKeyCells) {
         var type = this.type;
         if (highlightKeyCells) {
@@ -3560,7 +3566,9 @@ var MapGenerator = (function () {
             }
             if (cells.length <= 1)
                 continue;
-            var line = MapGenerator.generateLine(map, lineType, cells);
+            var line = new MapLine(lineType);
+            line.keyCells = cells;
+            MapGenerator.renderAndErodeLine(map, line);
             lines.push(line);
         }
         return lines;
@@ -3622,6 +3630,7 @@ var MapGenerator = (function () {
     };
     MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
+        var groupLines = [];
         // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
         for (var i = 0; i < locations.length; i++) {
             var from = locations[i];
@@ -3643,34 +3652,168 @@ var MapGenerator = (function () {
                     }
                 }
                 if (!anyCloser) {
-                    path = MapGenerator.removeSuperfluousLineCells(path);
-                    var line = MapGenerator.generateLine(map, lineType, path);
-                    map.lines.push(line);
+                    var line = new MapLine(lineType);
+                    line.keyCells = path;
+                    groupLines.push(line);
                 }
             }
         }
+        // for each line, remove any overlap with another by removing "overlapping" key cells
+        MapGenerator.removeOverlap(groupLines);
+        // where exactly two lines end on the same cell, combine them into one line
+        MapGenerator.combineLines(groupLines);
+        for (var _a = 0, groupLines_1 = groupLines; _a < groupLines_1.length; _a++) {
+            var line = groupLines_1[_a];
+            MapGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
+            MapGenerator.renderAndErodeLine(map, line);
+            map.lines.push(line);
+        }
     };
-    MapGenerator.removeSuperfluousLineCells = function (input) {
-        var mid = Math.ceil(input.length / 2);
-        var output = [];
-        var i;
-        for (i = 0; i < mid; i++)
-            output.push(input[i]);
-        i = mid;
-        if (input.length % 2 == 0)
-            i++;
-        for (i; i < input.length; i++)
-            output.push(input[i]);
-        ;
-        return output;
+    MapGenerator.removeOverlap = function (lines) {
+        for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
+            var line = lines_2[_i];
+            // find all lines that share a terminus with this line.
+            var startLines = [], endLines = [];
+            var firstCell = line.keyCells[0], lastCell = line.keyCells[line.keyCells.length - 1];
+            for (var _a = 0, lines_3 = lines; _a < lines_3.length; _a++) {
+                var otherLine = lines_3[_a];
+                if (otherLine === line)
+                    continue;
+                var otherFirst = otherLine.keyCells[0], otherLast = otherLine.keyCells[otherLine.keyCells.length - 1];
+                if (otherFirst === firstCell || otherLast === firstCell)
+                    startLines.push(otherLine);
+                if (otherFirst === lastCell || otherLast === lastCell)
+                    endLines.push(otherLine);
+            }
+            // remove key cells from the start of this line until only the "first" remaining key cell touches any of startLines
+            while (line.keyCells.length > 1) {
+                firstCell = line.keyCells[1];
+                var anyTouching = false;
+                for (var _b = 0, startLines_1 = startLines; _b < startLines_1.length; _b++) {
+                    var otherLine = startLines_1[_b];
+                    for (var _c = 0, _d = otherLine.keyCells; _c < _d.length; _c++) {
+                        var cell = _d[_c];
+                        if (cell === firstCell) {
+                            anyTouching = true;
+                            break;
+                        }
+                    }
+                }
+                if (!anyTouching)
+                    break;
+                line.keyCells.shift();
+            }
+            // remove key cells from the end of this line until only the "last" remaining key cell touches any of endLines
+            while (line.keyCells.length > 1) {
+                lastCell = line.keyCells[line.keyCells.length - 2];
+                var anyTouching = false;
+                for (var _e = 0, endLines_1 = endLines; _e < endLines_1.length; _e++) {
+                    var otherLine = endLines_1[_e];
+                    for (var _f = 0, _g = otherLine.keyCells; _f < _g.length; _f++) {
+                        var cell = _g[_f];
+                        if (cell === lastCell) {
+                            anyTouching = true;
+                            break;
+                        }
+                    }
+                }
+                if (!anyTouching)
+                    break;
+                line.keyCells.pop();
+            }
+        }
     };
-    MapGenerator.generateLine = function (map, lineType, cells) {
-        // create line
-        var line = new MapLine(lineType);
-        line.keyCells = cells;
+    MapGenerator.combineLines = function (lines) {
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var start = line.getStartCell(), end = line.getEndCell();
+            var hasMerged = false;
+            var startLines = [];
+            var endLines = [];
+            for (var j = 0; j < lines.length; j++) {
+                if (j == i)
+                    continue;
+                var other = lines[j];
+                var otherStart = other.getStartCell();
+                var otherEnd = other.getEndCell();
+                if (otherStart == end)
+                    endLines.push([other, false, j]);
+                else if (otherEnd == end)
+                    endLines.push([other, true, j]);
+                if (otherStart == start)
+                    startLines.push([other, false, j]);
+                else if (otherEnd == start)
+                    startLines.push([other, true, j]);
+            }
+            // if there is exactly one line with an end on this line's start point
+            var removedIndex = void 0;
+            if (startLines.length == 1) {
+                var info = startLines[0];
+                var cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+                for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
+                    var cell = cells_1[_i];
+                    line.keyCells.unshift(cell);
+                }
+                removedIndex = info[2];
+                lines.splice(removedIndex, 1);
+                hasMerged = true;
+            }
+            else
+                removedIndex = Number.MAX_VALUE;
+            // if there is exactly one line with an end on this line's end point
+            if (endLines.length == 1) {
+                var info = endLines[0];
+                var cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+                for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
+                    var cell = cells_2[_a];
+                    line.keyCells.push(cell);
+                }
+                var indexToRemove = info[2];
+                if (indexToRemove > removedIndex)
+                    indexToRemove--; // ensure we remove the right line if another has already been removed
+                lines.splice(indexToRemove, 1);
+                hasMerged = true;
+            }
+            if (hasMerged)
+                i--; // if this line has new ends, they still need tested
+        }
+    };
+    MapGenerator.removeSuperfluousLineCells = function (cells, linesToKeepJunctionsWith) {
+        if (linesToKeepJunctionsWith === void 0) { linesToKeepJunctionsWith = []; }
+        if (cells.length <= 3)
+            return;
+        var first = cells[0];
+        var last = cells[cells.length - 1];
+        var canRemove = false;
+        for (var i = 1; i < cells.length - 1; i++) {
+            canRemove = !canRemove;
+            if (!canRemove)
+                continue; // keep alternate cells
+            // don't remove a key cell if another line ends there
+            var cell = cells[i];
+            for (var _i = 0, linesToKeepJunctionsWith_1 = linesToKeepJunctionsWith; _i < linesToKeepJunctionsWith_1.length; _i++) {
+                var line = linesToKeepJunctionsWith_1[_i];
+                if (line.keyCells === cells)
+                    continue;
+                else if (cell == line.getStartCell() || cell == line.getEndCell()) {
+                    canRemove = false;
+                    break;
+                }
+            }
+            if (canRemove) {
+                cells.splice(i, 1);
+                i--;
+            }
+        }
+    };
+    MapGenerator.renderAndErodeLine = function (map, line) {
         line.updateRenderPoints();
         // erode the terrain this line passes through, if needed
-        if (lineType.erosionAmount != 0) {
+        if (line.type.erosionAmount != 0) {
             var erosionAmount = line.type.erosionAmount;
             var cellsToErode = line.getErosionAffectedCells(map);
             for (var _i = 0, cellsToErode_1 = cellsToErode; _i < cellsToErode_1.length; _i++) {
@@ -3716,7 +3859,7 @@ var MapGenerator = (function () {
             highestCell = testCell;
         }
         cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        cells = MapGenerator.removeSuperfluousLineCells(cells);
+        MapGenerator.removeSuperfluousLineCells(cells);
         return cells;
     };
     MapGenerator.pickHighestCell = function (cells) {
