@@ -3853,11 +3853,23 @@ var MapGenerator = (function () {
         var lowestCell = genStartCell;
         var cells = [genStartCell];
         // "flow" downwards through adjacent cells until we reach a "lowest" point or go below sea level
-        // TODO: local minima above sea level shouldn't just terminate a river. They should flow over that, possibly making a lake in the process. Right?
         while (true) {
-            var testCell = MapGenerator.pickLowestCell(map.getCellsInRange(lowestCell, 1));
-            if (testCell === lowestCell)
-                break;
+            var testCells = map.getCellsInRange(lowestCell, 1);
+            var testCell = MapGenerator.pickLowestCell(testCells);
+            if (testCell === lowestCell) {
+                if (testCell.height <= 0)
+                    break; // if under the sea, stop rather than eroding a valley
+                // erode a valley
+                var dipCell = testCell;
+                cells.push(dipCell);
+                // if this line came in, don't go out that way
+                if (cells.length > 2)
+                    testCells.slice(testCells.indexOf(cells[cells.length - 2]), 1);
+                // find the next lowest cell, and "erode" it down so that we can flow there
+                testCells.slice(testCells.indexOf(dipCell), 1);
+                testCell = MapGenerator.pickLowestCell(testCells);
+                testCell.height = dipCell.height - 0.01;
+            }
             cells.push(testCell);
             lowestCell = testCell;
             if (!lineType.canErodeBelowSeaLevel && lowestCell.height <= 0)
