@@ -3559,7 +3559,7 @@ var MapGenerator = (function () {
                     cells = MapGenerator.pickRandomLineCells(map, lineType);
                     break;
                 case 1 /* HighToLow */:
-                    cells = MapGenerator.pickHighToLowLineCells(map, lineType);
+                    cells = MapGenerator.pickHighToLowLineCells(map, lineType, lines);
                     break;
                 default:
                     continue;
@@ -3568,8 +3568,12 @@ var MapGenerator = (function () {
                 continue;
             var line = new MapLine(lineType);
             line.keyCells = cells;
-            MapGenerator.renderAndErodeLine(map, line);
             lines.push(line);
+        }
+        for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
+            var line = lines_2[_i];
+            MapGenerator.removeSuperfluousLineCells(line.keyCells);
+            MapGenerator.renderAndErodeLine(map, line);
         }
         return lines;
     };
@@ -3670,13 +3674,13 @@ var MapGenerator = (function () {
         }
     };
     MapGenerator.removeOverlap = function (lines) {
-        for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
-            var line = lines_2[_i];
+        for (var _i = 0, lines_3 = lines; _i < lines_3.length; _i++) {
+            var line = lines_3[_i];
             // find all lines that share a terminus with this line.
             var startLines = [], endLines = [];
             var firstCell = line.keyCells[0], lastCell = line.keyCells[line.keyCells.length - 1];
-            for (var _a = 0, lines_3 = lines; _a < lines_3.length; _a++) {
-                var otherLine = lines_3[_a];
+            for (var _a = 0, lines_4 = lines; _a < lines_4.length; _a++) {
+                var otherLine = lines_4[_a];
                 if (otherLine === line)
                     continue;
                 var otherFirst = otherLine.keyCells[0], otherLast = otherLine.keyCells[otherLine.keyCells.length - 1];
@@ -3830,7 +3834,7 @@ var MapGenerator = (function () {
             return [];
         return [cellA, cellB];
     };
-    MapGenerator.pickHighToLowLineCells = function (map, lineType) {
+    MapGenerator.pickHighToLowLineCells = function (map, lineType, otherLines) {
         // start with a random cell
         var genStartCell = map.getRandomCell(!lineType.canErodeBelowSeaLevel);
         if (genStartCell === undefined)
@@ -3858,8 +3862,23 @@ var MapGenerator = (function () {
             cells.unshift(testCell);
             highestCell = testCell;
         }
-        cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        MapGenerator.removeSuperfluousLineCells(cells);
+        // remove cells from the start until it doesn't touch any other river
+        for (var _i = 0, otherLines_1 = otherLines; _i < otherLines_1.length; _i++) {
+            var other = otherLines_1[_i];
+            var removedOnThisPass = void 0;
+            do {
+                var start = cells[0];
+                removedOnThisPass = false;
+                for (var _a = 0, _b = other.keyCells; _a < _b.length; _a++) {
+                    var cell = _b[_a];
+                    if (cell == start) {
+                        cells.shift();
+                        removedOnThisPass = true;
+                        break;
+                    }
+                }
+            } while (removedOnThisPass);
+        }
         return cells;
     };
     MapGenerator.pickHighestCell = function (cells) {

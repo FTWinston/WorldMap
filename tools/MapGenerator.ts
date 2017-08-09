@@ -185,7 +185,7 @@ class MapGenerator {
                 case LinePositionMode.Random:
                     cells = MapGenerator.pickRandomLineCells(map, lineType); break;
                 case LinePositionMode.HighToLow:
-                    cells = MapGenerator.pickHighToLowLineCells(map, lineType); break;
+                    cells = MapGenerator.pickHighToLowLineCells(map, lineType, lines); break;
                 default:
                     continue;
             }
@@ -195,10 +195,13 @@ class MapGenerator {
 
             let line = new MapLine(lineType);
             line.keyCells = cells;
-            MapGenerator.renderAndErodeLine(map, line);
             lines.push(line);
         }
 
+        for (let line of lines) {
+            MapGenerator.removeSuperfluousLineCells(line.keyCells);
+            MapGenerator.renderAndErodeLine(map, line);
+        }
         return lines;
     }
 
@@ -491,7 +494,7 @@ class MapGenerator {
         return [cellA, cellB];
     }
 
-    private static pickHighToLowLineCells(map: MapData, lineType: LineType) {
+    private static pickHighToLowLineCells(map: MapData, lineType: LineType, otherLines: MapLine[]) {
         // start with a random cell
         let genStartCell = map.getRandomCell(!lineType.canErodeBelowSeaLevel);
         if (genStartCell === undefined)
@@ -526,8 +529,20 @@ class MapGenerator {
             highestCell = testCell;
         }
 
-        cells.shift(); // always remove first cell, or most rivers will start on the same mountain
-        MapGenerator.removeSuperfluousLineCells(cells);
+        // remove cells from the start until it doesn't touch any other river
+        for (let other of otherLines) {
+            let removedOnThisPass;
+            do {
+                let start = cells[0];
+                removedOnThisPass = false;
+                for (let cell of other.keyCells)
+                    if (cell == start) {
+                        cells.shift();
+                        removedOnThisPass = true;
+                        break;
+                    }
+            } while (removedOnThisPass);
+        }
 
         return cells;
     }
