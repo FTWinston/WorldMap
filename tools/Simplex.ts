@@ -13,12 +13,25 @@ class SimplexNoise {
     constructor() {
         let p = [];
         for (let i=0; i<256; i++)
-            p[i] = Math.floor(Math.random()*256);
+            p[i] = i;
+        this.shuffle(p);
 
         // To remove the need for index wrapping, double the permutation table length
-        this.perm = [];
-        for(let i=0; i<512; i++)
-            this.perm[i] = p[i & 255];
+        for (let i=0; i<256; i++)
+            p[i+256] = p[i];
+
+        this.perm = p;
+    }
+
+    private shuffle(array: number[]) {
+        let j = 0, temp: number;
+
+        for (let i = array.length - 1; i > 0; i -= 1) {
+            j = Math.floor(Math.random() * (i + 1));
+            temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
     }
 
     private dot(gi: number, x: number, y: number) {

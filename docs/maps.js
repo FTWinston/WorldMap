@@ -3246,12 +3246,22 @@ var SimplexNoise = (function () {
     function SimplexNoise() {
         var p = [];
         for (var i = 0; i < 256; i++)
-            p[i] = Math.floor(Math.random() * 256);
+            p[i] = i;
+        this.shuffle(p);
         // To remove the need for index wrapping, double the permutation table length
-        this.perm = [];
-        for (var i = 0; i < 512; i++)
-            this.perm[i] = p[i & 255];
+        for (var i = 0; i < 256; i++)
+            p[i + 256] = p[i];
+        this.perm = p;
     }
+    SimplexNoise.prototype.shuffle = function (array) {
+        var j = 0, temp;
+        for (var i = array.length - 1; i > 0; i -= 1) {
+            j = Math.floor(Math.random() * (i + 1));
+            temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
+    };
     SimplexNoise.prototype.dot = function (gi, x, y) {
         var g = SimplexNoise.grad3[gi];
         return g[0] * x + g[1] * y;
