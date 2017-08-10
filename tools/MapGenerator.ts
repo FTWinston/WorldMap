@@ -273,21 +273,41 @@ class MapGenerator {
     private static generateLinesForLocationGroup(map: MapData, locations: MapLocation[], lineType: LineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
         let groupLines = [];
-        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+
+        // calculate the distance between each pair once
+        let pathCache: {[key:number]:{[key:number]:MapCell[]}} = {};
         for (let i=0; i<locations.length; i++) {
             let from = locations[i];
+            let pathsToOthers: {[key:number]:MapCell[]} = {};
             for (let j=i+1; j<locations.length; j++) {
-                let to = locations[j];
+                if (j == i)
+                    continue;
+                
+                let distance = MapGenerator.getConnectionPath(map, from.cell, locations[j].cell);
+                if (distance != null)
+                    pathsToOthers[j] = distance;
+            }
+            pathCache[i] = pathsToOthers;
+        }
+        for (let i=0; i<locations.length; i++)
+            for (let j=0; j<i; j++)
+                pathCache[i][j] = pathCache[j][i];
 
-                let path = MapGenerator.getConnectionPath(map, from.cell, to.cell);
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        for (let i=0; i<locations.length; i++) {
+            for (let j=i+1; j<locations.length; j++) {
+                let path = pathCache[i][j];
                 if (path === null)
                     continue;
 
                 let anyCloser = false;
 
-                for (let test of locations) {
-                    let dist1 = MapGenerator.getConnectionPath(map, from.cell, test.cell);
-                    let dist2 = MapGenerator.getConnectionPath(map, to.cell, test.cell);
+                for (let k=0; k<locations.length; k++) {
+                    if (k === i || k === j)
+                        continue;
+                    
+                    let dist1 = pathCache[i][k];
+                    let dist2 = pathCache[j][k];
 
                     if (dist1 === null || dist2 === null)
                         continue;

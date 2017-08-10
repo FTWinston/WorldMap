@@ -3650,19 +3650,35 @@ var MapGenerator = (function () {
     MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
         var groupLines = [];
-        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        // calculate the distance between each pair once
+        var pathCache = {};
         for (var i = 0; i < locations.length; i++) {
             var from = locations[i];
+            var pathsToOthers = {};
             for (var j = i + 1; j < locations.length; j++) {
-                var to = locations[j];
-                var path = MapGenerator.getConnectionPath(map, from.cell, to.cell);
+                if (j == i)
+                    continue;
+                var distance = MapGenerator.getConnectionPath(map, from.cell, locations[j].cell);
+                if (distance != null)
+                    pathsToOthers[j] = distance;
+            }
+            pathCache[i] = pathsToOthers;
+        }
+        for (var i = 0; i < locations.length; i++)
+            for (var j = 0; j < i; j++)
+                pathCache[i][j] = pathCache[j][i];
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        for (var i = 0; i < locations.length; i++) {
+            for (var j = i + 1; j < locations.length; j++) {
+                var path = pathCache[i][j];
                 if (path === null)
                     continue;
                 var anyCloser = false;
-                for (var _i = 0, locations_1 = locations; _i < locations_1.length; _i++) {
-                    var test = locations_1[_i];
-                    var dist1 = MapGenerator.getConnectionPath(map, from.cell, test.cell);
-                    var dist2 = MapGenerator.getConnectionPath(map, to.cell, test.cell);
+                for (var k = 0; k < locations.length; k++) {
+                    if (k === i || k === j)
+                        continue;
+                    var dist1 = pathCache[i][k];
+                    var dist2 = pathCache[j][k];
                     if (dist1 === null || dist2 === null)
                         continue;
                     if (dist1.length < path.length && dist2.length < path.length) {
@@ -3681,8 +3697,8 @@ var MapGenerator = (function () {
         MapGenerator.removeOverlap(groupLines);
         // where exactly two lines end on the same cell, combine them into one line
         MapGenerator.combineLines(groupLines);
-        for (var _a = 0, groupLines_1 = groupLines; _a < groupLines_1.length; _a++) {
-            var line = groupLines_1[_a];
+        for (var _i = 0, groupLines_1 = groupLines; _i < groupLines_1.length; _i++) {
+            var line = groupLines_1[_i];
             MapGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
             MapGenerator.renderAndErodeLine(map, line);
             map.lines.push(line);
