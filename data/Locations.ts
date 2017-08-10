@@ -27,6 +27,7 @@ class MapLocation {
     ) { }
 
     draw(ctx: CanvasRenderingContext2D, markerX: number, markerY: number) {
+        ctx.save();
         ctx.translate(markerX, markerY);
         MapLocation.icons[this.type.icon].draw(ctx);
 
@@ -37,9 +38,15 @@ class MapLocation {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.font = this.type.textSize + 'pt serif';
+
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 3;
+
+        ctx.lineWidth = 2;
+        ctx.fillStyle = '#000000';
         ctx.fillText(this.name, 0, 0);
 
-        ctx.translate(-markerX, -markerY + labelOffset);
+        ctx.restore();
     }
 
     static getByCell(cell: MapCell, allLocations: MapLocation[]) {

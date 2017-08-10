@@ -598,6 +598,7 @@ var MapLocation = (function () {
         this.type = type;
     }
     MapLocation.prototype.draw = function (ctx, markerX, markerY) {
+        ctx.save();
         ctx.translate(markerX, markerY);
         MapLocation.icons[this.type.icon].draw(ctx);
         var labelOffset = this.type.textSize * 1.5;
@@ -606,8 +607,12 @@ var MapLocation = (function () {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.font = this.type.textSize + 'pt serif';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 3;
+        ctx.lineWidth = 2;
+        ctx.fillStyle = '#000000';
         ctx.fillText(this.name, 0, 0);
-        ctx.translate(-markerX, -markerY + labelOffset);
+        ctx.restore();
     };
     MapLocation.getByCell = function (cell, allLocations) {
         for (var _i = 0, allLocations_1 = allLocations; _i < allLocations_1.length; _i++) {
