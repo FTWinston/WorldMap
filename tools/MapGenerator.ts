@@ -220,7 +220,7 @@ class MapGenerator {
             let foundGroup = false;
             for (let testGroup of groups) {
                 let firstInGroup = testGroup[0];
-                if (MapGenerator.getConnectionPath(map, location.cell, firstInGroup.cell) !== null) {
+                if (MapGenerator.getConnectionPaths(map, location.cell, [firstInGroup.cell]).length !== 0) {
                     testGroup.push(location);
                     foundGroup = true;
                     break;
@@ -234,7 +234,9 @@ class MapGenerator {
         return groups;
     }
 
-    private static getConnectionPath(map: MapData, from: MapCell, to: MapCell) {
+    private static getConnectionPaths(map: MapData, from: MapCell, to: MapCell[]) {
+        let results: MapCell[][] = [];
+
         let colMul = map.height;
         let visited: {[key:number]:boolean} = {};
         visited[from.row + from.col * colMul] = true;
@@ -242,7 +244,7 @@ class MapGenerator {
         let prevFringe = [[from]];
         let nextFringe: MapCell[][] = [];
 
-        while (prevFringe.length > 0) {
+        while (prevFringe.length > 0 && to.length > 0) {
             for (let fringePath of prevFringe) {
                 let fringeCell = fringePath[fringePath.length - 1];
                 for (let testCell of map.getNeighbours(fringeCell)) {
@@ -253,8 +255,16 @@ class MapGenerator {
                     let path = fringePath.slice();
                     path.push(testCell);
 
-                    if (testCell === to)
-                        return path;
+                    for (let i=0; i<to.length; i++)
+                        if (testCell === to[i]) {
+                            results.push(path);
+
+                            if (to.length === 1)
+                                return results; // if this was the last remaining cell, return early
+
+                            to.splice(i, 1);
+                            break;
+                        }
 
                     visited[testIndex] = true;
 
@@ -267,7 +277,7 @@ class MapGenerator {
             nextFringe = [];
         }
 
-        return null;
+        return results;
     }
 
     private static generateLinesForLocationGroup(map: MapData, locations: MapLocation[], lineType: LineType) {
@@ -275,19 +285,21 @@ class MapGenerator {
         let groupLines = [];
 
         // calculate the distance between each pair once
+        let locCells: MapCell[] = [];
+        for (let i=0; i<locations.length; i++)
+            locCells[i] = locations[i].cell;
         let pathCache: {[key:number]:{[key:number]:MapCell[]}} = {};
         for (let i=0; i<locations.length; i++) {
-            let from = locations[i];
-            let pathsToOthers: {[key:number]:MapCell[]} = {};
-            for (let j=i+1; j<locations.length; j++) {
-                if (j == i)
-                    continue;
-                
-                let distance = MapGenerator.getConnectionPath(map, from.cell, locations[j].cell);
-                if (distance != null)
-                    pathsToOthers[j] = distance;
+            let paths = MapGenerator.getConnectionPaths(map, locCells[i], locCells.slice(i + 1));
+
+            let cacheEntry: {[key:number]:MapCell[]} = {};
+            for (let path of paths) {
+                let endCell = path[path.length - 1];
+                let index = locCells.indexOf(endCell);
+                cacheEntry[index] = path;
             }
-            pathCache[i] = pathsToOthers;
+
+            pathCache[i] = cacheEntry;
         }
         for (let i=0; i<locations.length; i++)
             for (let j=0; j<i; j++)

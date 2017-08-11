@@ -3607,7 +3607,7 @@ var MapGenerator = (function () {
             for (var _b = 0, groups_1 = groups; _b < groups_1.length; _b++) {
                 var testGroup = groups_1[_b];
                 var firstInGroup = testGroup[0];
-                if (MapGenerator.getConnectionPath(map, location_4.cell, firstInGroup.cell) !== null) {
+                if (MapGenerator.getConnectionPaths(map, location_4.cell, [firstInGroup.cell]).length !== 0) {
                     testGroup.push(location_4);
                     foundGroup = true;
                     break;
@@ -3618,13 +3618,14 @@ var MapGenerator = (function () {
         }
         return groups;
     };
-    MapGenerator.getConnectionPath = function (map, from, to) {
+    MapGenerator.getConnectionPaths = function (map, from, to) {
+        var results = [];
         var colMul = map.height;
         var visited = {};
         visited[from.row + from.col * colMul] = true;
         var prevFringe = [[from]];
         var nextFringe = [];
-        while (prevFringe.length > 0) {
+        while (prevFringe.length > 0 && to.length > 0) {
             for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
                 var fringePath = prevFringe_1[_i];
                 var fringeCell = fringePath[fringePath.length - 1];
@@ -3635,8 +3636,14 @@ var MapGenerator = (function () {
                         continue;
                     var path = fringePath.slice();
                     path.push(testCell);
-                    if (testCell === to)
-                        return path;
+                    for (var i = 0; i < to.length; i++)
+                        if (testCell === to[i]) {
+                            results.push(path);
+                            if (to.length === 1)
+                                return results; // if this was the last remaining cell, return early
+                            to.splice(i, 1);
+                            break;
+                        }
                     visited[testIndex] = true;
                     if (testCell.height > 0 && testCell.height < 0.75)
                         nextFringe.push(path);
@@ -3645,24 +3652,26 @@ var MapGenerator = (function () {
             prevFringe = nextFringe;
             nextFringe = [];
         }
-        return null;
+        return results;
     };
     MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
         // connect every pair of locations in the group for which there isn't another location closer to both of them
         var groupLines = [];
         // calculate the distance between each pair once
+        var locCells = [];
+        for (var i = 0; i < locations.length; i++)
+            locCells[i] = locations[i].cell;
         var pathCache = {};
         for (var i = 0; i < locations.length; i++) {
-            var from = locations[i];
-            var pathsToOthers = {};
-            for (var j = i + 1; j < locations.length; j++) {
-                if (j == i)
-                    continue;
-                var distance = MapGenerator.getConnectionPath(map, from.cell, locations[j].cell);
-                if (distance != null)
-                    pathsToOthers[j] = distance;
+            var paths = MapGenerator.getConnectionPaths(map, locCells[i], locCells.slice(i + 1));
+            var cacheEntry = {};
+            for (var _i = 0, paths_1 = paths; _i < paths_1.length; _i++) {
+                var path = paths_1[_i];
+                var endCell = path[path.length - 1];
+                var index = locCells.indexOf(endCell);
+                cacheEntry[index] = path;
             }
-            pathCache[i] = pathsToOthers;
+            pathCache[i] = cacheEntry;
         }
         for (var i = 0; i < locations.length; i++)
             for (var j = 0; j < i; j++)
@@ -3697,8 +3706,8 @@ var MapGenerator = (function () {
         MapGenerator.removeOverlap(groupLines);
         // where exactly two lines end on the same cell, combine them into one line
         MapGenerator.combineLines(groupLines);
-        for (var _i = 0, groupLines_1 = groupLines; _i < groupLines_1.length; _i++) {
-            var line = groupLines_1[_i];
+        for (var _a = 0, groupLines_1 = groupLines; _a < groupLines_1.length; _a++) {
+            var line = groupLines_1[_a];
             MapGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
             MapGenerator.renderAndErodeLine(map, line);
             map.lines.push(line);
