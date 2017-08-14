@@ -3625,7 +3625,7 @@ var MapGenerator = (function () {
         visited[from.row + from.col * colMul] = true;
         var prevFringe = [[from]];
         var nextFringe = [];
-        while (prevFringe.length > 0 && to.length > 0) {
+        do {
             for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
                 var fringePath = prevFringe_1[_i];
                 var fringeCell = fringePath[fringePath.length - 1];
@@ -3651,7 +3651,7 @@ var MapGenerator = (function () {
             }
             prevFringe = nextFringe;
             nextFringe = [];
-        }
+        } while (prevFringe.length > 0);
         return results;
     };
     MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {

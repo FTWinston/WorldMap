@@ -244,7 +244,7 @@ class MapGenerator {
         let prevFringe = [[from]];
         let nextFringe: MapCell[][] = [];
 
-        while (prevFringe.length > 0 && to.length > 0) {
+        do {
             for (let fringePath of prevFringe) {
                 let fringeCell = fringePath[fringePath.length - 1];
                 for (let testCell of map.getNeighbours(fringeCell)) {
@@ -275,7 +275,7 @@ class MapGenerator {
 
             prevFringe = nextFringe;
             nextFringe = [];
-        }
+        } while (prevFringe.length > 0);
 
         return results;
     }
