@@ -23,26 +23,28 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
     render() {
         let height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight} absMinValue={-1} absMaxValue={1} heightList="heightMarks"
+            : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight}
                 guideScale={this.props.settings.heightScaleGuide} lowFreqScale={this.props.settings.heightScaleLowFreq} highFreqScale={this.props.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />;
 
         let temperature = this.state.selectingTemperatureGuide
             ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
-            : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} minValue={this.props.settings.minTemperature} maxValue={this.props.settings.maxTemperature} absMinValue={0} absMaxValue={1}
+            : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} minValue={this.props.settings.minTemperature} maxValue={this.props.settings.maxTemperature}
                 guideScale={this.props.settings.temperatureScaleGuide} lowFreqScale={this.props.settings.temperatureScaleLowFreq} highFreqScale={this.props.settings.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />;
 
         let precipitation = this.state.selectingPrecipitationGuide
             ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
-            : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} minValue={this.props.settings.minPrecipitation} maxValue={this.props.settings.maxPrecipitation} absMinValue={0} absMaxValue={1}
+            : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} minValue={this.props.settings.minPrecipitation} maxValue={this.props.settings.maxPrecipitation}
                 guideScale={this.props.settings.precipitationScaleGuide} lowFreqScale={this.props.settings.precipitationScaleLowFreq} highFreqScale={this.props.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />;
 
         return <div id="settingsRoot">
-            {height}
-            {temperature}
-            {precipitation}
-            <datalist id="heightMarks">
-                <option value="0" label="sea level" />
-            </datalist>
+            <div className="section" role="group">
+                Coast
+            </div>
+            <div className="section" role="group">
+                {height}
+                {temperature}
+                {precipitation}
+            </div>
         </div>
     }
 

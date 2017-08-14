@@ -17,7 +17,7 @@ $buttonHoverColor: #0af;
   justify-content: space-between;
   align-content: stretch;
 
-  #mapRoot, #settingsRoot {
+  #mapRoot, #settingsRoot > .section {
     flex-shrink: 1;
     flex-grow: 1;
   }
@@ -272,7 +272,7 @@ form {
   }
 }
 
-#settingsRoot {
+#settingsRoot > .section {
   margin: 1em;
   display: flex;
   flex-direction: row;

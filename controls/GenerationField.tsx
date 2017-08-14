@@ -3,12 +3,9 @@ interface IGenerationFieldProps {
     guide: GenerationGuide;
     minValue: number;
     maxValue: number;
-    absMinValue: number;
-    absMaxValue: number;
     guideScale: number;
     highFreqScale: number;
     lowFreqScale: number;
-    heightList?: string;
 
     showGuideSelection: () => void;
     changed: (
@@ -32,8 +29,8 @@ class GenerationField extends React.Component<IGenerationFieldProps, {}> {
                 </div>
             </div>
             <p>Fine tune the {lowerName} by specifying a "fixed" {lowerName}, and scaling how much this, the {lowerName} guide and randomness contribute to the generated map.</p>
-            <div role="group"><div className="fieldLabel">Min {lowerName}</div><input type="range" value={this.props.minValue.toString()} onChange={this.minChanged.bind(this)} step="0.01" min={this.props.absMinValue.toString()} max={this.props.absMaxValue.toString()} list={this.props.heightList} /></div>
-            <div role="group"><div className="fieldLabel">Max {lowerName}</div><input type="range" value={this.props.maxValue.toString()} onChange={this.maxChanged.bind(this)} step="0.01" min={this.props.absMinValue.toString()} max={this.props.absMaxValue.toString()} list={this.props.heightList} /></div>
+            <div role="group"><div className="fieldLabel">Min {lowerName}</div><input type="range" value={this.props.minValue.toString()} onChange={this.minChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group"><div className="fieldLabel">Max {lowerName}</div><input type="range" value={this.props.maxValue.toString()} onChange={this.maxChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <div role="group"><div className="fieldLabel">Scale: Guide</div><input type="range" value={this.props.guideScale.toString()} onChange={this.guideScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <div role="group"><div className="fieldLabel">Large variations</div><input type="range" value={this.props.lowFreqScale.toString()} onChange={this.lowFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>
             <div role="group"><div className="fieldLabel">Small variations</div><input type="range" value={this.props.highFreqScale.toString()} onChange={this.highFreqScaleChanged.bind(this)} step="0.01" min="0" max="1" /></div>

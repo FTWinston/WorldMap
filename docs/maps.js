@@ -974,40 +974,49 @@ Guides.scalarGuides = [
 Guides.vectorGuides = [];
 var GenerationSettings = (function () {
     function GenerationSettings() {
-        this.heightGuide = Guides.scalarGuides[0],
-            this.temperatureGuide = Guides.scalarGuides[3],
-            this.precipitationGuide = Guides.scalarGuides[2],
-            this.minHeight = -0.5;
+        this.coastGuide = Guides.scalarGuides[0],
+            this.coastNoiseLowFreq = 0.2;
+        this.coastNoiseHighFreq = 0.15;
+        this.heightGuide = Guides.scalarGuides[10],
+            this.minHeight = 0;
         this.maxHeight = 1;
         this.heightScaleGuide = 1;
         this.heightScaleLowFreq = 0.40;
         this.heightScaleHighFreq = 0.15;
-        this.minTemperature = 0;
+        this.temperatureGuide = Guides.scalarGuides[4],
+            this.minTemperature = 0;
         this.maxTemperature = 1;
         this.temperatureScaleGuide = 0.55;
         this.temperatureScaleLowFreq = 0.1;
         this.temperatureScaleHighFreq = 0.35;
-        this.minPrecipitation = 0;
+        this.precipitationGuide = Guides.scalarGuides[3],
+            this.minPrecipitation = 0;
         this.maxPrecipitation = 1;
         this.precipitationScaleGuide = 0.4;
         this.precipitationScaleLowFreq = 0.5;
         this.precipitationScaleHighFreq = 0.1;
     }
     GenerationSettings.prototype.randomize = function () {
+        if (Math.random() <= 0.6)
+            this.coastGuide = Guides.scalarGuides[0];
+        else
+            this.coastGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+                this.coastNoiseLowFreq = Math.random();
+        this.coastNoiseHighFreq = Math.random();
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-            this.minHeight = Random.randomRange(-0.7, 0.25);
+            this.minHeight = Random.randomRange(0, 0.25);
         this.maxHeight = Random.randomRange(Math.max(this.minHeight + 0.2, 0.25), 1);
         this.heightScaleGuide = Math.random() * 0.5;
         this.heightScaleLowFreq = Math.random() * 0.5 + 0.2;
         this.heightScaleHighFreq = Math.random() * 0.25;
-        this.minTemperature = Random.randomRange(0, 0.4);
+        this.temperatureGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.minTemperature = Random.randomRange(0, 0.4);
         this.maxTemperature = Random.randomRange(0.6, 1);
         this.temperatureScaleGuide = Math.random() * 0.5;
         this.temperatureScaleLowFreq = Math.random() * 0.5 + 0.2;
         this.temperatureScaleHighFreq = Math.random() * 0.25;
-        this.minPrecipitation = Random.randomRange(0, 0.4);
+        this.precipitationGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
+            this.minPrecipitation = Random.randomRange(0, 0.4);
         this.maxPrecipitation = Random.randomRange(0.6, 1);
         this.precipitationScaleGuide = Math.random() * 0.5;
         this.precipitationScaleLowFreq = Math.random() * 0.5 + 0.2;
@@ -1769,12 +1778,12 @@ var GenerationField = (function (_super) {
                 React.createElement("div", { className: "fieldLabel" },
                     "Min ",
                     lowerName),
-                React.createElement("input", { type: "range", value: this.props.minValue.toString(), onChange: this.minChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString(), list: this.props.heightList })),
+                React.createElement("input", { type: "range", value: this.props.minValue.toString(), onChange: this.minChanged.bind(this), step: "0.01", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("div", { className: "fieldLabel" },
                     "Max ",
                     lowerName),
-                React.createElement("input", { type: "range", value: this.props.maxValue.toString(), onChange: this.maxChanged.bind(this), step: "0.01", min: this.props.absMinValue.toString(), max: this.props.absMaxValue.toString(), list: this.props.heightList })),
+                React.createElement("input", { type: "range", value: this.props.maxValue.toString(), onChange: this.maxChanged.bind(this), step: "0.01", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("div", { className: "fieldLabel" }, "Scale: Guide"),
                 React.createElement("input", { type: "range", value: this.props.guideScale.toString(), onChange: this.guideScaleChanged.bind(this), step: "0.01", min: "0", max: "1" })),
@@ -3024,19 +3033,19 @@ var GenerationSettingsEditor = (function (_super) {
     GenerationSettingsEditor.prototype.render = function () {
         var height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
-            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, absMinValue: -1, absMaxValue: 1, heightList: "heightMarks", guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
         var temperature = this.state.selectingTemperatureGuide
             ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
-            : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, minValue: this.props.settings.minTemperature, maxValue: this.props.settings.maxTemperature, absMinValue: 0, absMaxValue: 1, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, minValue: this.props.settings.minTemperature, maxValue: this.props.settings.maxTemperature, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
         var precipitation = this.state.selectingPrecipitationGuide
             ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
-            : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, minValue: this.props.settings.minPrecipitation, maxValue: this.props.settings.maxPrecipitation, absMinValue: 0, absMaxValue: 1, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
+            : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, minValue: this.props.settings.minPrecipitation, maxValue: this.props.settings.maxPrecipitation, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
         return React.createElement("div", { id: "settingsRoot" },
-            height,
-            temperature,
-            precipitation,
-            React.createElement("datalist", { id: "heightMarks" },
-                React.createElement("option", { value: "0", label: "sea level" })));
+            React.createElement("div", { className: "section", role: "group" }, "Coast"),
+            React.createElement("div", { className: "section", role: "group" },
+                height,
+                temperature,
+                precipitation));
     };
     GenerationSettingsEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, propertyName, propertyEffects) {
         if (propertyEffects === void 0) { propertyEffects = propertyName; }
