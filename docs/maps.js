@@ -58,7 +58,7 @@ var MapData = (function () {
         return undefined;
     };
     MapData.prototype.getCellIndexAtPoint = function (mapX, mapY) {
-        var fCol = (mapX * Math.sqrt(3) - mapY) / 3;
+        var fCol = (mapX * MapData.packedWidthRatio - mapY) / 3;
         var fRow = mapY * 2 / 3;
         var fThirdCoord = -fCol - fRow;
         var rCol = Math.round(fCol);
@@ -67,11 +67,9 @@ var MapData = (function () {
         var colDiff = Math.abs(rCol - fCol);
         var rowDiff = Math.abs(rRow - fRow);
         var thirdDiff = Math.abs(rThird - fThirdCoord);
-        if (colDiff >= rowDiff) {
-            if (colDiff >= thirdDiff)
-                rCol = -rRow - rThird;
-        }
-        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
+        if (colDiff > rowDiff && colDiff > thirdDiff)
+            rCol = -rRow - rThird;
+        else if (rowDiff > thirdDiff)
             rRow = -rCol - rThird;
         return this.getCellIndex(rRow, rCol);
     };
@@ -3458,94 +3456,24 @@ var MapGenerator = (function () {
         // clear down all lines and locations
         map.lines = [];
         map.locations = [];
-        // to start with, generate height, temperate and precipitation values for all map cells
-        MapGenerator.allocateCellProperties(map, settings);
-        // generate mountain ranges, but don't add these to the map. Just use them for (negative) erosion.
-        var mountains = new LineType('Mountains', '#000000', 1, 1, 1, 1, -0.4, 1, true, 0 /* Random */);
-        MapGenerator.generateLines(map, mountains);
+        // firstly, decide which cells are land and which are sea
+        CoastlineGenerator.generate(map, settings);
+        // generate height, temperate and precipitation values for all land cells
+        TerrainGenerator.generate(map, settings);
         // create river lines and allow them to erode the map.
-        for (var _i = 0, _a = map.lineTypes; _i < _a.length; _i++) {
-            var lineType = _a[_i];
-            if (lineType.positionMode === 2 /* BetweenLocations */)
-                continue;
-            var lines = MapGenerator.generateLines(map, lineType);
-            map.lines = map.lines.concat(lines);
-        }
+        RiverGenerator.generate(map, settings);
         // create locations, which currently all prefer the lowest nearby point
-        for (var _b = 0, _c = map.locationTypes; _b < _c.length; _b++) {
-            var locationType = _c[_b];
-            var onePerNCells = 50; // TODO: to be specified per location type. Make this only consider LAND cells?
-            var numLocations = Math.round(map.width * map.height / onePerNCells);
-            for (var iLoc = 0; iLoc < numLocations; iLoc++) {
-                var loc = MapGenerator.generateLocation(map, locationType);
-                if (loc === undefined)
-                    continue;
-                map.locations.push(loc);
-            }
-        }
+        LocationGenerator.generate(map, settings);
         // create roads, only once locations are in place
-        for (var _d = 0, _e = map.lineTypes; _d < _e.length; _d++) {
-            var lineType = _e[_d];
-            if (lineType.positionMode !== 2 /* BetweenLocations */)
-                continue;
-            MapGenerator.generateLinesBetweenLocations(map, lineType);
-        }
+        RoadGenerator.generate(map, settings);
         // TODO: calculate wind, use that to modify precipitation and temperature
         // finally, allocate types to cells based on their generation properties
-        for (var _f = 0, _g = map.cells; _f < _g.length; _f++) {
-            var cell = _g[_f];
-            if (cell === null)
-                continue;
-            MapGenerator.updateCellType(cell);
-        }
-    };
-    MapGenerator.allocateCellProperties = function (map, settings) {
-        var heightGuide = settings.heightGuide;
-        var lowFreqHeightNoise = new SimplexNoise();
-        var highFreqHeightNoise = new SimplexNoise();
-        var temperatureGuide = settings.temperatureGuide;
-        var lowFreqTemperatureNoise = new SimplexNoise();
-        var highFreqTemperatureNoise = new SimplexNoise();
-        var precipitationGuide = settings.precipitationGuide;
-        var lowFreqPrecipitationNoise = new SimplexNoise();
-        var highFreqPrecipitationNoise = new SimplexNoise();
-        var heightScaleTot = settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
-        if (heightScaleTot == 0)
-            heightScaleTot = 1;
-        var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
-        var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
-        var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
-        var temperatureScaleTot = settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
-        if (temperatureScaleTot == 0)
-            temperatureScaleTot = 1;
-        var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
-        var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
-        var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
-        var precipitationScaleTot = settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
-        if (precipitationScaleTot == 0)
-            precipitationScaleTot = 1;
-        var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
-        var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
-        var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
-        var maxX = map.width * MapData.packedWidthRatio;
-        var maxY = map.height * MapData.packedHeightRatio;
-        // allocate height / temperature / precipitation generation properties to each cell
         for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
             var cell = _a[_i];
             if (cell === null)
                 continue;
-            cell.height = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
-            cell.temperature = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
-            cell.precipitation = MapGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
-            // don't allocate a cell type right away, as later steps may change these properties
+            MapGenerator.updateCellType(cell);
         }
-    };
-    MapGenerator.determineValue = function (x, y, maxX, maxY, guideScale, lowFreqScale, highFreqScale, guide, lowFreqNoise, highFreqNoise, minValue, maxValue) {
-        var value = lowFreqScale * lowFreqNoise.noise(x / 10, y / 10)
-            + highFreqScale * highFreqNoise.noise(x, y)
-            + guideScale * guide.generation(x, y, maxX, maxY);
-        var rawRange = lowFreqScale + highFreqScale + guideScale;
-        return minValue + (maxValue - minValue) * value / rawRange;
     };
     MapGenerator.updateCellType = function (cell) {
         var type = cell.height <= 0
@@ -3564,283 +3492,6 @@ var MapGenerator = (function () {
     };
     MapGenerator.constructCellTypeLookup = function (cellTypes) {
         MapGenerator.cellTypeLookup = new kdTree(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
-    };
-    MapGenerator.generateLocation = function (map, locationType) {
-        var cell = map.getRandomCell(true);
-        if (cell === undefined)
-            return undefined;
-        cell = MapGenerator.pickLowestCell(map.getCellsInRange(cell, 2), true);
-        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
-            var other = _a[_i];
-            var minDist = Math.min(locationType.minDistanceToOther, other.type.minDistanceToOther);
-            if (cell.distanceTo(other.cell) < minDist)
-                return undefined;
-        }
-        var location = new MapLocation(cell, locationType.name, locationType);
-        return location;
-    };
-    MapGenerator.generateLines = function (map, lineType) {
-        var lines = [];
-        var onePerNCells = 80; // TODO: Make this configurable, ideally in generation settings.
-        var numLines = Math.round(map.width * map.height / onePerNCells);
-        for (var iLine = 0; iLine < numLines; iLine++) {
-            var cells = void 0;
-            switch (lineType.positionMode) {
-                case 0 /* Random */:
-                    cells = MapGenerator.pickRandomLineCells(map, lineType);
-                    break;
-                case 1 /* HighToLow */:
-                    cells = MapGenerator.pickHighToLowLineCells(map, lineType, lines);
-                    break;
-                default:
-                    continue;
-            }
-            if (cells.length <= 1)
-                continue;
-            var line = new MapLine(lineType);
-            line.keyCells = cells;
-            lines.push(line);
-        }
-        for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
-            var line = lines_2[_i];
-            MapGenerator.removeSuperfluousLineCells(line.keyCells);
-            MapGenerator.renderAndErodeLine(map, line);
-        }
-        return lines;
-    };
-    MapGenerator.generateLinesBetweenLocations = function (map, lineType) {
-        var locationGroups = MapGenerator.groupConnectableLocations(map, map.locations);
-        for (var _i = 0, locationGroups_1 = locationGroups; _i < locationGroups_1.length; _i++) {
-            var group = locationGroups_1[_i];
-            MapGenerator.generateLinesForLocationGroup(map, group, lineType);
-        }
-    };
-    MapGenerator.groupConnectableLocations = function (map, locations) {
-        var groups = [];
-        for (var _i = 0, _a = locations.slice(); _i < _a.length; _i++) {
-            var location_4 = _a[_i];
-            var foundGroup = false;
-            for (var _b = 0, groups_1 = groups; _b < groups_1.length; _b++) {
-                var testGroup = groups_1[_b];
-                var firstInGroup = testGroup[0];
-                if (MapGenerator.getConnectionPaths(map, location_4.cell, [firstInGroup.cell]).length !== 0) {
-                    testGroup.push(location_4);
-                    foundGroup = true;
-                    break;
-                }
-            }
-            if (!foundGroup)
-                groups.push([location_4]);
-        }
-        return groups;
-    };
-    MapGenerator.getConnectionPaths = function (map, from, to) {
-        var results = [];
-        var colMul = map.height;
-        var visited = {};
-        visited[from.row + from.col * colMul] = true;
-        var prevFringe = [[from]];
-        var nextFringe = [];
-        do {
-            for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
-                var fringePath = prevFringe_1[_i];
-                var fringeCell = fringePath[fringePath.length - 1];
-                for (var _a = 0, _b = map.getNeighbours(fringeCell); _a < _b.length; _a++) {
-                    var testCell = _b[_a];
-                    var testIndex = testCell.row + testCell.col * colMul;
-                    if (visited[testIndex] === true)
-                        continue;
-                    var path = fringePath.slice();
-                    path.push(testCell);
-                    for (var i = 0; i < to.length; i++)
-                        if (testCell === to[i]) {
-                            results.push(path);
-                            if (to.length === 1)
-                                return results; // if this was the last remaining cell, return early
-                            to.splice(i, 1);
-                            break;
-                        }
-                    visited[testIndex] = true;
-                    if (testCell.height > 0 && testCell.height < 0.75)
-                        nextFringe.push(path);
-                }
-            }
-            prevFringe = nextFringe;
-            nextFringe = [];
-        } while (prevFringe.length > 0);
-        return results;
-    };
-    MapGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
-        // connect every pair of locations in the group for which there isn't another location closer to both of them
-        var groupLines = [];
-        // calculate the distance between each pair once
-        var locCells = [];
-        for (var i = 0; i < locations.length; i++)
-            locCells[i] = locations[i].cell;
-        var pathCache = {};
-        for (var i = 0; i < locations.length; i++) {
-            var paths = MapGenerator.getConnectionPaths(map, locCells[i], locCells.slice(i + 1));
-            var cacheEntry = {};
-            for (var _i = 0, paths_1 = paths; _i < paths_1.length; _i++) {
-                var path = paths_1[_i];
-                var endCell = path[path.length - 1];
-                var index = locCells.indexOf(endCell);
-                cacheEntry[index] = path;
-            }
-            pathCache[i] = cacheEntry;
-        }
-        for (var i = 0; i < locations.length; i++)
-            for (var j = 0; j < i; j++)
-                pathCache[i][j] = pathCache[j][i];
-        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
-        for (var i = 0; i < locations.length; i++) {
-            for (var j = i + 1; j < locations.length; j++) {
-                var path = pathCache[i][j];
-                if (path === null)
-                    continue;
-                var anyCloser = false;
-                for (var k = 0; k < locations.length; k++) {
-                    if (k === i || k === j)
-                        continue;
-                    var dist1 = pathCache[i][k];
-                    var dist2 = pathCache[j][k];
-                    if (dist1 === null || dist2 === null)
-                        continue;
-                    if (dist1.length < path.length && dist2.length < path.length) {
-                        anyCloser = true;
-                        break;
-                    }
-                }
-                if (!anyCloser) {
-                    var line = new MapLine(lineType);
-                    line.keyCells = path;
-                    groupLines.push(line);
-                }
-            }
-        }
-        // for each line, remove any overlap with another by removing "overlapping" key cells
-        MapGenerator.removeOverlap(groupLines);
-        // where exactly two lines end on the same cell, combine them into one line
-        MapGenerator.combineLines(groupLines);
-        for (var _a = 0, groupLines_1 = groupLines; _a < groupLines_1.length; _a++) {
-            var line = groupLines_1[_a];
-            MapGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
-            MapGenerator.renderAndErodeLine(map, line);
-            map.lines.push(line);
-        }
-    };
-    MapGenerator.removeOverlap = function (lines) {
-        for (var _i = 0, lines_3 = lines; _i < lines_3.length; _i++) {
-            var line = lines_3[_i];
-            // find all lines that share a terminus with this line.
-            var startLines = [], endLines = [];
-            var firstCell = line.keyCells[0], lastCell = line.keyCells[line.keyCells.length - 1];
-            for (var _a = 0, lines_4 = lines; _a < lines_4.length; _a++) {
-                var otherLine = lines_4[_a];
-                if (otherLine === line)
-                    continue;
-                var otherFirst = otherLine.keyCells[0], otherLast = otherLine.keyCells[otherLine.keyCells.length - 1];
-                if (otherFirst === firstCell || otherLast === firstCell)
-                    startLines.push(otherLine);
-                if (otherFirst === lastCell || otherLast === lastCell)
-                    endLines.push(otherLine);
-            }
-            // remove key cells from the start of this line until only the "first" remaining key cell touches any of startLines
-            while (line.keyCells.length > 1) {
-                firstCell = line.keyCells[1];
-                var anyTouching = false;
-                for (var _b = 0, startLines_1 = startLines; _b < startLines_1.length; _b++) {
-                    var otherLine = startLines_1[_b];
-                    for (var _c = 0, _d = otherLine.keyCells; _c < _d.length; _c++) {
-                        var cell = _d[_c];
-                        if (cell === firstCell) {
-                            anyTouching = true;
-                            break;
-                        }
-                    }
-                }
-                if (!anyTouching)
-                    break;
-                line.keyCells.shift();
-            }
-            // remove key cells from the end of this line until only the "last" remaining key cell touches any of endLines
-            while (line.keyCells.length > 1) {
-                lastCell = line.keyCells[line.keyCells.length - 2];
-                var anyTouching = false;
-                for (var _e = 0, endLines_1 = endLines; _e < endLines_1.length; _e++) {
-                    var otherLine = endLines_1[_e];
-                    for (var _f = 0, _g = otherLine.keyCells; _f < _g.length; _f++) {
-                        var cell = _g[_f];
-                        if (cell === lastCell) {
-                            anyTouching = true;
-                            break;
-                        }
-                    }
-                }
-                if (!anyTouching)
-                    break;
-                line.keyCells.pop();
-            }
-        }
-    };
-    MapGenerator.combineLines = function (lines) {
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var start = line.getStartCell(), end = line.getEndCell();
-            var hasMerged = false;
-            var startLines = [];
-            var endLines = [];
-            for (var j = 0; j < lines.length; j++) {
-                if (j == i)
-                    continue;
-                var other = lines[j];
-                var otherStart = other.getStartCell();
-                var otherEnd = other.getEndCell();
-                if (otherStart == end)
-                    endLines.push([other, false, j]);
-                else if (otherEnd == end)
-                    endLines.push([other, true, j]);
-                if (otherStart == start)
-                    startLines.push([other, false, j]);
-                else if (otherEnd == start)
-                    startLines.push([other, true, j]);
-            }
-            // if there is exactly one line with an end on this line's start point
-            var removedIndex = void 0;
-            if (startLines.length == 1) {
-                var info = startLines[0];
-                var cells = info[0].keyCells;
-                if (info[1])
-                    cells = cells.reverse();
-                for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
-                    var cell = cells_1[_i];
-                    line.keyCells.unshift(cell);
-                }
-                removedIndex = info[2];
-                lines.splice(removedIndex, 1);
-                hasMerged = true;
-            }
-            else
-                removedIndex = Number.MAX_VALUE;
-            // if there is exactly one line with an end on this line's end point
-            if (endLines.length == 1) {
-                var info = endLines[0];
-                var cells = info[0].keyCells;
-                if (info[1])
-                    cells = cells.reverse();
-                for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
-                    var cell = cells_2[_a];
-                    line.keyCells.push(cell);
-                }
-                var indexToRemove = info[2];
-                if (indexToRemove > removedIndex)
-                    indexToRemove--; // ensure we remove the right line if another has already been removed
-                lines.splice(indexToRemove, 1);
-                hasMerged = true;
-            }
-            if (hasMerged)
-                i--; // if this line has new ends, they still need tested
-        }
     };
     MapGenerator.removeSuperfluousLineCells = function (cells, linesToKeepJunctionsWith) {
         if (linesToKeepJunctionsWith === void 0) { linesToKeepJunctionsWith = []; }
@@ -3883,14 +3534,184 @@ var MapGenerator = (function () {
         }
         return line;
     };
-    MapGenerator.pickRandomLineCells = function (map, lineType) {
+    MapGenerator.pickHighestCell = function (cells) {
+        var returnCell = cells[0];
+        for (var i = 1; i < cells.length; i++) {
+            var testCell = cells[i];
+            if (testCell.height > returnCell.height)
+                returnCell = testCell;
+        }
+        return returnCell;
+    };
+    MapGenerator.pickLowestCell = function (cells, mustBeAboveSeaLevel) {
+        if (mustBeAboveSeaLevel === void 0) { mustBeAboveSeaLevel = false; }
+        var returnCell = cells[0];
+        var bestHeight = Number.MAX_VALUE;
+        for (var i = 0; i < cells.length; i++) {
+            var testCell = cells[i];
+            if (testCell.height < bestHeight && (!mustBeAboveSeaLevel || testCell.height > 0)) {
+                returnCell = testCell;
+                bestHeight = testCell.height;
+            }
+        }
+        return returnCell;
+    };
+    return MapGenerator;
+}());
+var CoastlineGenerator = (function () {
+    function CoastlineGenerator() {
+    }
+    CoastlineGenerator.generate = function (map, settings) {
+        var coastGuide = settings.coastGuide;
+        var lowFreqNoiseX = new SimplexNoise(), highFreqNoiseX = new SimplexNoise();
+        var lowFreqNoiseY = new SimplexNoise(), highFreqNoiseY = new SimplexNoise();
+        var lowFreqNoiseScale = settings.coastNoiseLowFreq, highFreqNoiseScale = settings.coastNoiseHighFreq;
+        var seaLevelCutoff = 0.5;
+        var maxX = map.width * MapData.packedWidthRatio;
+        var maxY = map.height * MapData.packedHeightRatio;
+        // allocate height to each cell, specify if it is land or sea
+        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell === null)
+                continue;
+            var x = cell.xPos, y = cell.yPos;
+            if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff) {
+                cell.height = -0.1;
+                continue;
+            }
+            /*
+                        let tmpX = x;
+                        x += lowFreqNoiseX.noise(x, y) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
+                        y += lowFreqNoiseY.noise(tmpX, y) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
+            */
+            var otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
+            if (otherCell === null)
+                continue;
+            console.log('started at ' + cell.col + ', ' + cell.row);
+            console.log('ended up at ' + otherCell.col + ', ' + otherCell.row);
+            otherCell.height = 0.1;
+        }
+    };
+    return CoastlineGenerator;
+}());
+var TerrainGenerator = (function () {
+    function TerrainGenerator() {
+    }
+    TerrainGenerator.generate = function (map, settings) {
+        // to start with, generate height, temperate and precipitation values for all map cells
+        TerrainGenerator.allocateCellProperties(map, settings);
+        //TerrainGenerator.generateMountainRanges(map, settings);
+    };
+    TerrainGenerator.allocateCellProperties = function (map, settings) {
+        var heightGuide = settings.heightGuide;
+        var lowFreqHeightNoise = new SimplexNoise();
+        var highFreqHeightNoise = new SimplexNoise();
+        var heightScaleTot = settings.heightScaleGuide + settings.heightScaleLowFreq + settings.heightScaleHighFreq;
+        if (heightScaleTot == 0)
+            heightScaleTot = 1;
+        var guideHeightScale = settings.heightScaleGuide / heightScaleTot;
+        var lowFreqHeightScale = settings.heightScaleLowFreq / heightScaleTot;
+        var highFreqHeightScale = settings.heightScaleHighFreq / heightScaleTot;
+        var temperatureGuide = settings.temperatureGuide;
+        var lowFreqTemperatureNoise = new SimplexNoise();
+        var highFreqTemperatureNoise = new SimplexNoise();
+        var temperatureScaleTot = settings.temperatureScaleGuide + settings.temperatureScaleLowFreq + settings.temperatureScaleHighFreq;
+        if (temperatureScaleTot == 0)
+            temperatureScaleTot = 1;
+        var guideTemperatureScale = settings.temperatureScaleGuide / temperatureScaleTot;
+        var lowFreqTemperatureScale = settings.temperatureScaleLowFreq / temperatureScaleTot;
+        var highFreqTemperatureScale = settings.temperatureScaleHighFreq / temperatureScaleTot;
+        var precipitationGuide = settings.precipitationGuide;
+        var lowFreqPrecipitationNoise = new SimplexNoise();
+        var highFreqPrecipitationNoise = new SimplexNoise();
+        var precipitationScaleTot = settings.precipitationScaleGuide + settings.precipitationScaleLowFreq + settings.precipitationScaleHighFreq;
+        if (precipitationScaleTot == 0)
+            precipitationScaleTot = 1;
+        var guidePrecipitationScale = settings.precipitationScaleGuide / precipitationScaleTot;
+        var lowFreqPrecipitationScale = settings.precipitationScaleLowFreq / precipitationScaleTot;
+        var highFreqPrecipitationScale = settings.precipitationScaleHighFreq / precipitationScaleTot;
+        var maxX = map.width * MapData.packedWidthRatio;
+        var maxY = map.height * MapData.packedHeightRatio;
+        // allocate height / temperature / precipitation generation properties to each cell with a height >= 0
+        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell === null || cell.height < 0)
+                continue;
+            cell.height = TerrainGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideHeightScale, lowFreqHeightScale, highFreqHeightScale, heightGuide, lowFreqHeightNoise, highFreqHeightNoise, settings.minHeight, settings.maxHeight);
+            cell.temperature = TerrainGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqTemperatureScale, highFreqTemperatureScale, temperatureGuide, lowFreqTemperatureNoise, highFreqTemperatureNoise, settings.minTemperature, settings.maxTemperature);
+            cell.precipitation = TerrainGenerator.determineValue(cell.xPos, cell.yPos, maxX, maxY, guideTemperatureScale, lowFreqPrecipitationScale, highFreqPrecipitationScale, precipitationGuide, lowFreqPrecipitationNoise, highFreqPrecipitationNoise, settings.minPrecipitation, settings.maxPrecipitation);
+            // don't allocate a cell type right away, as later steps may change these properties
+        }
+    };
+    TerrainGenerator.determineValue = function (x, y, maxX, maxY, guideScale, lowFreqScale, highFreqScale, guide, lowFreqNoise, highFreqNoise, minValue, maxValue) {
+        var value = lowFreqScale * lowFreqNoise.noise(x / 10, y / 10)
+            + highFreqScale * highFreqNoise.noise(x, y)
+            + guideScale * guide.generation(x, y, maxX, maxY);
+        var rawRange = lowFreqScale + highFreqScale + guideScale;
+        return minValue + (maxValue - minValue) * value / rawRange;
+    };
+    TerrainGenerator.generateMountainRanges = function (map, settings) {
+        // generate mountain ranges, but don't add these to the map. Just use them for (negative) erosion.
+        var lineType = new LineType('Mountains', '#000000', 1, 1, 1, 1, -0.4, 1, true, 0 /* Random */);
+        var lines = [];
+        var onePerNCells = 120; // TODO: Make this configurable, ideally in generation settings.
+        var numLines = Math.round(map.width * map.height / onePerNCells);
+        for (var iLine = 0; iLine < numLines; iLine++) {
+            var cells = TerrainGenerator.pickRandomLineCells(map, lineType);
+            if (cells.length <= 1)
+                continue;
+            var line = new MapLine(lineType);
+            line.keyCells = cells;
+            lines.push(line);
+        }
+        for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
+            var line = lines_2[_i];
+            MapGenerator.removeSuperfluousLineCells(line.keyCells);
+            MapGenerator.renderAndErodeLine(map, line);
+        }
+        return lines;
+    };
+    TerrainGenerator.pickRandomLineCells = function (map, lineType) {
         // TODO: plot a path between these two points, not just a straight line
-        var cellA = map.getRandomCell(true), cellB = map.getRandomCell(true);
+        var cellA = map.getRandomCell(false), cellB = map.getRandomCell(false);
         if (cellA === undefined || cellB === undefined)
             return [];
         return [cellA, cellB];
     };
-    MapGenerator.pickHighToLowLineCells = function (map, lineType, otherLines) {
+    return TerrainGenerator;
+}());
+var RiverGenerator = (function () {
+    function RiverGenerator() {
+    }
+    RiverGenerator.generate = function (map, settings) {
+        // create river lines and allow them to erode the map.
+        for (var _i = 0, _a = map.lineTypes; _i < _a.length; _i++) {
+            var lineType = _a[_i];
+            if (lineType.positionMode !== 1 /* HighToLow */)
+                continue;
+            RiverGenerator.generateLines(map, lineType);
+        }
+    };
+    RiverGenerator.generateLines = function (map, lineType) {
+        var lines = [];
+        var onePerNCells = 80; // TODO: Make this configurable, ideally in generation settings.
+        var numLines = Math.round(map.width * map.height / onePerNCells);
+        for (var iLine = 0; iLine < numLines; iLine++) {
+            var cells = RiverGenerator.pickHighToLowLineCells(map, lineType, lines);
+            if (cells.length <= 1)
+                continue;
+            var line = new MapLine(lineType);
+            line.keyCells = cells;
+            lines.push(line);
+        }
+        for (var _i = 0, lines_3 = lines; _i < lines_3.length; _i++) {
+            var line = lines_3[_i];
+            MapGenerator.removeSuperfluousLineCells(line.keyCells);
+            MapGenerator.renderAndErodeLine(map, line);
+            map.lines.push(line);
+        }
+    };
+    RiverGenerator.pickHighToLowLineCells = function (map, lineType, otherLines) {
         // start with a random cell
         var genStartCell = map.getRandomCell(!lineType.canErodeBelowSeaLevel);
         if (genStartCell === undefined)
@@ -3949,29 +3770,316 @@ var MapGenerator = (function () {
         }
         return cells;
     };
-    MapGenerator.pickHighestCell = function (cells) {
-        var returnCell = cells[0];
-        for (var i = 1; i < cells.length; i++) {
-            var testCell = cells[i];
-            if (testCell.height > returnCell.height)
-                returnCell = testCell;
-        }
-        return returnCell;
-    };
-    MapGenerator.pickLowestCell = function (cells, mustBeAboveSeaLevel) {
-        if (mustBeAboveSeaLevel === void 0) { mustBeAboveSeaLevel = false; }
-        var returnCell = cells[0];
-        var bestHeight = Number.MAX_VALUE;
-        for (var i = 0; i < cells.length; i++) {
-            var testCell = cells[i];
-            if (testCell.height < bestHeight && (!mustBeAboveSeaLevel || testCell.height > 0)) {
-                returnCell = testCell;
-                bestHeight = testCell.height;
+    return RiverGenerator;
+}());
+var LocationGenerator = (function () {
+    function LocationGenerator() {
+    }
+    LocationGenerator.generate = function (map, settings) {
+        // create locations, which currently all prefer the lowest nearby point
+        for (var _i = 0, _a = map.locationTypes; _i < _a.length; _i++) {
+            var locationType = _a[_i];
+            var onePerNCells = 50; // TODO: to be specified per location type. Make this only consider LAND cells?
+            var numLocations = Math.round(map.width * map.height / onePerNCells);
+            for (var iLoc = 0; iLoc < numLocations; iLoc++) {
+                var loc = LocationGenerator.generateLocation(map, locationType);
+                if (loc === undefined)
+                    continue;
+                map.locations.push(loc);
             }
         }
-        return returnCell;
     };
-    return MapGenerator;
+    LocationGenerator.generateLocation = function (map, locationType) {
+        var cell = map.getRandomCell(true);
+        if (cell === undefined)
+            return undefined;
+        cell = MapGenerator.pickLowestCell(map.getCellsInRange(cell, 2), true);
+        for (var _i = 0, _a = map.locations; _i < _a.length; _i++) {
+            var other = _a[_i];
+            var minDist = Math.min(locationType.minDistanceToOther, other.type.minDistanceToOther);
+            if (cell.distanceTo(other.cell) < minDist)
+                return undefined;
+        }
+        var location = new MapLocation(cell, locationType.name, locationType);
+        return location;
+    };
+    return LocationGenerator;
+}());
+var RoadGenerator = (function () {
+    function RoadGenerator() {
+    }
+    RoadGenerator.generate = function (map, settings) {
+        // create roads, only once locations are in place
+        for (var _i = 0, _a = map.lineTypes; _i < _a.length; _i++) {
+            var lineType = _a[_i];
+            if (lineType.positionMode !== 2 /* BetweenLocations */)
+                continue;
+            RoadGenerator.generateLinesBetweenLocations(map, lineType);
+        }
+    };
+    RoadGenerator.generateLinesBetweenLocations = function (map, lineType) {
+        var locationGroups = RoadGenerator.groupConnectableLocations(map, map.locations);
+        for (var _i = 0, locationGroups_1 = locationGroups; _i < locationGroups_1.length; _i++) {
+            var group = locationGroups_1[_i];
+            RoadGenerator.generateLinesForLocationGroup(map, group, lineType);
+        }
+    };
+    RoadGenerator.groupConnectableLocations = function (map, locations) {
+        var groups = [];
+        for (var _i = 0, _a = locations.slice(); _i < _a.length; _i++) {
+            var location_4 = _a[_i];
+            var foundGroup = false;
+            for (var _b = 0, groups_1 = groups; _b < groups_1.length; _b++) {
+                var testGroup = groups_1[_b];
+                var firstInGroup = testGroup[0];
+                if (RoadGenerator.getConnectionPaths(map, location_4.cell, [firstInGroup.cell]).length !== 0) {
+                    testGroup.push(location_4);
+                    foundGroup = true;
+                    break;
+                }
+            }
+            if (!foundGroup)
+                groups.push([location_4]);
+        }
+        return groups;
+    };
+    RoadGenerator.getConnectionPaths = function (map, from, to) {
+        var results = [];
+        var colMul = map.height;
+        var visited = {};
+        visited[from.row + from.col * colMul] = true;
+        var prevFringe = [[from]];
+        var nextFringe = [];
+        do {
+            for (var _i = 0, prevFringe_1 = prevFringe; _i < prevFringe_1.length; _i++) {
+                var fringePath = prevFringe_1[_i];
+                var fringeCell = fringePath[fringePath.length - 1];
+                for (var _a = 0, _b = map.getNeighbours(fringeCell); _a < _b.length; _a++) {
+                    var testCell = _b[_a];
+                    var testIndex = testCell.row + testCell.col * colMul;
+                    if (visited[testIndex] === true)
+                        continue;
+                    var path = fringePath.slice();
+                    path.push(testCell);
+                    for (var i = 0; i < to.length; i++)
+                        if (testCell === to[i]) {
+                            results.push(path);
+                            if (to.length === 1)
+                                return results; // if this was the last remaining cell, return early
+                            to.splice(i, 1);
+                            break;
+                        }
+                    visited[testIndex] = true;
+                    if (testCell.height > 0 && testCell.height < 0.75)
+                        nextFringe.push(path);
+                }
+            }
+            prevFringe = nextFringe;
+            nextFringe = [];
+        } while (prevFringe.length > 0);
+        return results;
+    };
+    RoadGenerator.generateLinesForLocationGroup = function (map, locations, lineType) {
+        // connect every pair of locations in the group for which there isn't another location closer to both of them
+        var groupLines = [];
+        // calculate the distance between each pair once
+        var locCells = [];
+        for (var i = 0; i < locations.length; i++)
+            locCells[i] = locations[i].cell;
+        var pathCache = {};
+        for (var i = 0; i < locations.length; i++) {
+            var paths = RoadGenerator.getConnectionPaths(map, locCells[i], locCells.slice(i + 1));
+            var cacheEntry = {};
+            for (var _i = 0, paths_1 = paths; _i < paths_1.length; _i++) {
+                var path = paths_1[_i];
+                var endCell = path[path.length - 1];
+                var index = locCells.indexOf(endCell);
+                cacheEntry[index] = path;
+            }
+            pathCache[i] = cacheEntry;
+        }
+        for (var i = 0; i < locations.length; i++)
+            for (var j = 0; j < i; j++)
+                pathCache[i][j] = pathCache[j][i];
+        // TODO: use a better algorithm for calculating this relative neighbourhood graph ... which this is, even though we don't actually keep it
+        for (var i = 0; i < locations.length; i++) {
+            for (var j = i + 1; j < locations.length; j++) {
+                var path = pathCache[i][j];
+                if (path === null)
+                    continue;
+                var anyCloser = false;
+                for (var k = 0; k < locations.length; k++) {
+                    if (k === i || k === j)
+                        continue;
+                    var dist1 = pathCache[i][k];
+                    var dist2 = pathCache[j][k];
+                    if (dist1 === null || dist2 === null)
+                        continue;
+                    if (dist1.length < path.length && dist2.length < path.length) {
+                        anyCloser = true;
+                        break;
+                    }
+                }
+                if (!anyCloser) {
+                    var line = new MapLine(lineType);
+                    line.keyCells = path;
+                    groupLines.push(line);
+                }
+            }
+        }
+        // for each line, remove any overlap with another by removing "overlapping" key cells
+        RoadGenerator.removeOverlap(groupLines);
+        // where exactly two lines end on the same cell, combine them into one line
+        RoadGenerator.combineLines(groupLines);
+        for (var _a = 0, groupLines_1 = groupLines; _a < groupLines_1.length; _a++) {
+            var line = groupLines_1[_a];
+            RoadGenerator.removeSuperfluousLineCells(line.keyCells, groupLines);
+            MapGenerator.renderAndErodeLine(map, line);
+            map.lines.push(line);
+        }
+    };
+    RoadGenerator.removeOverlap = function (lines) {
+        for (var _i = 0, lines_4 = lines; _i < lines_4.length; _i++) {
+            var line = lines_4[_i];
+            // find all lines that share a terminus with this line.
+            var startLines = [], endLines = [];
+            var firstCell = line.keyCells[0], lastCell = line.keyCells[line.keyCells.length - 1];
+            for (var _a = 0, lines_5 = lines; _a < lines_5.length; _a++) {
+                var otherLine = lines_5[_a];
+                if (otherLine === line)
+                    continue;
+                var otherFirst = otherLine.keyCells[0], otherLast = otherLine.keyCells[otherLine.keyCells.length - 1];
+                if (otherFirst === firstCell || otherLast === firstCell)
+                    startLines.push(otherLine);
+                if (otherFirst === lastCell || otherLast === lastCell)
+                    endLines.push(otherLine);
+            }
+            // remove key cells from the start of this line until only the "first" remaining key cell touches any of startLines
+            while (line.keyCells.length > 1) {
+                firstCell = line.keyCells[1];
+                var anyTouching = false;
+                for (var _b = 0, startLines_1 = startLines; _b < startLines_1.length; _b++) {
+                    var otherLine = startLines_1[_b];
+                    for (var _c = 0, _d = otherLine.keyCells; _c < _d.length; _c++) {
+                        var cell = _d[_c];
+                        if (cell === firstCell) {
+                            anyTouching = true;
+                            break;
+                        }
+                    }
+                }
+                if (!anyTouching)
+                    break;
+                line.keyCells.shift();
+            }
+            // remove key cells from the end of this line until only the "last" remaining key cell touches any of endLines
+            while (line.keyCells.length > 1) {
+                lastCell = line.keyCells[line.keyCells.length - 2];
+                var anyTouching = false;
+                for (var _e = 0, endLines_1 = endLines; _e < endLines_1.length; _e++) {
+                    var otherLine = endLines_1[_e];
+                    for (var _f = 0, _g = otherLine.keyCells; _f < _g.length; _f++) {
+                        var cell = _g[_f];
+                        if (cell === lastCell) {
+                            anyTouching = true;
+                            break;
+                        }
+                    }
+                }
+                if (!anyTouching)
+                    break;
+                line.keyCells.pop();
+            }
+        }
+    };
+    RoadGenerator.combineLines = function (lines) {
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var start = line.getStartCell(), end = line.getEndCell();
+            var hasMerged = false;
+            var startLines = [];
+            var endLines = [];
+            for (var j = 0; j < lines.length; j++) {
+                if (j == i)
+                    continue;
+                var other = lines[j];
+                var otherStart = other.getStartCell();
+                var otherEnd = other.getEndCell();
+                if (otherStart == end)
+                    endLines.push([other, false, j]);
+                else if (otherEnd == end)
+                    endLines.push([other, true, j]);
+                if (otherStart == start)
+                    startLines.push([other, false, j]);
+                else if (otherEnd == start)
+                    startLines.push([other, true, j]);
+            }
+            // if there is exactly one line with an end on this line's start point
+            var removedIndex = void 0;
+            if (startLines.length == 1) {
+                var info = startLines[0];
+                var cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+                for (var _i = 0, cells_1 = cells; _i < cells_1.length; _i++) {
+                    var cell = cells_1[_i];
+                    line.keyCells.unshift(cell);
+                }
+                removedIndex = info[2];
+                lines.splice(removedIndex, 1);
+                hasMerged = true;
+            }
+            else
+                removedIndex = Number.MAX_VALUE;
+            // if there is exactly one line with an end on this line's end point
+            if (endLines.length == 1) {
+                var info = endLines[0];
+                var cells = info[0].keyCells;
+                if (info[1])
+                    cells = cells.reverse();
+                for (var _a = 0, cells_2 = cells; _a < cells_2.length; _a++) {
+                    var cell = cells_2[_a];
+                    line.keyCells.push(cell);
+                }
+                var indexToRemove = info[2];
+                if (indexToRemove > removedIndex)
+                    indexToRemove--; // ensure we remove the right line if another has already been removed
+                lines.splice(indexToRemove, 1);
+                hasMerged = true;
+            }
+            if (hasMerged)
+                i--; // if this line has new ends, they still need tested
+        }
+    };
+    RoadGenerator.removeSuperfluousLineCells = function (cells, linesToKeepJunctionsWith) {
+        if (linesToKeepJunctionsWith === void 0) { linesToKeepJunctionsWith = []; }
+        if (cells.length <= 3)
+            return;
+        var first = cells[0];
+        var last = cells[cells.length - 1];
+        var canRemove = false;
+        for (var i = 1; i < cells.length - 1; i++) {
+            canRemove = !canRemove;
+            if (!canRemove)
+                continue; // keep alternate cells
+            // don't remove a key cell if another line ends there
+            var cell = cells[i];
+            for (var _i = 0, linesToKeepJunctionsWith_2 = linesToKeepJunctionsWith; _i < linesToKeepJunctionsWith_2.length; _i++) {
+                var line = linesToKeepJunctionsWith_2[_i];
+                if (line.keyCells === cells)
+                    continue;
+                else if (cell == line.getStartCell() || cell == line.getEndCell()) {
+                    canRemove = false;
+                    break;
+                }
+            }
+            if (canRemove) {
+                cells.splice(i, 1);
+                i--;
+            }
+        }
+    };
+    return RoadGenerator;
 }());
 var __assign = (this && this.__assign) || Object.assign || function(t) {
     for (var s, i = 1, n = arguments.length; i < n; i++) {

@@ -82,7 +82,7 @@ class MapData {
         return undefined;
     }
     getCellIndexAtPoint(mapX: number, mapY: number) {
-        let fCol = (mapX * Math.sqrt(3) - mapY) / 3;
+        let fCol = (mapX * MapData.packedWidthRatio - mapY) / 3;
         let fRow = mapY * 2 / 3;
         let fThirdCoord = - fCol - fRow;
 
@@ -94,11 +94,9 @@ class MapData {
         let rowDiff = Math.abs(rRow - fRow);
         let thirdDiff = Math.abs(rThird - fThirdCoord);
 
-        if (colDiff >= rowDiff) {
-            if (colDiff >= thirdDiff)
-                rCol = - rRow - rThird;
-        }
-        else if (rowDiff >= colDiff && rowDiff >= thirdDiff)
+        if (colDiff > rowDiff && colDiff > thirdDiff)
+            rCol = - rRow - rThird;
+        else if (rowDiff > thirdDiff)
             rRow = - rCol - rThird;
 
         return this.getCellIndex(rRow, rCol);

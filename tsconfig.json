@@ -51,7 +51,13 @@
         "tools/Random.ts",
         "tools/Simplex.ts",
         "tools/kdTree.ts",
-        "tools/MapGenerator.ts",
+
+        "generation/MapGenerator.ts",
+        "generation/CoastlineGenerator.ts",
+        "generation/TerrainGenerator.ts",
+        "generation/RiverGenerator.ts",
+        "generation/LocationGenerator.ts",
+        "generation/RoadGenerator.ts",
         
         "WorldMap.tsx"
     ]
