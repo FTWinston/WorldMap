@@ -10,56 +10,65 @@ class Guides {
             name: 'Raised center',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => { 
-                let hw = width/2;
-                let xComponent = x <= hw
-                    ? x / hw
-                    : (width - x) / hw;
+                let halfWidth = width/2;
+                let xFactor = (x - halfWidth) / halfWidth;
+                
+                let halfHeight = height/2;
+                let yFactor = (y - halfHeight) / halfHeight;
 
-                let hh = height/2;
-                let yComponent = y <= hh
-                    ? y / hh
-                    : (height - y) / hh;
-
-                return xComponent * yComponent;
+                return 1 - Math.sqrt(xFactor * xFactor + yFactor * yFactor);
             },
         },
         {
-            name: 'Linear gradient, increasing west to east',
+            name: 'Lowered center',
+            isVector: false,
+            generation: (x: number, y: number, width: number, height: number) => { 
+                let halfWidth = width/2;
+                let xFactor = (x - halfWidth) / halfWidth;
+                
+                let halfHeight = height/2;
+                let yFactor = (y - halfHeight) / halfHeight;
+
+                return Math.sqrt(xFactor * xFactor + yFactor * yFactor);
+            },
+        },
+        {
+            name: 'Gradient, increasing west to east',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => x / width,
         },
         {
-            name: 'Linear gradient, increasing east to west',
+            name: 'Gradient, increasing east to west',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => (width - x) / width,
         },
         {
-            name: 'Linear gradient, increasing north to south',
+            name: 'Gradient, increasing north to south',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => y / height,
         },
         {
-            name: 'Linear gradient, increasing south to north',
+            name: 'Gradient, increasing south to north',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => (height - y) / height,
         },
         {
-            name: 'Linear gradient, increasing northwest to southeast',
+            name: 'Gradient, increasing northwest to southeast',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => y / height * 0.5 + x / width * 0.5,
         },
         {
-            name: 'Linear gradient, increasing northeast to southwest',
+            name: 'Gradient, increasing northeast to southwest',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => y / height * 0.5 + (width - x) / width * 0.5,
         },
         {
-            name: 'Linear gradient, increasing southwest to northeast',
+            name: 'Gradient, increasing southwest to northeast',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => (height - y) / height * 0.5 + x / width * 0.5,
         },
         {
-            name: 'Linear gradient, increasing southeast to northwest',
+            name: 'Gradient, increasing southeast to northwest',
             isVector: false,
             generation: (x: number, y: number, width: number, height: number) => (height - y) / height * 0.5 + (width - x) / width * 0.5,
         },

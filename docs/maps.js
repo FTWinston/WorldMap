@@ -868,54 +868,61 @@ Guides.scalarGuides = [
         name: 'Raised center',
         isVector: false,
         generation: function (x, y, width, height) {
-            var hw = width / 2;
-            var xComponent = x <= hw
-                ? x / hw
-                : (width - x) / hw;
-            var hh = height / 2;
-            var yComponent = y <= hh
-                ? y / hh
-                : (height - y) / hh;
-            return xComponent * yComponent;
+            var halfWidth = width / 2;
+            var xFactor = (x - halfWidth) / halfWidth;
+            var halfHeight = height / 2;
+            var yFactor = (y - halfHeight) / halfHeight;
+            return 1 - Math.sqrt(xFactor * xFactor + yFactor * yFactor);
         },
     },
     {
-        name: 'Linear gradient, increasing west to east',
+        name: 'Lowered center',
+        isVector: false,
+        generation: function (x, y, width, height) {
+            var halfWidth = width / 2;
+            var xFactor = (x - halfWidth) / halfWidth;
+            var halfHeight = height / 2;
+            var yFactor = (y - halfHeight) / halfHeight;
+            return Math.sqrt(xFactor * xFactor + yFactor * yFactor);
+        },
+    },
+    {
+        name: 'Gradient, increasing west to east',
         isVector: false,
         generation: function (x, y, width, height) { return x / width; },
     },
     {
-        name: 'Linear gradient, increasing east to west',
+        name: 'Gradient, increasing east to west',
         isVector: false,
         generation: function (x, y, width, height) { return (width - x) / width; },
     },
     {
-        name: 'Linear gradient, increasing north to south',
+        name: 'Gradient, increasing north to south',
         isVector: false,
         generation: function (x, y, width, height) { return y / height; },
     },
     {
-        name: 'Linear gradient, increasing south to north',
+        name: 'Gradient, increasing south to north',
         isVector: false,
         generation: function (x, y, width, height) { return (height - y) / height; },
     },
     {
-        name: 'Linear gradient, increasing northwest to southeast',
+        name: 'Gradient, increasing northwest to southeast',
         isVector: false,
         generation: function (x, y, width, height) { return y / height * 0.5 + x / width * 0.5; },
     },
     {
-        name: 'Linear gradient, increasing northeast to southwest',
+        name: 'Gradient, increasing northeast to southwest',
         isVector: false,
         generation: function (x, y, width, height) { return y / height * 0.5 + (width - x) / width * 0.5; },
     },
     {
-        name: 'Linear gradient, increasing southwest to northeast',
+        name: 'Gradient, increasing southwest to northeast',
         isVector: false,
         generation: function (x, y, width, height) { return (height - y) / height * 0.5 + x / width * 0.5; },
     },
     {
-        name: 'Linear gradient, increasing southeast to northwest',
+        name: 'Gradient, increasing southeast to northwest',
         isVector: false,
         generation: function (x, y, width, height) { return (height - y) / height * 0.5 + (width - x) / width * 0.5; },
     },
