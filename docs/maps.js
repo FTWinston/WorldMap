@@ -3022,6 +3022,7 @@ var GenerationSettingsEditor = (function (_super) {
     function GenerationSettingsEditor(props) {
         var _this = _super.call(this, props) || this;
         _this.state = {
+            activeSection: 0 /* Overview */,
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
@@ -3029,6 +3030,53 @@ var GenerationSettingsEditor = (function (_super) {
         return _this;
     }
     GenerationSettingsEditor.prototype.render = function () {
+        var section;
+        var heading;
+        var prevNextBack = React.createElement("div", null,
+            React.createElement("button", { onClick: this.selectSection.bind(this, 0 /* Overview */) }, "Back to Overview"),
+            React.createElement("button", { onClick: this.selectSection.bind(this, this.state.activeSection - 1) }, "Previous section"),
+            React.createElement("button", { onClick: this.selectSection.bind(this, this.state.activeSection + 1) }, "Next section"));
+        switch (this.state.activeSection) {
+            case 1 /* Coastline */:
+                heading = 'Coastline';
+                section = this.renderCoastline();
+                break;
+            case 2 /* Terrain */:
+                heading = 'Terrain';
+                section = this.renderTerrain();
+                break;
+            default:
+                heading = 'Overview';
+                section = this.renderOverview();
+                prevNextBack = undefined;
+                break;
+        }
+        return React.createElement("div", { id: "settingsRoot" },
+            React.createElement("h1", null, heading),
+            section,
+            prevNextBack);
+    };
+    GenerationSettingsEditor.prototype.renderOverview = function () {
+        return React.createElement("div", { className: "section", role: "group" },
+            React.createElement("p", null,
+                "The different aspects of terrain generation can all be configured; select one to change its settings.",
+                React.createElement("br", null),
+                "Note that the steps below are listed in the order they are applied during generation."),
+            React.createElement("ol", null,
+                React.createElement("li", null,
+                    React.createElement("button", { onClick: this.selectSection.bind(this, 1 /* Coastline */) }, "Coastline")),
+                React.createElement("li", null,
+                    React.createElement("button", { onClick: this.selectSection.bind(this, 2 /* Terrain */) }, "Terrain"))));
+    };
+    GenerationSettingsEditor.prototype.selectSection = function (section) {
+        this.setState({
+            activeSection: section,
+        });
+    };
+    GenerationSettingsEditor.prototype.renderCoastline = function () {
+        return React.createElement("div", { className: "section", role: "group" });
+    };
+    GenerationSettingsEditor.prototype.renderTerrain = function () {
         var height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
             : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
@@ -3038,15 +3086,13 @@ var GenerationSettingsEditor = (function (_super) {
         var precipitation = this.state.selectingPrecipitationGuide
             ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
             : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, minValue: this.props.settings.minPrecipitation, maxValue: this.props.settings.maxPrecipitation, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
-        return React.createElement("div", { id: "settingsRoot" },
-            React.createElement("div", { className: "section", role: "group" }, "Coast"),
-            React.createElement("div", { className: "section", role: "group" },
-                height,
-                temperature,
-                precipitation));
+        return React.createElement("div", { className: "section multiple", role: "group" },
+            height,
+            temperature,
+            precipitation);
     };
     GenerationSettingsEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, propertyName, propertyEffects) {
-        if (propertyEffects === void 0) { propertyEffects = propertyName; }
+        if (propertyEffects === void 0) { propertyEffects = propertyName.toLowerCase(); }
         var intro = "Select a " + propertyName.toLowerCase() + " guide, which controls the overall " + propertyEffects + " of generated terrain.";
         return React.createElement("div", null,
             React.createElement("h2", null, propertyName),

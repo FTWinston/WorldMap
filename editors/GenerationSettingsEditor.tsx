@@ -1,9 +1,16 @@
+const enum SettingsEditorSection {
+    Overview,
+    Coastline,
+    Terrain,
+}
+
 interface IGenerationSettingsEditorProps {
     settings: GenerationSettings;
     settingsChanged: () => void;
 }
 
 interface IGenerationSettingsEditorState {
+    activeSection: SettingsEditorSection;
     selectingHeightGuide: boolean;
     selectingTemperatureGuide: boolean;
     selectingPrecipitationGuide: boolean;
@@ -14,6 +21,7 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
         super(props);
 
         this.state = {
+            activeSection: SettingsEditorSection.Overview,
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
@@ -21,6 +29,64 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
     }
 
     render() {
+        let section;
+        let heading;
+
+        let prevNextBack: JSX.Element | undefined = <div>
+            <button onClick={this.selectSection.bind(this, SettingsEditorSection.Overview)}>Back to Overview</button>
+            <button onClick={this.selectSection.bind(this, this.state.activeSection - 1)}>Previous section</button>
+            <button onClick={this.selectSection.bind(this, this.state.activeSection + 1)}>Next section</button>
+        </div>;
+
+        switch (this.state.activeSection) {
+            case SettingsEditorSection.Coastline:
+                heading = 'Coastline';
+                section = this.renderCoastline();
+                break;
+            case SettingsEditorSection.Terrain:
+                heading = 'Terrain';
+                section = this.renderTerrain();
+                break;
+            default:
+                heading = 'Overview';
+                section = this.renderOverview();
+                prevNextBack = undefined;
+                break;
+        }
+
+        return <div id="settingsRoot">
+            <h1>{heading}</h1>
+            {section}
+            {prevNextBack}
+        </div>
+    }
+
+    private renderOverview() {
+        return <div className="section" role="group">
+            <p>
+                The different aspects of terrain generation can all be configured; select one to change its settings.
+                <br/>Note that the steps below are listed in the order they are applied during generation.
+            </p>
+            <ol>
+                <li><button onClick={this.selectSection.bind(this, SettingsEditorSection.Coastline)}>Coastline</button></li>
+                <li><button onClick={this.selectSection.bind(this, SettingsEditorSection.Terrain)}>Terrain</button></li>
+            </ol>
+        </div>
+    }
+
+    private selectSection(section: SettingsEditorSection) {
+        this.setState({
+            activeSection: section,
+        });
+    }
+
+    private renderCoastline() {
+        return <div className="section" role="group">
+            
+        </div>
+    }
+
+    private renderTerrain() {
         let height = this.state.selectingHeightGuide
             ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
             : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight}
@@ -36,19 +102,14 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
             : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} minValue={this.props.settings.minPrecipitation} maxValue={this.props.settings.maxPrecipitation}
                 guideScale={this.props.settings.precipitationScaleGuide} lowFreqScale={this.props.settings.precipitationScaleLowFreq} highFreqScale={this.props.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />;
 
-        return <div id="settingsRoot">
-            <div className="section" role="group">
-                Coast
-            </div>
-            <div className="section" role="group">
-                {height}
-                {temperature}
-                {precipitation}
-            </div>
+        return <div className="section multiple" role="group">
+            {height}
+            {temperature}
+            {precipitation}
         </div>
     }
 
-    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, propertyName: string, propertyEffects: string = propertyName) {
+    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, propertyName: string, propertyEffects: string = propertyName.toLowerCase()) {
         let intro = `Select a ${propertyName.toLowerCase()} guide, which controls the overall ${propertyEffects} of generated terrain.`;
         
         return <div>

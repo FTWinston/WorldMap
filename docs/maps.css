@@ -8,7 +8,7 @@
   flex-direction: rows;
   justify-content: space-between;
   align-content: stretch; }
-  #worldRoot #mapRoot, #worldRoot #settingsRoot > .section {
+  #worldRoot #mapRoot, #worldRoot #settingsRoot, #worldRoot #settingsRoot > .section {
     flex-shrink: 1;
     flex-grow: 1; }
   #worldRoot #editorControls {
@@ -27,6 +27,9 @@
       margin-top: 0;
       margin-bottom: 0.5em; }
 
+button {
+  cursor: pointer; }
+
 #editorControls {
   display: flex;
   flex-direction: column;
@@ -40,8 +43,7 @@
     border-top-left-radius: 0.5em;
     border-bottom-left-radius: 0.5em;
     padding: 0.25em;
-    transition: background-color 0.25s, border-right-color 0.25s;
-    cursor: pointer; }
+    transition: background-color 0.25s, border-right-color 0.25s; }
     #editorControls button svg {
       fill: none;
       stroke: #000;
@@ -183,20 +185,25 @@ form.genField input {
       -moz-animation: spin 3s linear infinite;
       animation: spin 3s linear infinite; }
 
-#settingsRoot > .section {
-  margin: 1em;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around; }
-  #settingsRoot > .section > * {
-    flex-basis: 0;
-    flex-grow: 1;
-    flex-shrink: 1;
-    overflow-y: scroll; }
-    #settingsRoot > .section > *:not(:first-child) {
-      margin-left: 1em;
-      padding-left: 1em;
-      border-left: solid gray 1px; }
+#settingsRoot {
+  overflow-y: scroll; }
+  #settingsRoot > .section {
+    margin: 1em;
+    display: flex;
+    flex-direction: column; }
+    #settingsRoot > .section.multiple {
+      flex-direction: row;
+      justify-content: space-around; }
+      #settingsRoot > .section.multiple > * {
+        flex-basis: 0;
+        flex-grow: 1;
+        flex-shrink: 1; }
+        #settingsRoot > .section.multiple > *:not(:first-child) {
+          margin-left: 1em;
+          padding-left: 1em;
+          border-left: solid gray 1px; }
+  #settingsRoot button {
+    margin: 0.25em; }
 
 @-moz-keyframes spin {
   100% {
