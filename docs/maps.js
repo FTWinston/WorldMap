@@ -58,7 +58,7 @@ var MapData = (function () {
         return undefined;
     };
     MapData.prototype.getCellIndexAtPoint = function (mapX, mapY) {
-        var fCol = (mapX * MapData.packedWidthRatio - mapY) / 3;
+        var fCol = ((mapX + this.minX) * MapData.packedWidthRatio - mapY) / 3;
         var fRow = mapY * 2 / 3;
         var fThirdCoord = -fCol - fRow;
         var rCol = Math.round(fCol);
@@ -1659,7 +1659,7 @@ var MapView = (function (_super) {
     MapView.prototype.getCellIndexAtPoint = function (screenX, screenY) {
         if (this.scrollPane === undefined)
             return -1;
-        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft + this.props.map.minX * this.state.cellRadius - this.state.cellRadius - this.edgePadding;
+        var mapX = screenX - this.canvas.offsetLeft + this.scrollPane.scrollLeft - this.state.cellRadius - this.edgePadding;
         var mapY = screenY - this.canvas.offsetTop + this.scrollPane.scrollTop - this.state.cellRadius - this.edgePadding;
         return this.props.map.getCellIndexAtPoint(mapX / this.state.cellRadius, mapY / this.state.cellRadius);
     };
@@ -3453,9 +3453,18 @@ var MapGenerator = (function () {
     function MapGenerator() {
     }
     MapGenerator.generate = function (map, settings) {
-        // clear down all lines and locations
+        // clear down all lines, locations and cell data
         map.lines = [];
         map.locations = [];
+        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
+            var cell = _a[_i];
+            if (cell === null)
+                continue;
+            cell.height = -0.1;
+            cell.temperature = 0.5;
+            cell.precipitation = 1;
+            cell.cellType = CellType.empty;
+        }
         // firstly, decide which cells are land and which are sea
         CoastlineGenerator.generate(map, settings);
         // generate height, temperate and precipitation values for all land cells
@@ -3468,15 +3477,15 @@ var MapGenerator = (function () {
         RoadGenerator.generate(map, settings);
         // TODO: calculate wind, use that to modify precipitation and temperature
         // finally, allocate types to cells based on their generation properties
-        for (var _i = 0, _a = map.cells; _i < _a.length; _i++) {
-            var cell = _a[_i];
+        for (var _b = 0, _c = map.cells; _b < _c.length; _b++) {
+            var cell = _c[_b];
             if (cell === null)
                 continue;
             MapGenerator.updateCellType(cell);
         }
     };
     MapGenerator.updateCellType = function (cell) {
-        var type = cell.height <= 0
+        var type = cell.height < 0
             ? CellType.empty
             : MapGenerator.cellTypeLookup.nearest(cell);
         if (type !== undefined)
@@ -3575,20 +3584,14 @@ var CoastlineGenerator = (function () {
             if (cell === null)
                 continue;
             var x = cell.xPos, y = cell.yPos;
-            if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff) {
-                cell.height = -0.1;
+            if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff)
                 continue;
-            }
-            /*
-                        let tmpX = x;
-                        x += lowFreqNoiseX.noise(x, y) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
-                        y += lowFreqNoiseY.noise(tmpX, y) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
-            */
+            var tmpX = x;
+            x += lowFreqNoiseX.noise(x / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
+            y += lowFreqNoiseY.noise(tmpX / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
             var otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
-            if (otherCell === null)
+            if (otherCell == null)
                 continue;
-            console.log('started at ' + cell.col + ', ' + cell.row);
-            console.log('ended up at ' + otherCell.col + ', ' + otherCell.row);
             otherCell.height = 0.1;
         }
     };

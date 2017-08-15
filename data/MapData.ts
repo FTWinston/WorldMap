@@ -41,7 +41,7 @@ class MapData {
     static readonly packedWidthRatio = 1.7320508075688772; // Math.sqrt(3);
     static readonly packedHeightRatio = 1.5;
 
-    minX: number;
+    private minX: number;
     private positionCells() {
         this.minX = MapData.packedWidthRatio * (this.height/2 - 1);
 
@@ -82,7 +82,7 @@ class MapData {
         return undefined;
     }
     getCellIndexAtPoint(mapX: number, mapY: number) {
-        let fCol = (mapX * MapData.packedWidthRatio - mapY) / 3;
+        let fCol = ((mapX + this.minX) * MapData.packedWidthRatio - mapY) / 3;
         let fRow = mapY * 2 / 3;
         let fThirdCoord = - fCol - fRow;
 

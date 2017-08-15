@@ -17,21 +17,17 @@ class CoastlineGenerator {
 
             let x = cell.xPos, y = cell.yPos;
 
-            if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff) {
-                cell.height = -0.1;
-                continue;
-            }
-/*
-            let tmpX = x;
-            x += lowFreqNoiseX.noise(x, y) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
-            y += lowFreqNoiseY.noise(tmpX, y) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
-*/        
-            let otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
-            if (otherCell === null)
+            if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff)
                 continue;
 
-            console.log('started at ' + cell.col + ', ' + cell.row);
-            console.log('ended up at ' + otherCell.col + ', ' + otherCell.row);
+            let tmpX = x;
+            x += lowFreqNoiseX.noise(x / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
+            y += lowFreqNoiseY.noise(tmpX / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
+
+            let otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
+            if (otherCell == null)
+                continue;
+
             otherCell.height = 0.1;
         }
     }

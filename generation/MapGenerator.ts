@@ -1,8 +1,18 @@
 class MapGenerator {
     public static generate(map: MapData, settings: GenerationSettings) {
-        // clear down all lines and locations
+        // clear down all lines, locations and cell data
         map.lines = [];
         map.locations = [];
+
+        for (let cell of map.cells) {
+            if (cell === null)
+                continue;
+            
+            cell.height = -0.1;
+            cell.temperature = 0.5;
+            cell.precipitation = 1;
+            cell.cellType = CellType.empty;
+        }
         
         // firstly, decide which cells are land and which are sea
         CoastlineGenerator.generate(map, settings);
@@ -33,7 +43,7 @@ class MapGenerator {
     private static cellTypeLookup: kdTree<CellType, MapCell>;
 
     static updateCellType(cell: MapCell) {
-        let type = cell.height <= 0
+        let type = cell.height < 0
             ? CellType.empty
             : MapGenerator.cellTypeLookup.nearest(cell);
 
