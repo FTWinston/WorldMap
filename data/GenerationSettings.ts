@@ -1,4 +1,5 @@
 class GenerationSettings {
+    seaLevel: number;
     coastGuide: GenerationGuide;
     coastNoiseLowFreq: number;
     coastNoiseHighFreq: number;
@@ -25,6 +26,7 @@ class GenerationSettings {
     precipitationScaleHighFreq: number;
 
     constructor() {
+        this.seaLevel = 0.35;
         this.coastGuide = Guides.scalarGuides[0],
         this.coastNoiseLowFreq = 0.2;
         this.coastNoiseHighFreq = 0.15;
@@ -52,12 +54,13 @@ class GenerationSettings {
     }
 
     randomize() {
-        if (Math.random() <= 0.6) // islands should be a likely outcome
+        this.seaLevel = Random.randomRange(0.05, 0.8);
+        if (Math.random() <= 0.5) // islands should be a likely outcome
             this.coastGuide = Guides.scalarGuides[0];
         else
             this.coastGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-        this.coastNoiseLowFreq = Math.random();
-        this.coastNoiseHighFreq = Math.random();
+        this.coastNoiseLowFreq = Random.randomRange(1, 45);
+        this.coastNoiseHighFreq = Random.randomRange(1, 45);
 
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
         this.minHeight = Random.randomRange(0, 0.25);

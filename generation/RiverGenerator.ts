@@ -47,7 +47,7 @@ class RiverGenerator {
             let testCells = map.getCellsInRange(lowestCell, 1);
             let testCell = MapGenerator.pickLowestCell(testCells);
             if (testCell === lowestCell) {
-                if (testCell.height <= 0)
+                if (testCell.height < 0)
                     break; // if under the sea, stop rather than eroding a valley
 
                 // erode a valley
@@ -61,13 +61,13 @@ class RiverGenerator {
                 // find the next lowest cell, and "erode" it down so that we can flow there
                 testCells.slice(testCells.indexOf(dipCell), 1);
                 testCell = MapGenerator.pickLowestCell(testCells);
-                testCell.height = dipCell.height - 0.01;
+                testCell.height = dipCell.height - 0.01; // this can sink to below level and form a lake. that's not really how i wanted them to form...
             }
 
             cells.push(testCell);
             lowestCell = testCell;
 
-            if (!lineType.canErodeBelowSeaLevel && lowestCell.height <= 0)
+            if (!lineType.canErodeBelowSeaLevel && lowestCell.height < 0)
                 break; // some line types (rivers!) don't want us to keep eroding once we reach the seabed
         }
 

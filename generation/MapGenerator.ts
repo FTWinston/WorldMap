@@ -64,7 +64,7 @@ class MapGenerator {
     }
 
     static constructCellTypeLookup(cellTypes: CellType[]) {
-        MapGenerator.cellTypeLookup = new kdTree<CellType, MapCell>(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+        MapGenerator.cellTypeLookup = new kdTree<CellType, MapCell>(cellTypes.slice(1), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     }
 
     static removeSuperfluousLineCells(cells: MapCell[], linesToKeepJunctionsWith: MapLine[] = []) {

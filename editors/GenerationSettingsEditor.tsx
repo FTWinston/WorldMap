@@ -11,6 +11,7 @@ interface IGenerationSettingsEditorProps {
 
 interface IGenerationSettingsEditorState {
     activeSection: SettingsEditorSection;
+    selectingCoastGuide: boolean;
     selectingHeightGuide: boolean;
     selectingTemperatureGuide: boolean;
     selectingPrecipitationGuide: boolean;
@@ -22,6 +23,7 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
 
         this.state = {
             activeSection: SettingsEditorSection.Overview,
+            selectingCoastGuide: false,
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
@@ -81,24 +83,34 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
     }
 
     private renderCoastline() {
-        return <div className="section" role="group">
+        let guide = this.state.selectingHeightGuide
+            ? this.renderGuideSelection(this.props.settings.coastGuide, this.coastGuideSelected.bind(this), 'Coast', 'outline of generated terrain')
+            : <div className="palleteList">
+                <GuideView guide={this.props.settings.coastGuide} onClick={this.showCoastGuideSelection.bind(this)} />
+            </div>
             
+        return <div className="section" role="group">
+            {guide}
+            <p>Fine tune the coast outline by changing the sea level, and controlling how much low and high frequency noise are applied to the coastline.</p>
+            <div role="group"><div className="fieldLabel">Sea level</div><input type="range" value={this.props.settings.seaLevel.toString()} onChange={this.seaLevelChanged.bind(this)} step="0.01" min="0" max="1" /></div>
+            <div role="group"><div className="fieldLabel">Low frequency</div><input type="range" value={this.props.settings.coastNoiseLowFreq.toString()} onChange={this.lowFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="50" /></div>
+            <div role="group"><div className="fieldLabel">High frequency</div><input type="range" value={this.props.settings.coastNoiseHighFreq.toString()} onChange={this.highFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="50" /></div>
         </div>
     }
 
     private renderTerrain() {
         let height = this.state.selectingHeightGuide
-            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
+            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape of generated terrain')
             : <GenerationField name="Height" guide={this.props.settings.heightGuide} minValue={this.props.settings.minHeight} maxValue={this.props.settings.maxHeight}
                 guideScale={this.props.settings.heightScaleGuide} lowFreqScale={this.props.settings.heightScaleLowFreq} highFreqScale={this.props.settings.heightScaleHighFreq} showGuideSelection={this.showHeightGuideSelection.bind(this)} changed={this.heightChanged.bind(this)} />;
 
         let temperature = this.state.selectingTemperatureGuide
-            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
+            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature of generated terrain')
             : <GenerationField name="Temperature" guide={this.props.settings.temperatureGuide} minValue={this.props.settings.minTemperature} maxValue={this.props.settings.maxTemperature}
                 guideScale={this.props.settings.temperatureScaleGuide} lowFreqScale={this.props.settings.temperatureScaleLowFreq} highFreqScale={this.props.settings.temperatureScaleHighFreq} showGuideSelection={this.showTemperatureGuideSelection.bind(this)} changed={this.temperatureChanged.bind(this)} />;
 
         let precipitation = this.state.selectingPrecipitationGuide
-            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
+            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity of generated terrain')
             : <GenerationField name="Precipitation" guide={this.props.settings.precipitationGuide} minValue={this.props.settings.minPrecipitation} maxValue={this.props.settings.maxPrecipitation}
                 guideScale={this.props.settings.precipitationScaleGuide} lowFreqScale={this.props.settings.precipitationScaleLowFreq} highFreqScale={this.props.settings.precipitationScaleHighFreq} showGuideSelection={this.showPrecipitationGuideSelection.bind(this)} changed={this.precipitationChanged.bind(this)} />;
 
@@ -109,8 +121,8 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
         </div>
     }
 
-    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, propertyName: string, propertyEffects: string = propertyName.toLowerCase()) {
-        let intro = `Select a ${propertyName.toLowerCase()} guide, which controls the overall ${propertyEffects} of generated terrain.`;
+    private renderGuideSelection(selectedValue: GenerationGuide, onSelected: (guide: GenerationGuide) => void, propertyName: string, propertyEffects: string = propertyName.toLowerCase() + ' of generated terrain') {
+        let intro = `Select a ${propertyName.toLowerCase()} guide, which controls the overall ${propertyEffects}.`;
         
         return <div>
             <h2>{propertyName}</h2>
@@ -122,6 +134,19 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
                 })}
             </div>
         </div>;
+    }
+    private showCoastGuideSelection(guide: GenerationGuide) {
+        this.setState({
+            selectingCoastGuide: true,
+        });
+    }
+    private coastGuideSelected(guide: GenerationGuide) {
+        this.props.settings.coastGuide = guide;
+        this.props.settingsChanged();
+
+        this.setState({
+            selectingCoastGuide: false,
+        });
     }
     private showHeightGuideSelection(guide: GenerationGuide) {
         this.setState({
@@ -161,6 +186,22 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
         this.setState({
             selectingPrecipitationGuide: false,
         });
+    }
+
+    private seaLevelChanged(e: any) {
+        let val = parseFloat(e.target.value);
+        this.props.settings.seaLevel = val;
+        this.props.settingsChanged();
+    }
+    private lowFreqCoastScaleChanged(e: any) {
+        let val = parseFloat(e.target.value);
+        this.props.settings.coastNoiseLowFreq = val;
+        this.props.settingsChanged();
+    }
+    private highFreqCoastScaleChanged(e: any) {
+        let val = parseFloat(e.target.value);
+        this.props.settings.coastNoiseHighFreq = val;
+        this.props.settingsChanged();
     }
 
     private heightChanged(minValue: number, maxValue: number, guideScale: number, lowFreqScale: number, highFreqScale: number) {

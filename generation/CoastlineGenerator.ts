@@ -4,8 +4,7 @@ class CoastlineGenerator {
         let lowFreqNoiseX = new SimplexNoise(), highFreqNoiseX = new SimplexNoise();
         let lowFreqNoiseY = new SimplexNoise(), highFreqNoiseY = new SimplexNoise();
         let lowFreqNoiseScale = settings.coastNoiseLowFreq, highFreqNoiseScale = settings.coastNoiseHighFreq;
-
-        let seaLevelCutoff = 0.5;
+        let seaLevelCutoff = settings.seaLevel;
 
         let maxX = map.width * MapData.packedWidthRatio;
         let maxY = map.height * MapData.packedHeightRatio;
@@ -21,14 +20,9 @@ class CoastlineGenerator {
                 continue;
 
             let tmpX = x;
-            x += lowFreqNoiseX.noise(x / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
-            y += lowFreqNoiseY.noise(tmpX / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
-
-            let otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
-            if (otherCell == null)
-                continue;
-
-            otherCell.height = 0.1;
+            x += (lowFreqNoiseX.noise(x / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
+            y += (lowFreqNoiseY.noise(tmpX / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
+            cell.height = 0.1;
         }
     }
 }

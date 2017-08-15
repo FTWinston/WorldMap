@@ -972,6 +972,7 @@ Guides.scalarGuides = [
 Guides.vectorGuides = [];
 var GenerationSettings = (function () {
     function GenerationSettings() {
+        this.seaLevel = 0.35;
         this.coastGuide = Guides.scalarGuides[0],
             this.coastNoiseLowFreq = 0.2;
         this.coastNoiseHighFreq = 0.15;
@@ -995,12 +996,13 @@ var GenerationSettings = (function () {
         this.precipitationScaleHighFreq = 0.1;
     }
     GenerationSettings.prototype.randomize = function () {
-        if (Math.random() <= 0.6)
+        this.seaLevel = Random.randomRange(0.05, 0.8);
+        if (Math.random() <= 0.5)
             this.coastGuide = Guides.scalarGuides[0];
         else
             this.coastGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-                this.coastNoiseLowFreq = Math.random();
-        this.coastNoiseHighFreq = Math.random();
+                this.coastNoiseLowFreq = Random.randomRange(1, 45);
+        this.coastNoiseHighFreq = Random.randomRange(1, 45);
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             this.minHeight = Random.randomRange(0, 0.25);
         this.maxHeight = Random.randomRange(Math.max(this.minHeight + 0.2, 0.25), 1);
@@ -3023,6 +3025,7 @@ var GenerationSettingsEditor = (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.state = {
             activeSection: 0 /* Overview */,
+            selectingCoastGuide: false,
             selectingHeightGuide: false,
             selectingTemperatureGuide: false,
             selectingPrecipitationGuide: false,
@@ -3074,17 +3077,32 @@ var GenerationSettingsEditor = (function (_super) {
         });
     };
     GenerationSettingsEditor.prototype.renderCoastline = function () {
-        return React.createElement("div", { className: "section", role: "group" });
+        var guide = this.state.selectingHeightGuide
+            ? this.renderGuideSelection(this.props.settings.coastGuide, this.coastGuideSelected.bind(this), 'Coast', 'outline of generated terrain')
+            : React.createElement("div", { className: "palleteList" },
+                React.createElement(GuideView, { guide: this.props.settings.coastGuide, onClick: this.showCoastGuideSelection.bind(this) }));
+        return React.createElement("div", { className: "section", role: "group" },
+            guide,
+            React.createElement("p", null, "Fine tune the coast outline by changing the sea level, and controlling how much low and high frequency noise are applied to the coastline."),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "Sea level"),
+                React.createElement("input", { type: "range", value: this.props.settings.seaLevel.toString(), onChange: this.seaLevelChanged.bind(this), step: "0.01", min: "0", max: "1" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "Low frequency"),
+                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseLowFreq.toString(), onChange: this.lowFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "50" })),
+            React.createElement("div", { role: "group" },
+                React.createElement("div", { className: "fieldLabel" }, "High frequency"),
+                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseHighFreq.toString(), onChange: this.highFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "50" })));
     };
     GenerationSettingsEditor.prototype.renderTerrain = function () {
         var height = this.state.selectingHeightGuide
-            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape')
+            ? this.renderGuideSelection(this.props.settings.heightGuide, this.heightGuideSelected.bind(this), 'Height', 'shape of generated terrain')
             : React.createElement(GenerationField, { name: "Height", guide: this.props.settings.heightGuide, minValue: this.props.settings.minHeight, maxValue: this.props.settings.maxHeight, guideScale: this.props.settings.heightScaleGuide, lowFreqScale: this.props.settings.heightScaleLowFreq, highFreqScale: this.props.settings.heightScaleHighFreq, showGuideSelection: this.showHeightGuideSelection.bind(this), changed: this.heightChanged.bind(this) });
         var temperature = this.state.selectingTemperatureGuide
-            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature')
+            ? this.renderGuideSelection(this.props.settings.temperatureGuide, this.temperatureGuideSelected.bind(this), 'Temperature of generated terrain')
             : React.createElement(GenerationField, { name: "Temperature", guide: this.props.settings.temperatureGuide, minValue: this.props.settings.minTemperature, maxValue: this.props.settings.maxTemperature, guideScale: this.props.settings.temperatureScaleGuide, lowFreqScale: this.props.settings.temperatureScaleLowFreq, highFreqScale: this.props.settings.temperatureScaleHighFreq, showGuideSelection: this.showTemperatureGuideSelection.bind(this), changed: this.temperatureChanged.bind(this) });
         var precipitation = this.state.selectingPrecipitationGuide
-            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity')
+            ? this.renderGuideSelection(this.props.settings.precipitationGuide, this.precipitationGuideSelected.bind(this), 'Precipitation', 'rainfall / humidity of generated terrain')
             : React.createElement(GenerationField, { name: "Precipitation", guide: this.props.settings.precipitationGuide, minValue: this.props.settings.minPrecipitation, maxValue: this.props.settings.maxPrecipitation, guideScale: this.props.settings.precipitationScaleGuide, lowFreqScale: this.props.settings.precipitationScaleLowFreq, highFreqScale: this.props.settings.precipitationScaleHighFreq, showGuideSelection: this.showPrecipitationGuideSelection.bind(this), changed: this.precipitationChanged.bind(this) });
         return React.createElement("div", { className: "section multiple", role: "group" },
             height,
@@ -3092,8 +3110,8 @@ var GenerationSettingsEditor = (function (_super) {
             precipitation);
     };
     GenerationSettingsEditor.prototype.renderGuideSelection = function (selectedValue, onSelected, propertyName, propertyEffects) {
-        if (propertyEffects === void 0) { propertyEffects = propertyName.toLowerCase(); }
-        var intro = "Select a " + propertyName.toLowerCase() + " guide, which controls the overall " + propertyEffects + " of generated terrain.";
+        if (propertyEffects === void 0) { propertyEffects = propertyName.toLowerCase() + ' of generated terrain'; }
+        var intro = "Select a " + propertyName.toLowerCase() + " guide, which controls the overall " + propertyEffects + ".";
         return React.createElement("div", null,
             React.createElement("h2", null, propertyName),
             React.createElement("p", null, intro),
@@ -3101,6 +3119,18 @@ var GenerationSettingsEditor = (function (_super) {
                 var classes = guide == selectedValue ? 'selected' : undefined;
                 return React.createElement(GuideView, { guide: guide, key: id.toString(), className: classes, onClick: onSelected });
             })));
+    };
+    GenerationSettingsEditor.prototype.showCoastGuideSelection = function (guide) {
+        this.setState({
+            selectingCoastGuide: true,
+        });
+    };
+    GenerationSettingsEditor.prototype.coastGuideSelected = function (guide) {
+        this.props.settings.coastGuide = guide;
+        this.props.settingsChanged();
+        this.setState({
+            selectingCoastGuide: false,
+        });
     };
     GenerationSettingsEditor.prototype.showHeightGuideSelection = function (guide) {
         this.setState({
@@ -3137,6 +3167,21 @@ var GenerationSettingsEditor = (function (_super) {
         this.setState({
             selectingPrecipitationGuide: false,
         });
+    };
+    GenerationSettingsEditor.prototype.seaLevelChanged = function (e) {
+        var val = parseFloat(e.target.value);
+        this.props.settings.seaLevel = val;
+        this.props.settingsChanged();
+    };
+    GenerationSettingsEditor.prototype.lowFreqCoastScaleChanged = function (e) {
+        var val = parseFloat(e.target.value);
+        this.props.settings.coastNoiseLowFreq = val;
+        this.props.settingsChanged();
+    };
+    GenerationSettingsEditor.prototype.highFreqCoastScaleChanged = function (e) {
+        var val = parseFloat(e.target.value);
+        this.props.settings.coastNoiseHighFreq = val;
+        this.props.settingsChanged();
     };
     GenerationSettingsEditor.prototype.heightChanged = function (minValue, maxValue, guideScale, lowFreqScale, highFreqScale) {
         var settings = this.props.settings;
@@ -3546,7 +3591,7 @@ var MapGenerator = (function () {
             precDif * precDif);
     };
     MapGenerator.constructCellTypeLookup = function (cellTypes) {
-        MapGenerator.cellTypeLookup = new kdTree(cellTypes.slice(), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
+        MapGenerator.cellTypeLookup = new kdTree(cellTypes.slice(1), MapGenerator.cellTypeDistanceMetric, ['height', 'temperature', 'precipitation']);
     };
     MapGenerator.removeSuperfluousLineCells = function (cells, linesToKeepJunctionsWith) {
         if (linesToKeepJunctionsWith === void 0) { linesToKeepJunctionsWith = []; }
@@ -3621,7 +3666,7 @@ var CoastlineGenerator = (function () {
         var lowFreqNoiseX = new SimplexNoise(), highFreqNoiseX = new SimplexNoise();
         var lowFreqNoiseY = new SimplexNoise(), highFreqNoiseY = new SimplexNoise();
         var lowFreqNoiseScale = settings.coastNoiseLowFreq, highFreqNoiseScale = settings.coastNoiseHighFreq;
-        var seaLevelCutoff = 0.5;
+        var seaLevelCutoff = settings.seaLevel;
         var maxX = map.width * MapData.packedWidthRatio;
         var maxY = map.height * MapData.packedHeightRatio;
         // allocate height to each cell, specify if it is land or sea
@@ -3633,12 +3678,9 @@ var CoastlineGenerator = (function () {
             if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff)
                 continue;
             var tmpX = x;
-            x += lowFreqNoiseX.noise(x / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseX.noise(x, y) * highFreqNoiseScale;
-            y += lowFreqNoiseY.noise(tmpX / 10, y / 10) * lowFreqNoiseScale + highFreqNoiseY.noise(tmpX, y) * highFreqNoiseScale;
-            var otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
-            if (otherCell == null)
-                continue;
-            otherCell.height = 0.1;
+            x += (lowFreqNoiseX.noise(x / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
+            y += (lowFreqNoiseY.noise(tmpX / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
+            cell.height = 0.1;
         }
     };
     return CoastlineGenerator;
@@ -3773,7 +3815,7 @@ var RiverGenerator = (function () {
             var testCells = map.getCellsInRange(lowestCell, 1);
             var testCell = MapGenerator.pickLowestCell(testCells);
             if (testCell === lowestCell) {
-                if (testCell.height <= 0)
+                if (testCell.height < 0)
                     break; // if under the sea, stop rather than eroding a valley
                 // erode a valley
                 var dipCell = testCell;
@@ -3784,11 +3826,11 @@ var RiverGenerator = (function () {
                 // find the next lowest cell, and "erode" it down so that we can flow there
                 testCells.slice(testCells.indexOf(dipCell), 1);
                 testCell = MapGenerator.pickLowestCell(testCells);
-                testCell.height = dipCell.height - 0.01;
+                testCell.height = dipCell.height - 0.01; // this can sink to below level and form a lake. that's not really how i wanted them to form...
             }
             cells.push(testCell);
             lowestCell = testCell;
-            if (!lineType.canErodeBelowSeaLevel && lowestCell.height <= 0)
+            if (!lineType.canErodeBelowSeaLevel && lowestCell.height < 0)
                 break; // some line types (rivers!) don't want us to keep eroding once we reach the seabed
         }
         // also "flow" upwards until we reach a highest point
