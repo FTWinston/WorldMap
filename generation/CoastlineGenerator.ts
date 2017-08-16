@@ -20,8 +20,8 @@ class CoastlineGenerator {
                 continue;
 
             let tmpX = x; 
-            x += (lowFreqNoiseX.noise(x / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
-            y += (lowFreqNoiseY.noise(tmpX / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
+            x += (lowFreqNoiseX.noise(x / 100, y / 100) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
+            y += (lowFreqNoiseY.noise(tmpX / 100, y / 100) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
 
             let otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
             if (otherCell == null)
