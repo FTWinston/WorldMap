@@ -93,8 +93,8 @@ class GenerationSettingsEditor extends React.Component<IGenerationSettingsEditor
             {guide}
             <p>Fine tune the coast outline by changing the sea level, and controlling how much low and high frequency noise are applied to the coastline.</p>
             <div role="group"><div className="fieldLabel">Sea level</div><input type="range" value={this.props.settings.seaLevel.toString()} onChange={this.seaLevelChanged.bind(this)} step="0.01" min="0" max="1" /></div>
-            <div role="group"><div className="fieldLabel">Low frequency</div><input type="range" value={this.props.settings.coastNoiseLowFreq.toString()} onChange={this.lowFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="50" /></div>
-            <div role="group"><div className="fieldLabel">High frequency</div><input type="range" value={this.props.settings.coastNoiseHighFreq.toString()} onChange={this.highFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="50" /></div>
+            <div role="group"><div className="fieldLabel">Low frequency</div><input type="range" value={this.props.settings.coastNoiseLowFreq.toString()} onChange={this.lowFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="5" /></div>
+            <div role="group"><div className="fieldLabel">High frequency</div><input type="range" value={this.props.settings.coastNoiseHighFreq.toString()} onChange={this.highFreqCoastScaleChanged.bind(this)} step="0.1" min="0" max="5" /></div>
         </div>
     }
 

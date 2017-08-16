@@ -19,10 +19,15 @@ class CoastlineGenerator {
             if (coastGuide.generation(x, y, maxX, maxY) < seaLevelCutoff)
                 continue;
 
-            let tmpX = x;
+            let tmpX = x; 
             x += (lowFreqNoiseX.noise(x / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
             y += (lowFreqNoiseY.noise(tmpX / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
-            cell.height = 0.1;
+
+            let otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
+            if (otherCell == null)
+                continue;
+
+            otherCell.height = 0.1;
         }
     }
 }

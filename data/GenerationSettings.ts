@@ -28,8 +28,8 @@ class GenerationSettings {
     constructor() {
         this.seaLevel = 0.35;
         this.coastGuide = Guides.scalarGuides[0],
-        this.coastNoiseLowFreq = 0.2;
-        this.coastNoiseHighFreq = 0.15;
+        this.coastNoiseLowFreq = 2;
+        this.coastNoiseHighFreq = 1;
 
         this.heightGuide = Guides.scalarGuides[10],
         this.minHeight = 0;
@@ -59,8 +59,8 @@ class GenerationSettings {
             this.coastGuide = Guides.scalarGuides[0];
         else
             this.coastGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-        this.coastNoiseLowFreq = Random.randomRange(1, 45);
-        this.coastNoiseHighFreq = Random.randomRange(1, 45);
+        this.coastNoiseLowFreq = Random.randomRange(0.5, 3);
+        this.coastNoiseHighFreq = Random.randomRange(0, 2);
 
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
         this.minHeight = Random.randomRange(0, 0.25);

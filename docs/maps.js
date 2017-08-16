@@ -974,8 +974,8 @@ var GenerationSettings = (function () {
     function GenerationSettings() {
         this.seaLevel = 0.35;
         this.coastGuide = Guides.scalarGuides[0],
-            this.coastNoiseLowFreq = 0.2;
-        this.coastNoiseHighFreq = 0.15;
+            this.coastNoiseLowFreq = 2;
+        this.coastNoiseHighFreq = 1;
         this.heightGuide = Guides.scalarGuides[10],
             this.minHeight = 0;
         this.maxHeight = 1;
@@ -1001,8 +1001,8 @@ var GenerationSettings = (function () {
             this.coastGuide = Guides.scalarGuides[0];
         else
             this.coastGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
-                this.coastNoiseLowFreq = Random.randomRange(1, 45);
-        this.coastNoiseHighFreq = Random.randomRange(1, 45);
+                this.coastNoiseLowFreq = Random.randomRange(0.5, 3);
+        this.coastNoiseHighFreq = Random.randomRange(0, 2);
         this.heightGuide = Guides.scalarGuides[Random.randomIntRange(0, Guides.scalarGuides.length)],
             this.minHeight = Random.randomRange(0, 0.25);
         this.maxHeight = Random.randomRange(Math.max(this.minHeight + 0.2, 0.25), 1);
@@ -3089,10 +3089,10 @@ var GenerationSettingsEditor = (function (_super) {
                 React.createElement("input", { type: "range", value: this.props.settings.seaLevel.toString(), onChange: this.seaLevelChanged.bind(this), step: "0.01", min: "0", max: "1" })),
             React.createElement("div", { role: "group" },
                 React.createElement("div", { className: "fieldLabel" }, "Low frequency"),
-                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseLowFreq.toString(), onChange: this.lowFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "50" })),
+                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseLowFreq.toString(), onChange: this.lowFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "5" })),
             React.createElement("div", { role: "group" },
                 React.createElement("div", { className: "fieldLabel" }, "High frequency"),
-                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseHighFreq.toString(), onChange: this.highFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "50" })));
+                React.createElement("input", { type: "range", value: this.props.settings.coastNoiseHighFreq.toString(), onChange: this.highFreqCoastScaleChanged.bind(this), step: "0.1", min: "0", max: "5" })));
     };
     GenerationSettingsEditor.prototype.renderTerrain = function () {
         var height = this.state.selectingHeightGuide
@@ -3680,7 +3680,10 @@ var CoastlineGenerator = (function () {
             var tmpX = x;
             x += (lowFreqNoiseX.noise(x / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseX.noise(x, y) - 0.5) * highFreqNoiseScale * 2;
             y += (lowFreqNoiseY.noise(tmpX / 10, y / 10) - 0.5) * lowFreqNoiseScale * 2 + (highFreqNoiseY.noise(tmpX, y) - 0.5) * highFreqNoiseScale * 2;
-            cell.height = 0.1;
+            var otherCell = map.cells[map.getCellIndexAtPoint(x, y)];
+            if (otherCell == null)
+                continue;
+            otherCell.height = 0.1;
         }
     };
     return CoastlineGenerator;
